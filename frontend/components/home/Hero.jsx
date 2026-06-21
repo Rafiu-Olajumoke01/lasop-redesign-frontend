@@ -47,7 +47,7 @@ export default function Hero() {
               </Link>
 
               <Link
-                href="/contact"
+                href="/"
                 className="border border-blue-700 hover:border-blue-500 text-slate-200 px-7 py-4 rounded-xl font-semibold transition"
               >
                 Contact Us
