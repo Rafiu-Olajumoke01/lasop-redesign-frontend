@@ -54,9 +54,7 @@ export default function WhyChooseUs() {
                 secure better opportunities.
               </p>
 
-              <button className="mt-8 bg-[#0057E7] hover:bg-[#0A66FF] text-white px-7 py-4 rounded-xl font-semibold transition-all duration-300 hover:-translate-y-1 shadow-[0_12px_40px_rgba(0,87,231,0.35)] cursor-pointer">
-                Learn More
-              </button>
+          
             </div>
 
             {/* Right Content */}
