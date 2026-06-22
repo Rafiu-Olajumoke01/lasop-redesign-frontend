@@ -27,14 +27,14 @@ export default function SignupPage() {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:8000/api/users/register/', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/register/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
       const data = await res.json();
-      console.log(data); // add this to see the error
+      console.log(data);
 
       if (!res.ok) {
         const errorMessages = Object.values(data).flat().join(' ');

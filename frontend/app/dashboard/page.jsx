@@ -21,10 +21,10 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         const [profileRes, applicationsRes] = await Promise.all([
-          fetch('http://localhost:8000/api/users/profile/', {
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch('http://localhost:8000/api/applications/', {
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/applications/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -53,7 +53,7 @@ export default function DashboardPage() {
   const handleRemoveCourse = async (id) => {
     const token = localStorage.getItem('access');
     try {
-      const res = await fetch(`http://localhost:8000/api/applications/${id}/`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/applications/${id}/`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -87,7 +87,6 @@ export default function DashboardPage() {
   const count = applications.length;
   const totalFees = applications.reduce((sum, a) => sum + (Number(a.course_detail?.fee) || 0), 0);
 
-  // --- Donut chart geometry (pure SVG, no chart library needed) ---
   const RADIUS = 54;
   const STROKE = 16;
   const CIRC = 2 * Math.PI * RADIUS;
@@ -188,8 +187,6 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-[#0B0E14]">
-
-      {/* Internal section label — sits below the real site navbar, not fixed */}
       <div className="border-b border-[#1C2330] bg-[#0E121A]">
         <div className="max-w-5xl mx-auto px-5 md:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -201,8 +198,6 @@ export default function DashboardPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-5 md:px-8 pt-12 pb-16">
-
-        {/* Profile strip — given more vertical room, sits clearly below the section label */}
         <div className="flex items-center justify-between bg-[#11151D] border border-[#1C2330] rounded-xl px-6 py-6 mb-8">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-md bg-[#14201A] border border-[#2A4034] flex items-center justify-center font-mono text-base font-medium text-[#7CFF6B] shrink-0">
@@ -225,39 +220,21 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Analytics row: donut chart + stat breakdown side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-4 mb-8 items-stretch">
-
-          {/* Donut chart card */}
           <div className="bg-[#11151D] border border-[#1C2330] rounded-xl p-6 flex items-center gap-6 justify-center lg:justify-start">
             <div className="relative w-[140px] h-[140px] shrink-0">
               <svg viewBox="0 0 140 140" className="w-full h-full -rotate-90">
-                <circle
-                  cx="70"
-                  cy="70"
-                  r={RADIUS}
-                  fill="none"
-                  stroke="#1C2330"
-                  strokeWidth={STROKE}
-                />
+                <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#1C2330" strokeWidth={STROKE} />
                 {count > 0 && (
                   <>
                     <circle
-                      cx="70"
-                      cy="70"
-                      r={RADIUS}
-                      fill="none"
-                      stroke="#7CFF6B"
+                      cx="70" cy="70" r={RADIUS} fill="none" stroke="#7CFF6B"
                       strokeWidth={STROKE}
                       strokeDasharray={`${onlineDash} ${CIRC - onlineDash}`}
                       strokeLinecap="butt"
                     />
                     <circle
-                      cx="70"
-                      cy="70"
-                      r={RADIUS}
-                      fill="none"
-                      stroke="#FFB454"
+                      cx="70" cy="70" r={RADIUS} fill="none" stroke="#FFB454"
                       strokeWidth={STROKE}
                       strokeDasharray={`${physicalDash} ${CIRC - physicalDash}`}
                       strokeDashoffset={-onlineDash}
@@ -291,7 +268,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Stat cards stacked beside the chart */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-[#11151D] border border-[#1C2330] border-l-2 border-l-[#7CFF6B] rounded-r-lg px-4 py-3.5 flex flex-col justify-center">
               <p className="text-[#6B7585] text-[11px] font-mono mb-1.5">enrolled.length</p>
@@ -314,20 +290,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Error */}
         {error && (
           <div className="bg-[#2A1414] border border-[#501313] text-[#F09595] text-xs rounded-lg px-4 py-3 mb-5 font-mono">
             {error}
           </div>
         )}
 
-        {/* Courses header */}
         <div className="flex items-center justify-between mb-3.5">
           <h2 className="text-[#F1F3F7] font-medium text-[15px]">My courses</h2>
-          <Link
-            href="/apply"
-            className="text-[#7CFF6B] text-xs font-mono hover:text-[#9AFF8C] transition"
-          >
+          <Link href="/apply" className="text-[#7CFF6B] text-xs font-mono hover:text-[#9AFF8C] transition">
             + add_course()
           </Link>
         </div>

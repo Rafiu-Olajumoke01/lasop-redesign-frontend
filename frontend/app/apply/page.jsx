@@ -19,8 +19,8 @@ export default function ApplyPage() {
     const fetchData = async () => {
       try {
         const [coursesRes, locationsRes] = await Promise.all([
-          fetch('http://localhost:8000/api/courses/'),
-          fetch('http://localhost:8000/api/courses/locations/'),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/courses/`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/courses/locations/`),
         ]);
         const coursesData = await coursesRes.json();
         const locationsData = await locationsRes.json();
@@ -61,7 +61,7 @@ export default function ApplyPage() {
     };
 
     try {
-      const res = await fetch('http://localhost:8000/api/applications/', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/applications/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
