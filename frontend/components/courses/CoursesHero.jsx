@@ -1,25 +1,18 @@
 export default function CoursesHero() {
   return (
-    <section className="bg-[#071224] pt-40 pb-24">
-      <div className="container-width text-center">
-
-        <span className="inline-flex px-4 py-2 rounded-full bg-blue-900/30 border border-blue-800 text-blue-300 text-sm mb-6">
-          Explore LASOP Programs
-        </span>
-
-        <h1 className="text-5xl lg:text-7xl font-bold text-white">
-          Build Skills For
-          <span className="block text-[#5EA2FF]">
-            The Future
-          </span>
-        </h1>
-
-        <p className="max-w-3xl mx-auto mt-8 text-slate-400 text-lg leading-8">
-          Choose from technology, business and vocational
-          programs designed to equip you with practical,
-          real-world skills.
+    <section className="bg-[#050D1A] pt-36 pb-10">
+      <div className="container-width">
+        <p className="text-xs text-blue-400 font-medium tracking-widest uppercase mb-3">
+          LASOP Programs
         </p>
-
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <h1 className="text-2xl lg:text-3xl font-bold text-white">
+            Find your program
+          </h1>
+          <p className="text-slate-500 text-sm max-w-xs sm:text-right leading-relaxed">
+            Practical programs designed to get you job-ready fast.
+          </p>
+        </div>
       </div>
     </section>
   );

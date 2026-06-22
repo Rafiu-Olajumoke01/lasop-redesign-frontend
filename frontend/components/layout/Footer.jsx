@@ -13,7 +13,7 @@ const socials = [
 
 export default function Footer() {
   return (
-    <footer className="bg-[#040B18] border-t border-white/10">
+    <footer id="contact" className="bg-[#040B18] border-t border-white/10">
 
       <div className="container-width py-20">
 

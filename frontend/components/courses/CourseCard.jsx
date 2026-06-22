@@ -7,37 +7,49 @@ export default function CourseCard({ course }) {
     : "/placeholder.jpg";
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-[28px] overflow-hidden hover:-translate-y-2 hover:border-blue-500/40 transition-all duration-300">
-      <div className="relative h-56">
+    <Link
+      href={`/courses/${course.slug}`}
+      className="group block bg-[#0B1628] border border-white/[0.07] rounded-2xl overflow-hidden hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-1"
+    >
+      {/* Image */}
+      <div className="relative h-48 overflow-hidden">
         <Image
           src={imageUrl}
           alt={course.title}
           fill
-          className="object-cover"
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
         />
-      </div>
+        {/* Bottom fade so image blends into card */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0B1628] via-transparent to-transparent" />
 
-      <div className="p-6">
-        <span className="inline-block px-3 py-1 rounded-full bg-blue-900/20 text-blue-300 text-sm mb-4">
+        {/* Category badge sitting on the image */}
+        <span className="absolute top-3 left-3 text-[10px] font-medium px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 text-slate-300">
           {course.category}
         </span>
+      </div>
 
-        <h3 className="text-xl font-semibold text-white mb-4">
+      {/* Content */}
+      <div className="p-5">
+        <h3 className="text-white font-semibold text-base leading-snug mb-4">
           {course.title}
         </h3>
 
-        <div className="space-y-2 text-slate-400">
-          <p>Duration: {course.duration}</p>
-          <p>Fee: {course.fee}</p>
+        {/* Duration + Fee row */}
+        <div className="flex items-center justify-between text-xs text-slate-500 border-t border-white/[0.06] pt-4 mb-4">
+          <span>{course.duration}</span>
+          <span className="text-slate-400 font-medium">{course.fee}</span>
         </div>
 
-        <Link
-          href={`/courses/${course.slug}`}
-          className="mt-6 inline-block w-full text-center bg-[#0057E7] hover:bg-[#0A66FF] text-white py-3 rounded-xl font-medium transition"
-        >
-          View Program
-        </Link>
+        {/* CTA row */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-blue-400 group-hover:text-blue-300 transition-colors">
+            View program →
+          </span>
+          <div className="w-7 h-7 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+            <span className="text-blue-400 text-xs">→</span>
+          </div>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }

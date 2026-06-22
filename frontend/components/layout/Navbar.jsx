@@ -166,6 +166,10 @@ export default function Navbar() {
           <Link href="/faqs" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
             FAQs
           </Link>
+
+          <Link href="/contact" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
+            Contact
+          </Link>
         </nav>
 
         {/* CTA */}

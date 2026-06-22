@@ -1,107 +1,81 @@
 import Image from "next/image";
 import Link from "next/link";
 
+const stats = [
+  { value: "17+", label: "Years Experience" },
+  { value: "15K+", label: "Students Trained" },
+  { value: "10+", label: "Career Programs" },
+];
+
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden min-h-screen bg-[#071224] pt-32">
-      {/* Background Glow */}
-      <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] bg-blue-600/20 blur-[120px] rounded-full" />
+    <section className="relative min-h-screen overflow-hidden">
 
-      <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] bg-cyan-500/10 blur-[120px] rounded-full" />
+      {/* Full background image */}
 
-      <div className="container-width">
-        <div className="grid lg:grid-cols-2 gap-14 items-center min-h-[85vh]">
-          {/* LEFT CONTENT */}
-          <div>
+      <div className="absolute inset-0 z-0">
+        <Image
+          src="/lasopTwo.jfif"
+          alt="LASOP students"
+          fill
+          priority
+          className="object-cover object-center"
+
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#050D1A] via-[#050D1A]/75 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050D1A]/80 via-transparent to-[#050D1A]/30" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 container-width min-h-screen flex flex-col pt-32">
+
+        {/* Main text — takes remaining space, vertically centered */}
+        <div className="flex-1 flex items-center">
+          <div className="max-w-lg py-10">
+
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-blue-800 bg-blue-900/30 backdrop-blur-md mb-7">
-              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-
-              <p className="text-sm text-blue-200">
-                Career-focused tech training since 2009
-              </p>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-500/25 bg-blue-500/10 mb-7">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              <span className="text-xs text-blue-300 font-medium tracking-wide">
+                Career-focused tech training · Est. 2009
+              </span>
             </div>
 
-            {/* Heading */}
-            <h1 className="text-3xl lg:text-5xl font-bold leading-tight text-white">
-              Build Your Future With
-              <span className="text-[#5EA2FF] block">
-                Practical Tech Skills
+            {/* Headline */}
+            <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight tracking-tight mb-5">
+              Build a tech career
+              <span className="text-[#60A5FA] block mt-1">
+                that actually pays.
               </span>
             </h1>
 
             {/* Description */}
-            <p className="text-slate-300 text-lg mt-7 max-w-xl leading-8">
-              Learn software development, cybersecurity, AI engineering,
-              automation, data science, and more through practical,
-              career-focused programs at LASOP.
+            <p className="text-slate-400 text-base leading-relaxed mb-9 max-w-md">
+              LASOP has trained 15,000+ students across Nigeria in software
+              development, cybersecurity, AI, and data science — with real
+              mentors and real career outcomes.
             </p>
 
-            {/* CTA Buttons */}
-            <div className="flex items-center gap-4 mt-10">
+            {/* CTAs */}
+            <div className="flex flex-wrap gap-3">
               <Link
                 href="/courses"
-                className="inline-flex items-center justify-center bg-gradient-to-r from-[#0057E7] to-[#0A66FF] text-white px-7 py-4 rounded-xl font-semibold cursor-pointer transition-all duration-300 ease-out shadow-[0_12px_40px_rgba(0,87,231,0.35)] hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_20px_60px_rgba(0,87,231,0.45)] active:scale-[0.98]"
+                className="inline-flex items-center gap-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold px-7 py-3.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 shadow-[0_8px_30px_rgba(37,99,235,0.4)]"
               >
                 Explore Courses
+                <span>→</span>
               </Link>
-
               <Link
-                href="/"
-                className="border border-blue-700 hover:border-blue-500 text-slate-200 px-7 py-4 rounded-xl font-semibold transition"
+                href="/contact"
+                className="inline-flex items-center text-slate-300 hover:text-white border border-white/15 hover:border-white/30 px-7 py-3.5 rounded-xl transition-all duration-200 backdrop-blur-sm"
               >
                 Contact Us
               </Link>
             </div>
 
-            {/* Stats */}
-            {/* <div className="flex gap-12 mt-14">
-              <div>
-                <h2 className="text-3xl font-bold text-white">10+</h2>
-
-                <p className="text-slate-400 mt-1">Career Programs</p>
-              </div>
-
-              <div>
-                <h2 className="text-3xl font-bold text-white">15K+</h2>
-
-                <p className="text-slate-400 mt-1">Students Trained</p>
-              </div>
-
-              <div>
-                <h2 className="text-3xl font-bold text-white">17+</h2>
-
-                <p className="text-slate-400 mt-1">Years Experience</p>
-              </div>
-            </div> */}
-          </div>
-
-          {/* RIGHT CONTENT */}
-          <div className="relative flex justify-center">
-            {/* Blue Glow */}
-            <div className="absolute w-[500px] h-[500px] bg-blue-600/20 blur-[100px] rounded-full" />
-
-            {/* Main Image */}
-            <div className="relative z-10 rounded-md overflow-hidden border border-blue-900/40 shadow-2xl">
-              <Image
-                src="/hero-image.avif"
-                alt="LASOP students"
-                width={700}
-                height={700}
-                className="w-full h-auto object-cover"
-              />
-            </div>
-
-            {/* Floating Card */}
-            <div className="absolute left-[-30px] bottom-[70px] bg-white rounded-xl shadow-xl p-5 z-20">
-              <p className="text-sm text-slate-500">Most Popular</p>
-
-              <h3 className="font-bold text-slate-900 mt-1">
-                Full-stack Development & AI
-              </h3>
-            </div>
           </div>
         </div>
+
       </div>
     </section>
   );
