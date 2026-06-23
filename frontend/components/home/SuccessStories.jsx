@@ -32,44 +32,36 @@ const stories = [
 
 export default function SuccessStories() {
   return (
-    <section className="bg-[#071224] py-28">
-
-      <div className="container-width">
-
+    <section className="bg-[#071224] py-16 sm:py-20 lg:py-28">
+      <div className="container-width px-4 sm:px-6">
         {/* Heading */}
         <Reveal>
           <div className="text-center max-w-3xl mx-auto">
-
-            <span className="inline-flex px-4 py-2 rounded-full bg-blue-900/30 border border-blue-800 text-blue-300 text-sm mb-6">
+            <span className="inline-flex px-4 py-2 rounded-full bg-blue-900/30 border border-blue-800 text-blue-300 text-sm mb-5 sm:mb-6">
               Student Success Stories
             </span>
 
-            <h2 className="text-5xl lg:text-6xl font-bold text-white">
+            <h2 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-white">
               Real People.
               <span className="block text-[#5EA2FF]">
                 Real Transformations.
               </span>
             </h2>
 
-            <p className="text-slate-400 text-lg mt-6">
+            <p className="text-slate-400 text-base sm:text-lg mt-5 sm:mt-6">
               Discover how LASOP students transformed
               their careers through practical learning.
             </p>
-
           </div>
         </Reveal>
 
         {/* Cards */}
-        <div className="grid lg:grid-cols-3 gap-8 mt-20">
-
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mt-12 sm:mt-20">
           {stories.map((story, index) => (
             <Reveal key={story.name} delay={index * 0.1}>
-
-              <div className="bg-white/5 border border-white/10 rounded-[24px] overflow-hidden hover:-translate-y-3 hover:border-blue-500/40 transition-all duration-500"
-              >
+              <div className="bg-white/5 border border-white/10 rounded-[20px] sm:rounded-[24px] overflow-hidden hover:-translate-y-3 hover:border-blue-500/40 transition-all duration-500">
                 {/* Image */}
-                <div className="relative h-[350px]">
-
+                <div className="relative h-[260px] sm:h-[300px] lg:h-[350px]">
                   <Image
                     src={story.image}
                     alt={story.name}
@@ -78,89 +70,76 @@ export default function SuccessStories() {
                   />
 
                   {/* Floating Card */}
-                  <div className="absolute bottom-5 left-5 right-5 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl"
-                  >
-                    <h3 className="font-bold text-lg text-[#004ac6]">
+                  <div className="absolute bottom-4 left-4 right-4 sm:bottom-5 sm:left-5 sm:right-5 bg-white/95 backdrop-blur-md rounded-2xl p-3 sm:p-4 shadow-xl">
+                    <h3 className="font-bold text-base sm:text-lg text-[#004ac6]">
                       {story.name}
                     </h3>
 
-                    <p className="text-sm text-slate-600">
+                    <p className="text-xs sm:text-sm text-slate-600">
                       {story.role}
                     </p>
                   </div>
                 </div>
 
                 {/* Content */}
-                <div className="p-7">
-
+                <div className="p-5 sm:p-7">
                   {/* Skills */}
-                  <div className="flex gap-2 flex-wrap mb-6">
-
+                  <div className="flex gap-2 flex-wrap mb-5 sm:mb-6">
                     {story.skills.map((skill) => (
                       <span
                         key={skill}
-                        className="px-3 py-1 rounded-full bg-blue-900/20 text-blue-300 text-sm"
+                        className="px-3 py-1 rounded-full bg-blue-900/20 text-blue-300 text-xs sm:text-sm"
                       >
                         {skill}
                       </span>
                     ))}
-
                   </div>
 
                   {/* Story */}
-                  <p className="text-slate-300 leading-8 italic">
+                  <p className="text-slate-300 leading-7 sm:leading-8 italic text-sm sm:text-base">
                     {`"${story.story}"`}
                   </p>
-
                 </div>
-
               </div>
-
             </Reveal>
           ))}
-
         </div>
 
         {/* Stats Bar */}
-
         <Reveal>
-          <div className="mt-20 grid grid-cols-3 bg-white/5 border border-white/10 rounded-[24px] overflow-hidden">
-
-            <div className="text-center py-10 border-r border-white/10">
-              <h3 className="text-4xl font-bold text-[#5EA2FF]">
+          <div className="mt-12 sm:mt-20 grid grid-cols-1 sm:grid-cols-3 bg-white/5 border border-white/10 rounded-[20px] sm:rounded-[24px] overflow-hidden">
+            <div className="text-center py-6 sm:py-10 border-b sm:border-b-0 sm:border-r border-white/10">
+              <h3 className="text-3xl sm:text-4xl font-bold text-[#5EA2FF]">
                 2500+
               </h3>
 
-              <p className="text-slate-400 mt-2">
+              <p className="text-slate-400 mt-2 text-sm sm:text-base">
                 Graduates
               </p>
             </div>
 
-            <div className="text-center py-10 border-r border-white/10">
-              <h3 className="text-4xl font-bold text-[#5EA2FF]">
+            <div className="text-center py-6 sm:py-10 border-b sm:border-b-0 sm:border-r border-white/10">
+              <h3 className="text-3xl sm:text-4xl font-bold text-[#5EA2FF]">
                 85%
               </h3>
 
-              <p className="text-slate-400 mt-2">
+              <p className="text-slate-400 mt-2 text-sm sm:text-base">
                 Job Placement
               </p>
             </div>
 
-            <div className="text-center py-10">
-              <h3 className="text-4xl font-bold text-[#5EA2FF]">
+            <div className="text-center py-6 sm:py-10">
+              <h3 className="text-3xl sm:text-4xl font-bold text-[#5EA2FF]">
                 100+
               </h3>
 
-              <p className="text-slate-400 mt-2">
+              <p className="text-slate-400 mt-2 text-sm sm:text-base">
                 Hiring Partners
               </p>
             </div>
-
           </div>
         </Reveal>
-
       </div>
-
     </section>
   );
 }

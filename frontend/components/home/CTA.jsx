@@ -6,42 +6,29 @@ import { FiArrowRight } from "react-icons/fi";
 
 export default function CTA() {
   return (
-    <section className="bg-[#071224] py-24">
-
-      <div className="container-width">
-
+    <section className="bg-[#071224] py-16 sm:py-20 lg:py-24">
+      <div className="container-width px-4 sm:px-6">
         <Reveal>
-          <div
-            className="relative overflow-hidden rounded-[36px] border border-white/10 bg-gradient-to-br from-[#0057E7] via-[#004ac6] to-[#003b9e] px-8 py-20 lg:px-20 text-center"
-          >
+          <div className="relative overflow-hidden rounded-[24px] sm:rounded-[36px] border border-white/10 bg-gradient-to-br from-[#0057E7] via-[#004ac6] to-[#003b9e] px-5 sm:px-8 py-12 sm:py-16 lg:py-20 lg:px-20 text-center">
             {/* Glow Effects */}
+            <div className="absolute -top-20 -left-20 w-60 sm:w-80 h-60 sm:h-80 bg-blue-300/20 blur-[100px] sm:blur-[120px] rounded-full" />
 
-            <div className="absolute -top-20 -left-20 w-80 h-80 bg-blue-300/20 blur-[120px] rounded-full" />
-
-            <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-white/10 blur-[120px] rounded-full" />
+            <div className="absolute -bottom-20 -right-20 w-60 sm:w-80 h-60 sm:h-80 bg-white/10 blur-[100px] sm:blur-[120px] rounded-full" />
 
             {/* Content */}
-
             <div className="relative z-10 max-w-4xl mx-auto">
-
-              <span
-                className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 border border-white/20 text-blue-100 text-sm mb-6"
-              >
+              <span className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 border border-white/20 text-blue-100 text-xs sm:text-sm mb-5 sm:mb-6">
                 Take The Next Step
               </span>
 
-              <h2
-                className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight"
-              >
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-white leading-tight">
                 Ready To Start
                 <span className="block">
                   Your Journey?
                 </span>
               </h2>
 
-              <p
-                className="text-blue-100 text-lg leading-8 mt-6 max-w-3xl mx-auto"
-              >
+              <p className="text-blue-100 text-sm sm:text-base lg:text-lg leading-7 sm:leading-8 mt-5 sm:mt-6 max-w-3xl mx-auto">
                 Whether you are looking to build a technology career,
                 start a business, master AI, or learn practical vocational
                 skills, LASOP provides the training, mentorship and support
@@ -49,13 +36,10 @@ export default function CTA() {
               </p>
 
               {/* Buttons */}
-
-              <div
-                className="flex flex-col md:flex-row justify-center gap-4 mt-10"
-              >
+              <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 mt-8 sm:mt-10">
                 <Link
                   href="/courses"
-                  className="bg-white text-[#0057E7] px-8 py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:scale-105 transition-all duration-300"
+                  className="bg-white text-[#0057E7] px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:scale-105 transition-all duration-300 text-sm sm:text-base"
                 >
                   Explore Programs
                   <FiArrowRight />
@@ -63,26 +47,22 @@ export default function CTA() {
 
                 <Link
                   href="/webinar"
-                  className="border border-white/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/10 transition-all duration-300"
+                  className="border border-white/30 text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-semibold hover:bg-white/10 transition-all duration-300 text-sm sm:text-base"
                 >
                   Attend Webinar
                 </Link>
 
                 <Link
                   href="/contact"
-                  className="border border-white/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/10 transition-all duration-300"
+                  className="border border-white/30 text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-semibold hover:bg-white/10 transition-all duration-300 text-sm sm:text-base"
                 >
                   Contact Us
                 </Link>
               </div>
-
             </div>
-
           </div>
         </Reveal>
-
       </div>
-
     </section>
   );
 }
