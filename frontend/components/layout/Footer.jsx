@@ -130,7 +130,7 @@ export default function Footer() {
             <ul className="space-y-3">
               {socials.map(({ name, href, icon: Icon }) => (
                 <li key={name}>
-                  
+                  <Link
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -138,7 +138,7 @@ export default function Footer() {
                   >
                     <Icon className="text-sm shrink-0" />
                     {name}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
