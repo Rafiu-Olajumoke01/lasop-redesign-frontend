@@ -21,14 +21,13 @@ export default function Hero() {
 
       {/* Content */}
       <div className="relative z-10 container-width min-h-screen flex flex-col px-4 sm:px-6 pt-24 sm:pt-28 lg:pt-32">
-        {/* Main text — takes remaining space, vertically centered */}
         <div className="flex-1 flex items-center">
           <div className="max-w-lg py-8 sm:py-10">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-500/25 bg-blue-500/10 mb-5 sm:mb-7">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
               <span className="text-[11px] sm:text-xs text-blue-300 font-medium tracking-wide">
-                Career-focused tech training · Est. 2009
+                Career-focused tech training · Est. 2021
               </span>
             </div>
 
@@ -42,7 +41,7 @@ export default function Hero() {
 
             {/* Description */}
             <p className="text-slate-400 text-sm sm:text-base leading-relaxed mb-7 sm:mb-9 max-w-md">
-              LASOP has trained 15,000+ students across Nigeria in software
+              LASOP has trained 5,000+ students across Nigeria in software
               development, cybersecurity, AI, and data science — with real
               mentors and real career outcomes.
             </p>

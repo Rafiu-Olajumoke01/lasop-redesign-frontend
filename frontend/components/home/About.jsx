@@ -29,7 +29,7 @@ export default function About() {
               {/* Floating Card */}
               <div className="absolute -bottom-5 -right-3 sm:-bottom-8 sm:-right-6 bg-white/10 backdrop-blur-xl border border-white/10 rounded-md p-4 sm:p-6 shadow-xl">
                 <h3 className="text-xl sm:text-3xl font-bold text-white">
-                  17+
+                  5+
                 </h3>
 
                 <p className="text-slate-300 mt-1 text-xs sm:text-base">

@@ -6,9 +6,9 @@ const stats = [
     title: "5K+",
     subtitle: "Students Trained",
   },
-  {
+ {
     icon: <FiAward />,
-    title: "17+",
+    title: "5+",
     subtitle: "Years Experience",
   },
   {

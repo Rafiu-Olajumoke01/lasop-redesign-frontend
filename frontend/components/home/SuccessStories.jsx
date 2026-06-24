@@ -110,7 +110,7 @@ export default function SuccessStories() {
           <div className="mt-12 sm:mt-20 grid grid-cols-1 sm:grid-cols-3 bg-white/5 border border-white/10 rounded-[20px] sm:rounded-[24px] overflow-hidden">
             <div className="text-center py-6 sm:py-10 border-b sm:border-b-0 sm:border-r border-white/10">
               <h3 className="text-3xl sm:text-4xl font-bold text-[#5EA2FF]">
-                2500+
+                5000+
               </h3>
 
               <p className="text-slate-400 mt-2 text-sm sm:text-base">
