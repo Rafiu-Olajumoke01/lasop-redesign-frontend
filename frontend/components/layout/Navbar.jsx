@@ -78,7 +78,6 @@ export default function Navbar() {
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "auto";
-
     return () => {
       document.body.style.overflow = "auto";
     };
@@ -87,38 +86,32 @@ export default function Navbar() {
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-gradient-to-r from-[#071224]/95 via-[#0B1730]/95 to-[#0A1A38]/95 backdrop-blur-xl border-b border-blue-900/40 shadow-[0_8px_32px_rgba(0,0,0,0.18)]">
       <div className="container-width h-20 flex items-center justify-between">
+
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Image src="/logo.webp" alt="LASOP Logo" width={45} height={45} />
-
           <h1 className="text-2xl font-bold text-[#8BB8FF] tracking-wide">LASOP</h1>
         </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center gap-8">
-          {/* Courses */}
+
+          {/* Courses Dropdown */}
           <div className="relative">
             <div className="group">
-              {/* Trigger */}
               <button className="h-20 flex items-center gap-1 font-medium text-slate-200 hover:text-[#60A5FA] transition duration-300">
                 Courses
                 <FiChevronDown className="group-hover:rotate-180 transition duration-300" />
               </button>
 
-              {/* Dropdown */}
-              <div className="absolute left-1/2 top-full -translate-x-1/2 pt-1 opacity-0 invisible translate-y-2 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-300"
-              >
-                {/* Actual Card */}
-                <div className="w-[850px] bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-md shadow-2xl shadow-blue-200/40 p-4"
-                >
-                  {/* Header */}
+              <div className="absolute left-1/2 top-full -translate-x-1/2 pt-1 opacity-0 invisible translate-y-2 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-300">
+                <div className="w-[850px] bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-md shadow-2xl shadow-blue-200/40 p-4">
                   <div className="mb-6">
                     <h2 className="text-xl font-bold text-[#004ac6]">
                       Explore LASOP Programs
                     </h2>
                   </div>
 
-                  {/* Courses Grid */}
                   <div className="grid grid-cols-2 gap-4">
                     {courses.map((course) => (
                       <Link
@@ -133,16 +126,11 @@ export default function Navbar() {
                     ))}
                   </div>
 
-                  {/* Footer */}
                   <div className="border-t border-blue-200 mt-6 pt-5 flex items-center justify-between">
                     <p className="text-sm text-slate-600">
                       Find the perfect career path for you.
                     </p>
-
-                    <Link
-                      href="/courses"
-                      className="font-semibold text-[#004ac6] hover:underline"
-                    >
+                    <Link href="/courses" className="font-semibold text-[#004ac6] hover:underline">
                       View All Courses →
                     </Link>
                   </div>
@@ -151,28 +139,25 @@ export default function Navbar() {
             </div>
           </div>
 
+          {/* Desktop Links */}
           <Link href="/webinar" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
             Webinar
           </Link>
-
           <Link href="/calendar" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
             Calendar
           </Link>
-
           <Link href="/about" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
             About
           </Link>
-
           <Link href="/faqs" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
             FAQs
           </Link>
-
           <Link href="/contact" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
             Contact
           </Link>
         </nav>
 
-        {/* CTA */}
+        {/* Desktop CTA */}
         <Link
           href="/signup"
           className="hidden lg:flex items-center justify-center bg-[#0057E7] text-white px-5 py-2 rounded-lg font-semibold shadow-[0_10px_30px_rgba(0,87,231,0.35)] hover:bg-[#0A66FF] hover:-translate-y-[2px] transition-all duration-300"
@@ -180,10 +165,10 @@ export default function Navbar() {
           Sign Up
         </Link>
 
-        {/* Mobile */}
-        <button 
+        {/* Mobile Toggle */}
+        <button
           onClick={() => setIsOpen(!isOpen)}
-          className="lg:hidden text-3xl cursor-pointer"
+          className="lg:hidden text-3xl cursor-pointer text-white"
         >
           {isOpen ? "✕" : "☰"}
         </button>
@@ -193,8 +178,8 @@ export default function Navbar() {
         {isOpen && (
           <>
             {/* Overlay */}
-            <motion.div 
-              initial={{ opacity: 0 }} 
+            <motion.div
+              initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsOpen(false)}
@@ -206,104 +191,72 @@ export default function Navbar() {
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", stiffness: 300, damping: 30, }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="fixed top-0 right-0 h-screen w-[90%] max-w-[380px] bg-[#071224] border-l border-white/10 z-50 p-6 overflow-y-auto"
             >
-              {/* Header */}
+              {/* Drawer Header */}
               <div className="flex justify-between items-center mb-10">
-                <h2 className="text-white text-xl font-bold">
-                  LASOP
-                </h2>
-
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="text-white text-3xl"
-                >
+                <h2 className="text-white text-xl font-bold">LASOP</h2>
+                <button onClick={() => setIsOpen(false)} className="text-white text-3xl">
                   <FiX />
                 </button>
               </div>
 
               {/* Courses Accordion */}
               <div className="border-b border-white/10 pb-4">
-
                 <button
-                  onClick={() =>
-                    setShowCourses(!showCourses)
-                  }
+                  onClick={() => setShowCourses(!showCourses)}
                   className="w-full flex justify-between items-center text-white font-medium py-3"
                 >
                   Courses
-
-                  <FiChevronDown
-                    className={`
-                      transition-transform duration-300
-                      ${showCourses ? "rotate-180" : ""}
-                    `}
-                  />
+                  <FiChevronDown className={`transition-transform duration-300 ${showCourses ? "rotate-180" : ""}`} />
                 </button>
 
                 <AnimatePresence>
                   {showCourses && (
                     <motion.div
-                      initial={{ height: 0, opacity: 0, }}
-                      animate={{ height: "auto", opacity: 1, }}
-                      exit={{ height: 0, opacity: 0, }}
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
                       <div className="flex flex-col gap-3 pt-2 pl-3">
-
                         {courses.map((course) => (
                           <Link
                             key={course.title}
                             href={course.path}
-                            onClick={() =>
-                              setIsOpen(false)
-                            }
+                            onClick={() => setIsOpen(false)}
                             className="text-slate-300 hover:text-blue-400 text-sm"
                           >
                             {course.title}
                           </Link>
                         ))}
-
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
 
-              {/* Other Links */}
+              {/* Mobile Links */}
               <div className="flex flex-col mt-4">
-
-                <Link
-                  href="/webinar"
-                  className="py-4 text-white border-b border-white/10"
-                >
+                <Link href="/webinar" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
                   Webinar
                 </Link>
-
-                <Link
-                  href="/calendar"
-                  className="py-4 text-white border-b border-white/10"
-                >
+                <Link href="/calendar" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
                   Calendar
                 </Link>
-
-                <Link
-                  href="/about"
-                  className="py-4 text-white border-b border-white/10"
-                >
+                <Link href="/about" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
                   About
                 </Link>
-
-                <Link
-                  href="/faqs"
-                  className="py-4 text-white border-b border-white/10"
-                >
+                <Link href="/faqs" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
                   FAQs
+                </Link>
+                <Link href="/contact" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
+                  Contact
                 </Link>
               </div>
 
-              {/* CTA */}
+              {/* Mobile CTA */}
               <Link
                 href="/signup"
                 onClick={() => setIsOpen(false)}
