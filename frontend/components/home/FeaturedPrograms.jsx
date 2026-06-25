@@ -5,17 +5,43 @@ import Reveal from "../shared/Reveal";
 
 const programs = [
   {
-    title: "Full-stack Web Development & AI",
+    title: "Full-stack Web Software Development & AI",
     duration: "6 Months",
     fee: "₦450K",
     description:
-      "Learn React, JavaScript, Python, APIs and modern software development.",
+      "Learn React, JavaScript, Python and modern full-stack software development.",
   },
   {
-    title: "Data Science",
+    title: "Data Science with Python and R",
     duration: "5 Months",
     fee: "₦450K",
     description: "Master data analytics, machine learning and visualization.",
+  },
+  {
+    title: "AI Automation",
+    duration: "3 Months",
+    fee: "₦450K",
+    description: "Automate workflows and businesses using AI tools.",
+  },
+  {
+    title: "Business Startup and Growth to ₦50M",
+    duration: "6 Months",
+    fee: "₦450K",
+    description:
+      "Learn how to start, structure and scale a business to ₦50M and beyond.",
+  },
+  {
+    title: "Computer and Mobile Phone Repair",
+    duration: "6 Months",
+    fee: "₦450K",
+    description:
+      "Hands-on training in diagnosing and repairing computers and mobile devices.",
+  },
+  {
+    title: "Car Diagnosis & Programming",
+    duration: "2 Months",
+    fee: "₦450K",
+    description: "Master modern vehicle diagnostics and programming.",
   },
   {
     title: "Artificial Intelligence Engineering",
@@ -30,16 +56,18 @@ const programs = [
     description: "Learn ethical hacking, system security and cyber defense.",
   },
   {
-    title: "AI Automation",
+    title: "Project Management and Business Development",
     duration: "2 Months",
     fee: "₦250K",
-    description: "Automate workflows and businesses using AI tools.",
+    description:
+      "Gain practical skills in managing projects and growing businesses.",
   },
   {
-    title: "Car Diagnosis & Programming",
-    duration: "2 Months",
-    fee: "₦250K",
-    description: "Master modern vehicle diagnostics and programming.",
+    title: "Automobile Rewire and Electricals",
+    duration: "6 Months",
+    fee: "₦450K",
+    description:
+      "Learn automobile electrical systems, rewiring and fault diagnosis.",
   },
 ];
 
