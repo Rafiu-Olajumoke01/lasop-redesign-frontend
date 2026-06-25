@@ -22,9 +22,15 @@ const courses = [
     path: "/courses/data-science",
   },
   {
+    title: "Data Analysis",
+    duration: "3 Months",
+    fee: "₦450K",
+    path: "/courses/data-analysis",
+  },
+  {
     title: "AI Automation",
-    duration: "2 Months",
-    fee: "₦250K",
+    duration: "3 Months",
+    fee: "₦450K",
     path: "/courses/ai-automation",
   },
   {
@@ -36,13 +42,13 @@ const courses = [
   {
     title: "Computer & Mobile Phone Repair",
     duration: "6 Months",
-    fee: "₦550K",
+    fee: "₦450K",
     path: "/courses/phone-repair",
   },
   {
     title: "Car Diagnosis & Programming",
     duration: "2 Months",
-    fee: "₦250K",
+    fee: "₦450K",
     path: "/courses/car-diagnosis",
   },
   {
@@ -122,6 +128,9 @@ export default function Navbar() {
                         <h3 className="font-semibold text-slate-800 group-hover/item:text-white transition">
                           {course.title}
                         </h3>
+                        <p className="text-xs text-slate-500 group-hover/item:text-blue-200 mt-1 transition">
+                          {course.duration} · {course.fee}
+                        </p>
                       </Link>
                     ))}
                   </div>
@@ -229,6 +238,9 @@ export default function Navbar() {
                             className="text-slate-300 hover:text-blue-400 text-sm"
                           >
                             {course.title}
+                            <span className="block text-xs text-slate-500">
+                              {course.duration} · {course.fee}
+                            </span>
                           </Link>
                         ))}
                       </div>
