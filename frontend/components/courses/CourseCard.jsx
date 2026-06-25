@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export default function CourseCard({ course }) {
   const imageUrl = course.image
-    ? `http://localhost:8000${course.image}`
+    ? `${process.env.NEXT_PUBLIC_API_URL}${course.image}`
     : "/placeholder.jpg";
 
   return (

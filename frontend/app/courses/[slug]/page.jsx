@@ -2,7 +2,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 
 async function getCourse(slug) {
-  const response = await fetch(`http://localhost:8000/api/courses/${slug}/`, {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/courses/${slug}/`, {
     cache: "no-store",
   });
 
@@ -23,7 +23,7 @@ export default async function CourseDetailsPage({ params }) {
 
   const imageUrl = course.image?.startsWith("http")
     ? course.image
-    : `http://localhost:8000${course.image}`;
+    : `${process.env.NEXT_PUBLIC_API_URL}${course.image}`;
 
   return (
     <main className="bg-[#071224] min-h-screen">
