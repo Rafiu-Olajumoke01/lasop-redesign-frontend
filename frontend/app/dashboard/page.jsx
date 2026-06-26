@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
-// ─── Payment Transfer Component ──────────────────────────────────────────────
+// ─── Payment Transfer ─────────────────────────────────────────────────────────
 
 function PaymentTransfer({ applicationId, authToken, onClose }) {
   const [payment, setPayment] = useState(null);
@@ -51,7 +51,6 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
     };
   }, [initiatePayment]);
 
-  // countdown
   useEffect(() => {
     clearInterval(timerRef.current);
     if (!payment || payment.status === 'paid' || payment.status === 'expired') return;
@@ -68,7 +67,6 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
     return () => clearInterval(timerRef.current);
   }, [payment]);
 
-  // polling
   useEffect(() => {
     if (!payment || payment.status === 'paid' || payment.status === 'expired') {
       clearInterval(pollRef.current);
@@ -118,38 +116,29 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
     return `${m}:${s}`;
   };
 
-  const urgency = secondsLeft < 300; // last 5 mins
+  const urgency = secondsLeft < 300;
 
   return (
     <div className="mt-3 rounded-xl border border-[#1C2330] bg-[#0D1118] overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between px-5 py-3.5 bg-[#0E121A] border-b border-[#1C2330]">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-[#5B8CFF] inline-block" />
           <span className="text-[11px] text-[#6B7585] font-mono">payment.initiate()</span>
         </div>
-        <button
-          onClick={onClose}
-          className="text-[#5A6275] hover:text-[#E6E9EF] text-xs font-mono transition"
-        >
+        <button onClick={onClose} className="text-[#5A6275] hover:text-[#E6E9EF] text-xs font-mono transition">
           ✕ close
         </button>
       </div>
 
       <div className="p-5">
         {loading && (
-          <p className="text-[#6B7585] text-sm font-mono animate-pulse">
-            fetching_account_details...
-          </p>
+          <p className="text-[#6B7585] text-sm font-mono animate-pulse">fetching_account_details...</p>
         )}
 
         {error && (
           <div className="bg-[#2A1414] border border-[#501313] rounded-lg px-4 py-3 mb-3">
             <p className="text-[#F09595] text-xs font-mono mb-2">{error}</p>
-            <button
-              onClick={initiatePayment}
-              className="text-xs text-[#5B8CFF] font-mono hover:text-[#7FAAFF] transition"
-            >
+            <button onClick={initiatePayment} className="text-xs text-[#5B8CFF] font-mono hover:text-[#7FAAFF] transition">
               retry()
             </button>
           </div>
@@ -160,22 +149,15 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
             {payment.status === 'paid' && (
               <div className="bg-[#14201A] border border-[#2A4034] rounded-lg px-4 py-4 text-center">
                 <p className="text-[#7CFF6B] font-mono text-sm mb-1">payment.status === "paid" ✓</p>
-                <p className="text-[#8B95A7] text-xs">
-                  ₦{Number(payment.amount).toLocaleString()} received and confirmed.
-                </p>
+                <p className="text-[#8B95A7] text-xs">₦{Number(payment.amount).toLocaleString()} received and confirmed.</p>
               </div>
             )}
 
             {payment.status === 'expired' && (
               <div className="bg-[#1E1A0E] border border-[#3A2E0A] rounded-lg px-4 py-4">
                 <p className="text-[#FFB454] font-mono text-sm mb-1">session.expired()</p>
-                <p className="text-[#8B95A7] text-xs mb-3">
-                  Your 30-minute window ended. Start a new one to continue.
-                </p>
-                <button
-                  onClick={initiatePayment}
-                  className="text-xs text-[#5B8CFF] font-mono hover:text-[#7FAAFF] transition border border-[#1C2B4A] hover:border-[#2A3F6A] px-3 py-1.5 rounded-md"
-                >
+                <p className="text-[#8B95A7] text-xs mb-3">Your 30-minute window ended. Start a new one to continue.</p>
+                <button onClick={initiatePayment} className="text-xs text-[#5B8CFF] font-mono hover:text-[#7FAAFF] transition border border-[#1C2B4A] hover:border-[#2A3F6A] px-3 py-1.5 rounded-md">
                   new_session()
                 </button>
               </div>
@@ -183,16 +165,9 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
 
             {!['paid', 'expired'].includes(payment.status) && (
               <div className="space-y-4">
-                {/* Timer bar */}
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[11px] text-[#6B7585] font-mono">session.expires_in</span>
-                  <span
-                    className={`font-mono text-sm px-3 py-1 rounded-md ${
-                      urgency
-                        ? 'text-[#F09595] bg-[#2A1414] border border-[#501313]'
-                        : 'text-[#7CFF6B] bg-[#14201A] border border-[#2A4034]'
-                    }`}
-                  >
+                  <span className={`font-mono text-sm px-3 py-1 rounded-md ${urgency ? 'text-[#F09595] bg-[#2A1414] border border-[#501313]' : 'text-[#7CFF6B] bg-[#14201A] border border-[#2A4034]'}`}>
                     {formatTime(secondsLeft)}
                   </span>
                 </div>
@@ -203,7 +178,6 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
                   />
                 </div>
 
-                {/* Account details */}
                 <div className="bg-[#11151D] border border-[#1C2330] rounded-lg divide-y divide-[#1C2330]">
                   <div className="flex items-center justify-between px-4 py-3">
                     <span className="text-[#6B7585] text-xs font-mono">bank</span>
@@ -212,22 +186,15 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
                   <div className="flex items-center justify-between px-4 py-3">
                     <span className="text-[#6B7585] text-xs font-mono">account_number</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[#E6E9EF] font-mono text-sm tracking-widest">
-                        {payment.account_number}
-                      </span>
-                      <button
-                        onClick={copyAccNumber}
-                        className="text-[10px] text-[#5B8CFF] font-mono hover:text-[#7FAAFF] transition"
-                      >
+                      <span className="text-[#E6E9EF] font-mono text-sm tracking-widest">{payment.account_number}</span>
+                      <button onClick={copyAccNumber} className="text-[10px] text-[#5B8CFF] font-mono hover:text-[#7FAAFF] transition">
                         {copied ? 'copied ✓' : 'copy'}
                       </button>
                     </div>
                   </div>
                   <div className="flex items-center justify-between px-4 py-3">
                     <span className="text-[#6B7585] text-xs font-mono">amount</span>
-                    <span className="text-[#5B8CFF] font-medium text-sm">
-                      ₦{Number(payment.amount).toLocaleString()}
-                    </span>
+                    <span className="text-[#5B8CFF] font-medium text-sm">₦{Number(payment.amount).toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -238,9 +205,7 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
                 {payment.status === 'awaiting_confirmation' ? (
                   <div className="flex items-center gap-2.5 bg-[#0E1829] border border-[#1C2B4A] rounded-lg px-4 py-3">
                     <span className="w-2 h-2 rounded-full bg-[#5B8CFF] animate-pulse shrink-0" />
-                    <p className="text-[#7FAAFF] text-xs font-mono">
-                      verifying... updates automatically when confirmed.
-                    </p>
+                    <p className="text-[#7FAAFF] text-xs font-mono">verifying... updates automatically when confirmed.</p>
                   </div>
                 ) : (
                   <button
@@ -260,6 +225,91 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
   );
 }
 
+// ─── Course Card ──────────────────────────────────────────────────────────────
+// Defined OUTSIDE DashboardPage so React doesn't recreate it on every render
+
+function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemove }) {
+  const isOnline = app.mode_of_learning === 'online';
+  const slug = (app.course_detail?.title || 'course')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  const isPaymentOpen = openPayment === app.id;
+
+  return (
+    <div
+      className={
+        'bg-[#11151D] border border-[#1C2330] rounded-lg overflow-hidden hover:border-[#2A2F3A] transition group ' +
+        (featured ? 'md:col-span-2' : '')
+      }
+    >
+      <div className="flex items-center gap-1.5 px-3 py-2 bg-[#0E121A] border-b border-[#1C2330]">
+        <span className="w-[7px] h-[7px] rounded-full bg-[#FF5F57] inline-block" />
+        <span className="w-[7px] h-[7px] rounded-full bg-[#FEBC2E] inline-block" />
+        <span className="w-[7px] h-[7px] rounded-full bg-[#28C840] inline-block" />
+        <span className="ml-1.5 text-[11px] text-[#6B7585] font-mono truncate">{slug}.course</span>
+        <button
+          onClick={() => onRemove(app.id)}
+          aria-label="Remove course"
+          className="ml-auto text-[11px] text-[#5A6275] hover:text-[#F09595] transition shrink-0 opacity-60 group-hover:opacity-100"
+        >
+          remove()
+        </button>
+      </div>
+
+      <div className={featured ? 'p-5 md:p-6' : 'p-4'}>
+        <div className={featured ? 'flex items-start justify-between gap-6 flex-wrap' : ''}>
+          <div className={featured ? 'flex-1 min-w-[220px]' : ''}>
+            <h3 className={'text-[#F1F3F7] font-medium leading-snug mb-2.5 ' + (featured ? 'text-base' : 'text-sm')}>
+              {app.course_detail?.title}
+            </h3>
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className={'text-[11px] px-2.5 py-1 rounded-md font-mono ' + (isOnline ? 'bg-[#14201A] text-[#7CFF6B]' : 'bg-[#261B0E] text-[#FFB454]')}>
+                {app.mode_of_learning}
+              </span>
+              <span className="text-[11px] text-[#6B7585]">{app.course_detail?.duration}</span>
+            </div>
+            {app.location_detail && (
+              <p className="text-[11px] text-[#6B7585] mb-2.5">
+                {app.location_detail.name} — {app.location_detail.address}
+              </p>
+            )}
+          </div>
+
+          <div className={featured ? 'flex flex-col items-end justify-between gap-2 shrink-0' : 'flex items-center justify-between pt-2.5 border-t border-[#1C2330] mt-0'}>
+            <p className={'text-[#5B8CFF] font-medium ' + (featured ? 'text-lg' : 'text-sm')}>
+              ₦{Number(app.course_detail?.fee).toLocaleString()}
+            </p>
+            <p className="text-[#6B7585] text-[11px]">
+              {new Date(app.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          </div>
+        </div>
+
+        {/* Pay button */}
+        <div className="mt-4 pt-3.5 border-t border-[#1C2330]">
+          <button
+            onClick={() => setOpenPayment(isPaymentOpen ? null : app.id)}
+            className={`text-xs font-mono px-3 py-2 rounded-md border transition ${
+              isPaymentOpen
+                ? 'text-[#6B7585] border-[#2A2F3A] hover:text-[#F09595] hover:border-[#501313]'
+                : 'text-[#5B8CFF] border-[#1C2B4A] hover:border-[#2A3F6A] hover:text-[#7FAAFF]'
+            }`}
+          >
+            {isPaymentOpen ? 'cancel_payment()' : 'pay_now()'}
+          </button>
+        </div>
+
+        {isPaymentOpen && (
+          <PaymentTransfer
+            applicationId={app.id}
+            authToken={token}
+            onClose={() => setOpenPayment(null)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard Page ───────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -268,7 +318,7 @@ export default function DashboardPage() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [openPayment, setOpenPayment] = useState(null); // applicationId
+  const [openPayment, setOpenPayment] = useState(null);
   const [token, setToken] = useState('');
 
   useEffect(() => {
@@ -338,95 +388,8 @@ export default function DashboardPage() {
   const onlineDash = CIRC * onlinePct;
   const physicalDash = CIRC * physicalPct;
 
-  const slugify = (title) =>
-    (title || 'course').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-
-  const CourseCard = ({ app, featured }) => {
-    const isOnline = app.mode_of_learning === 'online';
-    const slug = slugify(app.course_detail?.title);
-    const isPaymentOpen = openPayment === app.id;
-
-    return (
-      <div
-        className={
-          'bg-[#11151D] border border-[#1C2330] rounded-lg overflow-hidden hover:border-[#2A2F3A] transition group ' +
-          (featured ? 'md:col-span-2' : '')
-        }
-      >
-        {/* macOS-style tab bar */}
-        <div className="flex items-center gap-1.5 px-3 py-2 bg-[#0E121A] border-b border-[#1C2330]">
-          <span className="w-[7px] h-[7px] rounded-full bg-[#FF5F57] inline-block" />
-          <span className="w-[7px] h-[7px] rounded-full bg-[#FEBC2E] inline-block" />
-          <span className="w-[7px] h-[7px] rounded-full bg-[#28C840] inline-block" />
-          <span className="ml-1.5 text-[11px] text-[#6B7585] font-mono truncate">{slug}.course</span>
-          <button
-            onClick={() => handleRemoveCourse(app.id)}
-            aria-label="Remove course"
-            className="ml-auto text-[11px] text-[#5A6275] hover:text-[#F09595] transition shrink-0 opacity-60 group-hover:opacity-100"
-          >
-            remove()
-          </button>
-        </div>
-
-        <div className={featured ? 'p-5 md:p-6' : 'p-4'}>
-          <div className={featured ? 'flex items-start justify-between gap-6 flex-wrap' : ''}>
-            <div className={featured ? 'flex-1 min-w-[220px]' : ''}>
-              <h3 className={'text-[#F1F3F7] font-medium leading-snug mb-2.5 ' + (featured ? 'text-base' : 'text-sm')}>
-                {app.course_detail?.title}
-              </h3>
-              <div className="flex items-center gap-2 mb-2.5">
-                <span className={'text-[11px] px-2.5 py-1 rounded-md font-mono ' + (isOnline ? 'bg-[#14201A] text-[#7CFF6B]' : 'bg-[#261B0E] text-[#FFB454]')}>
-                  {app.mode_of_learning}
-                </span>
-                <span className="text-[11px] text-[#6B7585]">{app.course_detail?.duration}</span>
-              </div>
-              {app.location_detail && (
-                <p className="text-[11px] text-[#6B7585] mb-2.5">
-                  {app.location_detail.name} — {app.location_detail.address}
-                </p>
-              )}
-            </div>
-
-            <div className={featured ? 'flex flex-col items-end justify-between gap-2 shrink-0' : 'flex items-center justify-between pt-2.5 border-t border-[#1C2330] mt-0'}>
-              <p className={'text-[#5B8CFF] font-medium ' + (featured ? 'text-lg' : 'text-sm')}>
-                ₦{Number(app.course_detail?.fee).toLocaleString()}
-              </p>
-              <p className="text-[#6B7585] text-[11px]">
-                {new Date(app.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </p>
-            </div>
-          </div>
-
-          {/* Pay button */}
-          <div className="mt-4 pt-3.5 border-t border-[#1C2330]">
-            <button
-              onClick={() => setOpenPayment(isPaymentOpen ? null : app.id)}
-              className={`text-xs font-mono px-3 py-2 rounded-md border transition ${
-                isPaymentOpen
-                  ? 'text-[#6B7585] border-[#2A2F3A] hover:text-[#F09595] hover:border-[#501313]'
-                  : 'text-[#5B8CFF] border-[#1C2B4A] hover:border-[#2A3F6A] hover:text-[#7FAAFF]'
-              }`}
-            >
-              {isPaymentOpen ? 'cancel_payment()' : 'pay_now()'}
-            </button>
-          </div>
-
-          {/* Inline payment panel */}
-          {isPaymentOpen && (
-            <PaymentTransfer
-              applicationId={app.id}
-              authToken={token}
-              onClose={() => setOpenPayment(null)}
-            />
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <main className="min-h-screen bg-[#0B0E14]">
-      {/* Top bar */}
       <div className="border-b border-[#1C2330] bg-[#0E121A]">
         <div className="max-w-5xl mx-auto px-5 md:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -438,25 +401,20 @@ export default function DashboardPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-5 md:px-8 pt-12 pb-16">
-        {/* Profile card */}
+        {/* Profile */}
         <div className="flex items-center justify-between bg-[#11151D] border border-[#1C2330] rounded-xl px-6 py-6 mb-8">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-md bg-[#14201A] border border-[#2A4034] flex items-center justify-center font-mono text-base font-medium text-[#7CFF6B] shrink-0">
               {initials || '··'}
             </div>
             <div>
-              <p className="text-[#F1F3F7] font-medium text-lg leading-tight">
-                {user?.first_name} {user?.last_name}
-              </p>
+              <p className="text-[#F1F3F7] font-medium text-lg leading-tight">{user?.first_name} {user?.last_name}</p>
               <p className="text-[#6B7585] text-xs font-mono mt-1">
                 {user?.email}{user?.phone_number ? ` · ${user.phone_number}` : ''}
               </p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-xs text-[#8B95A7] hover:text-[#E6E9EF] border border-[#2A2F3A] hover:border-[#3A4050] px-4 py-2.5 rounded-md transition shrink-0"
-          >
+          <button onClick={handleLogout} className="text-xs text-[#8B95A7] hover:text-[#E6E9EF] border border-[#2A2F3A] hover:border-[#3A4050] px-4 py-2.5 rounded-md transition shrink-0">
             Log out
           </button>
         </div>
@@ -519,7 +477,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Course list */}
+        {/* Courses */}
         <div className="flex items-center justify-between mb-3.5">
           <h2 className="text-[#F1F3F7] font-medium text-[15px]">My courses</h2>
           <Link href="/apply" className="text-[#7CFF6B] text-xs font-mono hover:text-[#9AFF8C] transition">
@@ -536,11 +494,26 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : count === 1 ? (
-          <CourseCard app={applications[0]} featured />
+          <CourseCard
+            app={applications[0]}
+            featured
+            token={token}
+            openPayment={openPayment}
+            setOpenPayment={setOpenPayment}
+            onRemove={handleRemoveCourse}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {applications.map((app, i) => (
-              <CourseCard key={app.id} app={app} featured={count % 2 !== 0 && i === count - 1} />
+              <CourseCard
+                key={app.id}
+                app={app}
+                featured={count % 2 !== 0 && i === count - 1}
+                token={token}
+                openPayment={openPayment}
+                setOpenPayment={setOpenPayment}
+                onRemove={handleRemoveCourse}
+              />
             ))}
           </div>
         )}
