@@ -9,17 +9,21 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 function getApplicantName(a) {
   const s = a.student_detail || a.student || a.user_detail || a.user || {};
-  if (s.first_name || s.last_name) return `${s.first_name || ''} ${s.last_name || ''}`.trim();
-  return s.email || a.applicant_name || a.email || '—';
+  const full = `${s.first_name || ''} ${s.last_name || ''}`.trim();
+  if (full) return full;
+  if (s.email) return s.email;
+  if (a.applicant_name) return a.applicant_name;
+  if (a.email) return a.email;
+  return null; // null = don't show
 }
 
 function getApplicantEmail(a) {
   const s = a.student_detail || a.student || a.user_detail || a.user || {};
-  return s.email || a.email || '—';
+  return s.email || a.email || null;
 }
 
 function getCourseTitle(a) {
-  return a.course_detail?.title || a.course?.title || a.course_title || '—';
+  return a.course_detail?.title || a.course?.title || a.course_title || null;
 }
 
 function getCourseFee(a) {
@@ -31,15 +35,20 @@ function formatMoney(n) {
 }
 
 function formatDate(d) {
-  if (!d) return '—';
+  if (!d) return null;
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
+
+// ─── Design tokens ────────────────────────────────────────────────────────────
+// Dark theme: bg #0A0F1E (near-black navy), surface #111827, border #1F2937
+// Accent: electric blue #3B82F6 → indigo #6366F1
+// Text: primary #F1F5F9, secondary #64748B, muted #374151
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
 
 function Card({ children, className = '' }) {
   return (
-    <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 ${className}`}>
+    <div className={`bg-[#111827] border border-[#1F2937] rounded-2xl ${className}`}>
       {children}
     </div>
   );
@@ -47,58 +56,63 @@ function Card({ children, className = '' }) {
 
 function CardHeader({ title, action }) {
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-      <h3 className="text-sm font-semibold text-slate-800 tracking-wide uppercase">{title}</h3>
+    <div className="flex items-center justify-between px-6 py-4 border-b border-[#1F2937]">
+      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">{title}</h3>
       {action}
     </div>
   );
 }
 
-const STAT_ACCENTS = [
-  'from-blue-500 to-indigo-500',
-  'from-violet-500 to-purple-500',
-  'from-amber-400 to-orange-500',
-  'from-emerald-400 to-teal-500',
+const STAT_GRADIENTS = [
+  { from: '#3B82F6', to: '#6366F1' },
+  { from: '#8B5CF6', to: '#A855F7' },
+  { from: '#F59E0B', to: '#F97316' },
+  { from: '#10B981', to: '#14B8A6' },
 ];
 
 function StatCard({ label, value, accentIndex = 0 }) {
-  const gradient = STAT_ACCENTS[accentIndex % STAT_ACCENTS.length];
+  const g = STAT_GRADIENTS[accentIndex % STAT_GRADIENTS.length];
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 relative overflow-hidden">
-      <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${gradient}`} />
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">{label}</p>
-      <p className="text-3xl font-black text-slate-900 leading-none">{value}</p>
+    <div className="bg-[#111827] border border-[#1F2937] rounded-2xl p-5 relative overflow-hidden">
+      <div
+        className="absolute top-0 left-0 w-full h-[3px]"
+        style={{ background: `linear-gradient(90deg, ${g.from}, ${g.to})` }}
+      />
+      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3">{label}</p>
+      <p className="text-3xl font-black text-slate-100 leading-none">{value}</p>
     </div>
   );
 }
 
-function Badge({ status }) {
+function Pill({ children, color = 'slate' }) {
   const map = {
-    paid:                  'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    approved:              'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    pending:               'bg-amber-50 text-amber-700 border border-amber-200',
-    awaiting_confirmation: 'bg-amber-50 text-amber-700 border border-amber-200',
-    expired:               'bg-rose-50 text-rose-700 border border-rose-200',
-    rejected:              'bg-rose-50 text-rose-700 border border-rose-200',
-    online:                'bg-blue-50 text-blue-700 border border-blue-200',
-    physical:              'bg-slate-100 text-slate-600 border border-slate-200',
+    blue:   'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    indigo: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+    amber:  'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    emerald:'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    rose:   'bg-rose-500/10 text-rose-400 border-rose-500/20',
+    slate:  'bg-slate-500/10 text-slate-400 border-slate-500/20',
   };
-  const cls = map[status] || 'bg-slate-100 text-slate-600 border border-slate-200';
   return (
-    <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full tracking-wide ${cls}`}>
-      {(status || 'unknown').replace(/_/g, ' ')}
+    <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border tracking-wide ${map[color] || map.slate}`}>
+      {children}
     </span>
   );
+}
+
+function ModePill({ mode }) {
+  if (!mode) return null;
+  return <Pill color={mode === 'online' ? 'blue' : 'slate'}>{mode}</Pill>;
 }
 
 function EmptyState({ title, hint }) {
   return (
     <div className="py-20 text-center">
-      <div className="w-12 h-12 rounded-2xl bg-slate-100 mx-auto mb-4 flex items-center justify-center text-2xl">
-        ◧
+      <div className="w-12 h-12 rounded-2xl bg-[#1F2937] mx-auto mb-4 flex items-center justify-center text-xl">
+        📭
       </div>
-      <p className="text-slate-700 font-semibold mb-1">{title}</p>
-      {hint && <p className="text-slate-400 text-sm">{hint}</p>}
+      <p className="text-slate-300 font-semibold mb-1">{title}</p>
+      {hint && <p className="text-slate-500 text-sm">{hint}</p>}
     </div>
   );
 }
@@ -106,8 +120,8 @@ function EmptyState({ title, hint }) {
 function Spinner({ text }) {
   return (
     <div className="py-20 text-center">
-      <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin mx-auto mb-3" />
-      <p className="text-slate-400 text-sm">{text}</p>
+      <div className="w-8 h-8 rounded-full border-2 border-[#1F2937] border-t-blue-500 animate-spin mx-auto mb-3" />
+      <p className="text-slate-500 text-sm">{text}</p>
     </div>
   );
 }
@@ -115,8 +129,8 @@ function Spinner({ text }) {
 function ErrorBanner({ message }) {
   if (!message) return null;
   return (
-    <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-3 mb-5">
-      <span className="text-rose-400 mt-0.5">⚠</span>
+    <div className="flex items-start gap-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm rounded-xl px-4 py-3 mb-5">
+      <span className="mt-0.5 shrink-0">⚠</span>
       {message}
     </div>
   );
@@ -128,7 +142,7 @@ function PrimaryButton({ children, className = '', ...props }) {
       {...props}
       className={`bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500
         disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl
-        shadow-sm shadow-blue-200 transition-all active:scale-95 ${className}`}
+        shadow-lg shadow-blue-900/40 transition-all active:scale-95 ${className}`}
     >
       {children}
     </button>
@@ -139,8 +153,8 @@ function SecondaryButton({ children, ...props }) {
   return (
     <button
       {...props}
-      className="bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium px-4 py-2.5
-        rounded-xl border border-slate-200 hover:border-slate-300 transition-all active:scale-95"
+      className="bg-[#1F2937] hover:bg-[#374151] text-slate-300 text-sm font-medium px-4 py-2.5
+        rounded-xl border border-[#374151] hover:border-[#4B5563] transition-all active:scale-95"
     >
       {children}
     </button>
@@ -152,7 +166,7 @@ function LinkButton({ children, danger, ...props }) {
     <button
       {...props}
       className={`text-[13px] font-semibold transition hover:underline underline-offset-2 ${
-        danger ? 'text-rose-500 hover:text-rose-600' : 'text-blue-600 hover:text-blue-700'
+        danger ? 'text-rose-400 hover:text-rose-300' : 'text-blue-400 hover:text-blue-300'
       }`}
     >
       {children}
@@ -161,13 +175,13 @@ function LinkButton({ children, danger, ...props }) {
 }
 
 const inputClass =
-  'w-full bg-slate-50 border border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 ' +
-  'outline-none rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition';
+  'w-full bg-[#0A0F1E] border border-[#1F2937] focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 ' +
+  'outline-none rounded-xl px-3.5 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 transition';
 
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{label}</label>
+      <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-widest">{label}</label>
       {children}
     </div>
   );
@@ -175,14 +189,14 @@ function Field({ label, children }) {
 
 function Modal({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-          <h3 className="text-base font-bold text-slate-900">{title}</h3>
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-[#111827] border border-[#1F2937] rounded-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[#1F2937]">
+          <h3 className="text-base font-bold text-slate-100">{title}</h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400
-              hover:text-slate-700 hover:bg-slate-100 transition text-sm"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500
+              hover:text-slate-200 hover:bg-[#1F2937] transition text-sm"
           >
             ✕
           </button>
@@ -195,27 +209,24 @@ function Modal({ title, onClose, children }) {
 
 function TagChipInput({ label, value = [], onChange, placeholder }) {
   const [draft, setDraft] = useState('');
-
   const addTag = () => {
     const v = draft.trim();
     if (!v || value.includes(v)) { setDraft(''); return; }
     onChange([...value, v]);
     setDraft('');
   };
-
   const removeTag = (tag) => onChange(value.filter((t) => t !== tag));
-
   return (
     <div>
-      <label className="block text-[13px] font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">{label}</label>
+      <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-widest">{label}</label>
       <div className="flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
         {value.map((tag) => (
-          <span key={tag} className="flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 text-[12px] px-2.5 py-1 rounded-full font-medium">
+          <span key={tag} className="flex items-center gap-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[12px] px-2.5 py-1 rounded-full font-medium">
             {tag}
-            <button type="button" onClick={() => removeTag(tag)} className="text-blue-400 hover:text-rose-500 transition" aria-label={`Remove ${tag}`}>✕</button>
+            <button type="button" onClick={() => removeTag(tag)} className="text-blue-500 hover:text-rose-400 transition">✕</button>
           </span>
         ))}
-        {value.length === 0 && <span className="text-slate-400 text-[12px] self-center">None added yet</span>}
+        {value.length === 0 && <span className="text-slate-600 text-[12px] self-center">None added yet</span>}
       </div>
       <div className="flex gap-2">
         <input
@@ -231,6 +242,18 @@ function TagChipInput({ label, value = [], onChange, placeholder }) {
   );
 }
 
+function PageHeader({ title, subtitle, children }) {
+  return (
+    <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
+      <div>
+        <h2 className="text-xl font-black text-slate-100">{title}</h2>
+        {subtitle && <p className="text-slate-500 text-sm mt-0.5">{subtitle}</p>}
+      </div>
+      {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
+    </div>
+  );
+}
+
 // ─── Data hook ────────────────────────────────────────────────────────────────
 
 function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }, token) {
@@ -239,13 +262,12 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
   const [error, setError] = useState('');
 
   const refresh = useCallback(async () => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const res = await fetch(`${API_BASE}${basePath}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error(`Could not load ${label} (status ${res.status}).`);
+      if (!res.ok) throw new Error(`Could not load ${label} (${res.status}).`);
       const data = await res.json();
       setItems(Array.isArray(data) ? data : data.results || []);
     } catch (err) {
@@ -255,12 +277,10 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
     }
   }, [basePath, label, token]);
 
-  useEffect(() => {
-    if (token) refresh();
-  }, [token, refresh]);
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
 
   const save = async (payload, existingItem) => {
-    if (existingItem && !supportsUpdate) throw new Error(`Updating ${label} isn't supported by the API yet.`);
+    if (existingItem && !supportsUpdate) throw new Error(`Updating ${label} isn't supported yet.`);
     const url = existingItem ? `${API_BASE}${detailPath(existingItem)}` : `${API_BASE}${basePath}`;
     const res = await fetch(url, {
       method: existingItem ? 'PATCH' : 'POST',
@@ -280,7 +300,7 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
     setItems((prev) => prev.filter((i) => i.id !== item.id));
   };
 
-  return { items, loading, error, refresh, save, remove, supportsUpdate };
+  return { items, loading, error, refresh, save, remove };
 }
 
 // ─── Overview ─────────────────────────────────────────────────────────────────
@@ -297,42 +317,52 @@ function OverviewTab({ courses, locations, applications }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total courses"     value={courses.items.length}     accentIndex={0} />
-        <StatCard label="Locations"         value={locations.items.length}   accentIndex={1} />
-        <StatCard label="Pending payments"  value={pending}                  accentIndex={2} />
+        <StatCard label="Courses"           value={courses.items.length}      accentIndex={0} />
+        <StatCard label="Locations"         value={locations.items.length}    accentIndex={1} />
+        <StatCard label="Pending payments"  value={pending}                   accentIndex={2} />
         <StatCard label="Revenue collected" value={formatMoney(totalRevenue)} accentIndex={3} />
       </div>
 
       <Card>
         <CardHeader title="Recent applications" />
-        <div className="p-6">
+        <div className="p-2">
           {applications.loading ? (
-            <Spinner text="Loading applications…" />
+            <Spinner text="Loading…" />
           ) : applications.items.length === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-8">No applications yet.</p>
+            <EmptyState title="No applications yet" />
           ) : (
-            <div className="space-y-1">
-              {applications.items.slice(0, 5).map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-slate-50 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500
-                      flex items-center justify-center text-white text-xs font-bold shrink-0">
-                      {getApplicantName(a).charAt(0).toUpperCase() || '?'}
+            <div>
+              {applications.items.slice(0, 5).map((a) => {
+                const name    = getApplicantName(a);
+                const course  = getCourseTitle(a);
+                const date    = formatDate(a.created_at);
+                const mode    = a.mode_of_learning;
+                return (
+                  <div
+                    key={a.id}
+                    className="flex items-center justify-between px-4 py-3 rounded-xl hover:bg-[#1F2937] transition"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Only show avatar if we actually have a name */}
+                      {name && (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600
+                          flex items-center justify-center text-white text-xs font-bold shrink-0">
+                          {name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        {name && <p className="text-slate-200 text-sm font-semibold leading-none mb-1 truncate">{name}</p>}
+                        {course && <p className="text-slate-500 text-xs truncate">{course}</p>}
+                        {!name && !course && <p className="text-slate-600 text-xs italic">No details available</p>}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-slate-900 text-sm font-semibold leading-none mb-1">{getApplicantName(a)}</p>
-                      <p className="text-slate-400 text-xs">{getCourseTitle(a)}</p>
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                      {date && <span className="text-slate-600 text-xs hidden sm:block">{date}</span>}
+                      {mode && <ModePill mode={mode} />}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-slate-400 text-xs hidden sm:block">{formatDate(a.created_at)}</span>
-                    <Badge status={a.payment_status} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -346,10 +376,10 @@ function OverviewTab({ courses, locations, applications }) {
 const emptyCourse = { title: '', description: '', duration: '', fee: '', mode_of_learning: 'online', topics: [] };
 
 function CoursesTab({ courses }) {
-  const [modal, setModal] = useState(null);
-  const [form, setForm] = useState(emptyCourse);
+  const [modal, setModal]   = useState(null);
+  const [form, setForm]     = useState(emptyCourse);
   const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState('');
+  const [err, setErr]       = useState('');
 
   const openNew  = () => { setForm(emptyCourse); setModal('new'); setErr(''); };
   const openEdit = (c) => { setForm({ ...emptyCourse, ...c }); setModal(c); setErr(''); };
@@ -357,10 +387,8 @@ function CoursesTab({ courses }) {
 
   const handleSave = async () => {
     setSaving(true); setErr('');
-    try {
-      await courses.save(form, modal === 'new' ? null : modal);
-      close();
-    } catch (e) { setErr(e.message); }
+    try { await courses.save(form, modal === 'new' ? null : modal); close(); }
+    catch (e) { setErr(e.message); }
     finally { setSaving(false); }
   };
 
@@ -369,47 +397,37 @@ function CoursesTab({ courses }) {
       <PageHeader title="Courses" subtitle={`${courses.items.length} course${courses.items.length !== 1 ? 's' : ''}`}>
         <PrimaryButton onClick={openNew}>+ Add course</PrimaryButton>
       </PageHeader>
-
       <ErrorBanner message={courses.error} />
-
-      {courses.loading ? (
-        <Spinner text="Loading courses…" />
-      ) : courses.items.length === 0 ? (
+      {courses.loading ? <Spinner text="Loading courses…" /> : courses.items.length === 0 ? (
         <Card><EmptyState title="No courses yet" hint="Add your first course to get started." /></Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {courses.items.map((c) => (
-            <Card key={c.id} className="p-5 hover:shadow-md transition-shadow">
+            <Card key={c.id} className="p-5 hover:border-[#374151] transition-colors">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-slate-900 font-bold text-base leading-snug pr-4">{c.title}</h3>
+                <h3 className="text-slate-100 font-bold text-base leading-snug pr-4">{c.title}</h3>
                 <div className="flex items-center gap-2 shrink-0">
                   <LinkButton onClick={() => openEdit(c)}>Edit</LinkButton>
-                  <span className="text-slate-200">·</span>
+                  <span className="text-[#374151]">·</span>
                   <LinkButton danger onClick={() => courses.remove(c)}>Delete</LinkButton>
                 </div>
               </div>
-
               {c.description && (
                 <p className="text-slate-500 text-sm leading-relaxed mb-3 line-clamp-2">{c.description}</p>
               )}
-
               <div className="flex items-center gap-2 mb-3">
-                <Badge status={c.mode_of_learning} />
-                {c.duration && (
-                  <span className="text-slate-400 text-xs font-medium">{c.duration}</span>
-                )}
+                {c.mode_of_learning && <ModePill mode={c.mode_of_learning} />}
+                {c.duration && <span className="text-slate-500 text-xs">{c.duration}</span>}
               </div>
-
               {c.topics?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-4">
                   {c.topics.map((t) => (
-                    <span key={t} className="text-[11px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">{t}</span>
+                    <span key={t} className="text-[11px] bg-[#1F2937] text-slate-400 px-2 py-0.5 rounded-full">{t}</span>
                   ))}
                 </div>
               )}
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <p className="text-slate-900 font-black text-lg">{formatMoney(c.fee)}</p>
+              <div className="pt-3 border-t border-[#1F2937]">
+                <p className="text-slate-100 font-black text-lg">{formatMoney(c.fee)}</p>
               </div>
             </Card>
           ))}
@@ -467,10 +485,8 @@ function LocationsTab({ locations }) {
 
   const handleSave = async () => {
     setSaving(true); setErr('');
-    try {
-      await locations.save(form, modal === 'new' ? null : modal);
-      close();
-    } catch (e) { setErr(e.message); }
+    try { await locations.save(form, modal === 'new' ? null : modal); close(); }
+    catch (e) { setErr(e.message); }
     finally { setSaving(false); }
   };
 
@@ -479,35 +495,28 @@ function LocationsTab({ locations }) {
       <PageHeader title="Locations" subtitle={`${locations.items.length} location${locations.items.length !== 1 ? 's' : ''}`}>
         <PrimaryButton onClick={openNew}>+ Add location</PrimaryButton>
       </PageHeader>
-
       <ErrorBanner message={locations.error} />
-
-      {locations.loading ? (
-        <Spinner text="Loading locations…" />
-      ) : locations.items.length === 0 ? (
+      {locations.loading ? <Spinner text="Loading locations…" /> : locations.items.length === 0 ? (
         <Card><EmptyState title="No locations yet" hint="Add a study location to get started." /></Card>
       ) : (
         <div className="space-y-3">
           {locations.items.map((l) => (
-            <Card key={l.id} className="px-6 py-4 hover:shadow-md transition-shadow">
+            <Card key={l.id} className="px-6 py-4 hover:border-[#374151] transition-colors">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-base">📍</span>
-                    <p className="text-slate-900 font-bold">{l.name}</p>
-                  </div>
-                  <p className="text-slate-400 text-sm mb-3 pl-6">{l.address}</p>
+                  <p className="text-slate-100 font-bold mb-1">{l.name}</p>
+                  {l.address && <p className="text-slate-500 text-sm mb-3">{l.address}</p>}
                   {l.amenities?.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pl-6">
+                    <div className="flex flex-wrap gap-1.5">
                       {l.amenities.map((t) => (
-                        <span key={t} className="text-[11px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">{t}</span>
+                        <span key={t} className="text-[11px] bg-[#1F2937] text-slate-400 px-2 py-0.5 rounded-full">{t}</span>
                       ))}
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0 mt-1">
+                <div className="flex items-center gap-2 shrink-0">
                   <LinkButton onClick={() => openEdit(l)}>Edit</LinkButton>
-                  <span className="text-slate-200">·</span>
+                  <span className="text-[#374151]">·</span>
                   <LinkButton danger onClick={() => locations.remove(l)}>Delete</LinkButton>
                 </div>
               </div>
@@ -562,8 +571,8 @@ function ApplicationsTab({ applications }) {
               onClick={() => setFilter(f)}
               className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${
                 filter === f
-                  ? 'border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-200'
-                  : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                  ? 'border-blue-500 bg-blue-600 text-white shadow-lg shadow-blue-900/40'
+                  : 'border-[#1F2937] text-slate-500 hover:border-[#374151] hover:text-slate-300'
               }`}
             >
               {f === 'all' ? 'All' : f.replace(/_/g, ' ')}
@@ -574,51 +583,64 @@ function ApplicationsTab({ applications }) {
 
       <ErrorBanner message={applications.error} />
 
-      {applications.loading ? (
-        <Spinner text="Loading applications…" />
-      ) : filtered.length === 0 ? (
+      {applications.loading ? <Spinner text="Loading applications…" /> : filtered.length === 0 ? (
         <Card><EmptyState title="No applications" hint="Nothing matches this filter yet." /></Card>
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/80 text-left">
-                  {['Applicant', 'Course', 'Mode', 'Fee', 'Status', 'Date', ''].map((h, i) => (
-                    <th
-                      key={i}
-                      className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-widest"
-                    >
+                <tr className="border-b border-[#1F2937] bg-[#0A0F1E]/60 text-left">
+                  {['Applicant', 'Course', 'Mode', 'Fee', 'Date', ''].map((h, i) => (
+                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((a) => (
-                  <tr key={a.id} className="border-b border-slate-50 hover:bg-blue-50/30 transition">
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500
-                          flex items-center justify-center text-white text-[11px] font-bold shrink-0">
-                          {getApplicantName(a).charAt(0).toUpperCase() || '?'}
+                {filtered.map((a) => {
+                  const name   = getApplicantName(a);
+                  const email  = getApplicantEmail(a);
+                  const course = getCourseTitle(a);
+                  const mode   = a.mode_of_learning;
+                  const date   = formatDate(a.created_at);
+                  return (
+                    <tr key={a.id} className="border-b border-[#1F2937]/50 hover:bg-[#1F2937]/40 transition last:border-0">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          {name ? (
+                            <>
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600
+                                flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+                                {name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="text-slate-200 font-semibold leading-none mb-0.5">{name}</p>
+                                {email && <p className="text-slate-500 text-[11px]">{email}</p>}
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-slate-600 text-xs italic">Not available</span>
+                          )}
                         </div>
-                        <div>
-                          <p className="text-slate-900 font-semibold leading-none mb-0.5">{getApplicantName(a)}</p>
-                          <p className="text-slate-400 text-[11px]">{getApplicantEmail(a)}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-slate-600 font-medium max-w-[180px] truncate">{getCourseTitle(a)}</td>
-                    <td className="px-5 py-4"><Badge status={a.mode_of_learning} /></td>
-                    <td className="px-5 py-4 text-slate-900 font-bold">{formatMoney(getCourseFee(a))}</td>
-                    <td className="px-5 py-4"><Badge status={a.payment_status} /></td>
-                    <td className="px-5 py-4 text-slate-400 text-xs">{formatDate(a.created_at)}</td>
-                    <td className="px-5 py-4 text-right">
-                      <LinkButton danger onClick={() => applications.remove(a)}>Delete</LinkButton>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-5 py-4 text-slate-400 max-w-[180px]">
+                        {course ? <span className="truncate block">{course}</span> : <span className="text-slate-600 italic text-xs">—</span>}
+                      </td>
+                      <td className="px-5 py-4">
+                        {mode ? <ModePill mode={mode} /> : <span className="text-slate-600 text-xs">—</span>}
+                      </td>
+                      <td className="px-5 py-4 text-slate-200 font-bold">{formatMoney(getCourseFee(a))}</td>
+                      <td className="px-5 py-4 text-slate-500 text-xs whitespace-nowrap">
+                        {date || '—'}
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <LinkButton danger onClick={() => applications.remove(a)}>Delete</LinkButton>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -628,58 +650,48 @@ function ApplicationsTab({ applications }) {
   );
 }
 
-// ─── Page header ──────────────────────────────────────────────────────────────
-
-function PageHeader({ title, subtitle, children }) {
-  return (
-    <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
-      <div>
-        <h2 className="text-xl font-black text-slate-900">{title}</h2>
-        {subtitle && <p className="text-slate-400 text-sm mt-0.5">{subtitle}</p>}
-      </div>
-      {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
-    </div>
-  );
-}
-
-// ─── Navigation icons ─────────────────────────────────────────────────────────
+// ─── Nav icons ────────────────────────────────────────────────────────────────
 
 function IconOverview({ active }) {
+  const c = active ? 'white' : '#64748B';
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-      <rect x="1" y="1" width="6" height="6" rx="1.5" fill={active ? 'white' : 'currentColor'} opacity={active ? 1 : 0.6} />
-      <rect x="9" y="1" width="6" height="6" rx="1.5" fill={active ? 'white' : 'currentColor'} opacity={active ? 1 : 0.6} />
-      <rect x="1" y="9" width="6" height="6" rx="1.5" fill={active ? 'white' : 'currentColor'} opacity={active ? 1 : 0.6} />
-      <rect x="9" y="9" width="6" height="6" rx="1.5" fill={active ? 'white' : 'currentColor'} opacity={active ? 0.4 : 0.3} />
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0">
+      <rect x="1" y="1" width="5.5" height="5.5" rx="1.5" fill={c} opacity={active ? 1 : 0.7} />
+      <rect x="8.5" y="1" width="5.5" height="5.5" rx="1.5" fill={c} opacity={active ? 0.7 : 0.5} />
+      <rect x="1" y="8.5" width="5.5" height="5.5" rx="1.5" fill={c} opacity={active ? 0.7 : 0.5} />
+      <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1.5" fill={c} opacity={active ? 0.4 : 0.3} />
     </svg>
   );
 }
 
 function IconCourses({ active }) {
+  const c = active ? 'white' : '#64748B';
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-      <rect x="1" y="2" width="14" height="2" rx="1" fill={active ? 'white' : 'currentColor'} opacity={active ? 1 : 0.6} />
-      <rect x="1" y="7" width="10" height="2" rx="1" fill={active ? 'white' : 'currentColor'} opacity={active ? 0.8 : 0.5} />
-      <rect x="1" y="12" width="7" height="2" rx="1" fill={active ? 'white' : 'currentColor'} opacity={active ? 0.6 : 0.4} />
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0">
+      <rect x="1" y="2" width="13" height="2" rx="1" fill={c} opacity={active ? 1 : 0.7} />
+      <rect x="1" y="6.5" width="9" height="2" rx="1" fill={c} opacity={active ? 0.7 : 0.5} />
+      <rect x="1" y="11" width="6" height="2" rx="1" fill={c} opacity={active ? 0.5 : 0.35} />
     </svg>
   );
 }
 
 function IconLocations({ active }) {
+  const c = active ? 'white' : '#64748B';
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-      <circle cx="8" cy="7" r="3" stroke={active ? 'white' : 'currentColor'} strokeWidth="1.5" opacity={active ? 1 : 0.6} />
-      <path d="M8 1C5.24 1 3 3.24 3 6c0 4 5 9 5 9s5-5 5-9c0-2.76-2.24-5-5-5z" stroke={active ? 'white' : 'currentColor'} strokeWidth="1.5" fill="none" opacity={active ? 0.8 : 0.5} />
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0">
+      <path d="M7.5 1C5.01 1 3 3.01 3 5.5c0 3.75 4.5 8.5 4.5 8.5S12 9.25 12 5.5C12 3.01 9.99 1 7.5 1z" stroke={c} strokeWidth="1.4" fill="none" opacity={active ? 0.9 : 0.6} />
+      <circle cx="7.5" cy="5.5" r="1.5" fill={c} opacity={active ? 1 : 0.7} />
     </svg>
   );
 }
 
 function IconApplications({ active }) {
+  const c = active ? 'white' : '#64748B';
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-      <rect x="2" y="1" width="12" height="14" rx="2" stroke={active ? 'white' : 'currentColor'} strokeWidth="1.5" fill="none" opacity={active ? 0.8 : 0.5} />
-      <rect x="5" y="5" width="6" height="1.5" rx="0.75" fill={active ? 'white' : 'currentColor'} opacity={active ? 1 : 0.6} />
-      <rect x="5" y="8" width="4" height="1.5" rx="0.75" fill={active ? 'white' : 'currentColor'} opacity={active ? 0.7 : 0.4} />
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0">
+      <rect x="2" y="1" width="11" height="13" rx="2" stroke={c} strokeWidth="1.4" fill="none" opacity={active ? 0.8 : 0.5} />
+      <rect x="4.5" y="4.5" width="6" height="1.5" rx="0.75" fill={c} opacity={active ? 1 : 0.6} />
+      <rect x="4.5" y="7.5" width="4" height="1.5" rx="0.75" fill={c} opacity={active ? 0.7 : 0.4} />
     </svg>
   );
 }
@@ -695,14 +707,13 @@ const NAV = [
 
 export default function BackstagePage() {
   const router = useRouter();
-  const [token, setToken]           = useState('');
+  const [token, setToken]             = useState('');
   const [authChecked, setAuthChecked] = useState(false);
-  const [tab, setTab]               = useState('overview');
+  const [tab, setTab]                 = useState('overview');
 
   useEffect(() => {
     const t = localStorage.getItem('access');
     if (!t) { router.push('/login'); return; }
-
     const verifyStaff = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/users/profile/`, {
@@ -718,11 +729,8 @@ export default function BackstagePage() {
         if (!profile.is_staff) { router.push('/dashboard'); return; }
         setToken(t);
         setAuthChecked(true);
-      } catch {
-        router.push('/login');
-      }
+      } catch { router.push('/login'); }
     };
-
     verifyStaff();
   }, []);
 
@@ -747,100 +755,108 @@ export default function BackstagePage() {
 
   if (!authChecked) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0A0F1E' }}>
         <div className="text-center">
-          <div className="w-10 h-10 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin mx-auto mb-3" />
-          <p className="text-slate-400 text-sm">Verifying access…</p>
+          <div className="w-10 h-10 rounded-full border-2 border-[#1F2937] border-t-blue-500 animate-spin mx-auto mb-3" />
+          <p className="text-slate-500 text-sm">Verifying access…</p>
         </div>
-      </main>
+      </div>
     );
   }
 
-  const activeTab = NAV.find((n) => n.key === tab);
-
   return (
-    <main className="min-h-screen bg-[#F0F4FA] flex">
+    // Full-screen dark shell — intentionally no outer layout wrapper
+    <div className="min-h-screen flex" style={{ background: '#0A0F1E' }}>
 
-      {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
-      <aside className="w-56 shrink-0 flex flex-col" style={{ background: '#0F1629' }}>
-
-        {/* Logo area */}
+      {/* ── Sidebar ──────────────────────────────────────────────────── */}
+      <aside
+        className="w-56 shrink-0 flex flex-col border-r"
+        style={{ background: '#080D1A', borderColor: '#1F2937' }}
+      >
+        {/* Logo */}
         <div className="px-5 pt-6 pb-5">
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-900/50">
               <span className="text-white text-xs font-black">L</span>
             </div>
-            <span className="text-white font-black text-base tracking-tight">LASOP</span>
+            <span className="text-slate-100 font-black text-base tracking-tight">LASOP</span>
           </div>
-          <p className="text-slate-500 text-[11px] font-medium tracking-wide uppercase pl-9">Admin</p>
+          <p className="text-slate-600 text-[10px] font-bold tracking-widest uppercase pl-9">Admin Panel</p>
         </div>
 
-        {/* Divider */}
-        <div className="mx-5 h-px bg-white/5 mb-3" />
+        <div className="mx-5 h-px mb-3" style={{ background: '#1F2937' }} />
 
-        {/* Nav */}
+        {/* Nav items */}
         <nav className="flex-1 px-3 space-y-0.5">
           {NAV.map((item) => {
-            const isActive = tab === item.key;
+            const active = tab === item.key;
             return (
               <button
                 key={item.key}
                 onClick={() => setTab(item.key)}
                 className={`w-full flex items-center gap-3 text-sm px-3 py-2.5 rounded-xl transition-all ${
-                  isActive
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-900/40'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 font-medium'
+                  active
+                    ? 'text-white font-semibold shadow-lg shadow-blue-900/30'
+                    : 'text-slate-500 hover:text-slate-200 hover:bg-white/5 font-medium'
                 }`}
+                style={active ? { background: 'linear-gradient(135deg, #2563EB, #4F46E5)' } : {}}
               >
-                <item.Icon active={isActive} />
+                <item.Icon active={active} />
                 {item.label}
               </button>
             );
           })}
         </nav>
 
-        {/* Bottom area */}
+        {/* Logout */}
         <div className="px-3 pb-5 mt-4">
-          <div className="mx-2 h-px bg-white/5 mb-3" />
+          <div className="mx-2 h-px mb-3" style={{ background: '#1F2937' }} />
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 text-sm font-medium text-slate-500
+            className="w-full flex items-center gap-3 text-sm font-medium text-slate-600
               hover:text-rose-400 hover:bg-white/5 px-3 py-2.5 rounded-xl transition-all text-left"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 opacity-60">
-              <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              <path d="M10 11l3-3-3-3M13 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0">
+              <path d="M5.5 2H3a1 1 0 00-1 1v9a1 1 0 001 1h2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              <path d="M9.5 10l3-2.5L9.5 5M12.5 7.5H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Log out
           </button>
         </div>
       </aside>
 
-      {/* ── Main content ─────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      {/* ── Main ─────────────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
 
         {/* Topbar */}
-        <header className="bg-white border-b border-slate-200/80 px-8 py-4 flex items-center justify-between shrink-0">
+        <header
+          className="shrink-0 px-8 py-4 flex items-center justify-between border-b"
+          style={{ background: '#080D1A', borderColor: '#1F2937' }}
+        >
           <div>
-            <h1 className="text-slate-900 font-black text-lg leading-none">{activeTab?.label}</h1>
-            <p className="text-slate-400 text-xs mt-0.5">LASOP admin dashboard</p>
+            <p className="text-slate-100 font-black text-lg leading-none">
+              {NAV.find((n) => n.key === tab)?.label}
+            </p>
+            <p className="text-slate-600 text-[11px] mt-0.5 font-medium uppercase tracking-wide">LASOP admin</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600
-              flex items-center justify-center text-white text-xs font-bold">
-              A
-            </div>
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+            style={{ background: 'linear-gradient(135deg, #2563EB, #4F46E5)' }}
+          >
+            A
           </div>
         </header>
 
-        {/* Page content */}
-        <div className="flex-1 px-8 py-7 max-w-5xl w-full">
-          {tab === 'overview'     && <OverviewTab courses={courses} locations={locations} applications={applications} />}
-          {tab === 'courses'      && <CoursesTab courses={courses} />}
-          {tab === 'locations'    && <LocationsTab locations={locations} />}
-          {tab === 'applications' && <ApplicationsTab applications={applications} />}
+        {/* Content */}
+        <div className="flex-1 px-8 py-7 overflow-y-auto">
+          <div className="max-w-5xl">
+            {tab === 'overview'     && <OverviewTab courses={courses} locations={locations} applications={applications} />}
+            {tab === 'courses'      && <CoursesTab courses={courses} />}
+            {tab === 'locations'    && <LocationsTab locations={locations} />}
+            {tab === 'applications' && <ApplicationsTab applications={applications} />}
+          </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
