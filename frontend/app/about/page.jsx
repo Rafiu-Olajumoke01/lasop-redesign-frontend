@@ -59,12 +59,12 @@ export default function About() {
     },
   ];
 
-  const stats = [
-    { number: "X,000+", label: "Students Trained" },
-    { number: "X+", label: "Career Programs" },
-    { number: "X+", label: "Years of Experience" },
-    { number: "X+", label: "Hiring Partners" },
-  ];
+ const stats = [
+  { number: "5,000+", label: "Students Trained" },
+  { number: "50+", label: "Career Programs" },
+  { number: "3+", label: "Years of Experience" },
+  { number: "10+", label: "Hiring Partners" },
+];
 
   return (
     <div className="bg-[#071224]">
