@@ -72,7 +72,7 @@ export default function About() {
       <div className="relative h-96 overflow-hidden pt-20">
         <div className="absolute inset-0">
           <Image
-            src="\aboutLasop.jpeg"
+            src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
             alt="LASOP students learning"
             fill
             className="object-cover"
@@ -174,7 +174,7 @@ export default function About() {
               <div className="absolute w-[80%] h-[80%] bg-blue-600/20 blur-[100px] rounded-full" />
               <div className="relative z-10 rounded-md overflow-hidden border border-blue-900/40 shadow-2xl">
                 <Image
-                  src="https://images.unsplash.com/photo-1531482615713-2afd69097998?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+                  src="\aboutLasop.jpeg"
                   alt="LASOP classroom"
                   width={700}
                   height={500}
