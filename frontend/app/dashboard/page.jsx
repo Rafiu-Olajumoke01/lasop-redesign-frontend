@@ -19,10 +19,11 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
   const pollRef = useRef(null);
   const timerRef = useRef(null);
 
-  const authHeaders = {
+  // FIX: moved authHeaders inside functions / passed as arg to avoid stale closure issues
+  const getAuthHeaders = useCallback(() => ({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${authToken}`,
-  };
+  }), [authToken]);
 
   const initiatePayment = useCallback(async () => {
     setLoading(true);
@@ -30,7 +31,7 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
     try {
       const res = await fetch(
         `${API_BASE}/api/applications/${applicationId}/payments/initiate/`,
-        { method: 'POST', headers: authHeaders }
+        { method: 'POST', headers: getAuthHeaders() }
       );
       if (!res.ok) throw new Error('Could not start payment. Please try again.');
       const data = await res.json();
@@ -41,7 +42,7 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
     } finally {
       setLoading(false);
     }
-  }, [applicationId]);
+  }, [applicationId, authToken, getAuthHeaders]);
 
   useEffect(() => {
     initiatePayment();
@@ -51,6 +52,7 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
     };
   }, [initiatePayment]);
 
+  // Countdown timer
   useEffect(() => {
     clearInterval(timerRef.current);
     if (!payment || payment.status === 'paid' || payment.status === 'expired') return;
@@ -67,16 +69,16 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
     return () => clearInterval(timerRef.current);
   }, [payment]);
 
+  // Poll for payment status every 5 seconds
   useEffect(() => {
-    if (!payment || payment.status === 'paid' || payment.status === 'expired') {
-      clearInterval(pollRef.current);
-      return;
-    }
+    clearInterval(pollRef.current);
+    if (!payment || payment.status === 'paid' || payment.status === 'expired') return;
+
     pollRef.current = setInterval(async () => {
       try {
         const res = await fetch(
           `${API_BASE}/api/applications/${applicationId}/payments/status/`,
-          { headers: authHeaders }
+          { headers: getAuthHeaders() }
         );
         if (!res.ok) return;
         const data = await res.json();
@@ -84,15 +86,17 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
         setSecondsLeft(data.seconds_remaining);
       } catch {}
     }, 5000);
+
     return () => clearInterval(pollRef.current);
-  }, [payment, applicationId]);
+  }, [payment, applicationId, authToken, getAuthHeaders]);
 
   const handleConfirmClicked = async () => {
     setConfirming(true);
+    setError('');
     try {
       const res = await fetch(
         `${API_BASE}/api/applications/${applicationId}/payments/confirm-clicked/`,
-        { method: 'POST', headers: authHeaders }
+        { method: 'POST', headers: getAuthHeaders() }
       );
       if (!res.ok) throw new Error('Could not confirm. Please refresh and try again.');
       const data = await res.json();
@@ -105,6 +109,7 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
   };
 
   const copyAccNumber = () => {
+    if (!payment?.account_number) return;
     navigator.clipboard.writeText(payment.account_number);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -157,7 +162,10 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
               <div className="bg-[#1E1A0E] border border-[#3A2E0A] rounded-lg px-4 py-4">
                 <p className="text-[#FFB454] font-mono text-sm mb-1">session.expired()</p>
                 <p className="text-[#8B95A7] text-xs mb-3">Your 30-minute window ended. Start a new one to continue.</p>
-                <button onClick={initiatePayment} className="text-xs text-[#5B8CFF] font-mono hover:text-[#7FAAFF] transition border border-[#1C2B4A] hover:border-[#2A3F6A] px-3 py-1.5 rounded-md">
+                <button
+                  onClick={initiatePayment}
+                  className="text-xs text-[#5B8CFF] font-mono hover:text-[#7FAAFF] transition border border-[#1C2B4A] hover:border-[#2A3F6A] px-3 py-1.5 rounded-md"
+                >
                   new_session()
                 </button>
               </div>
@@ -226,7 +234,6 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
 }
 
 // ─── Course Card ──────────────────────────────────────────────────────────────
-// Defined OUTSIDE DashboardPage so React doesn't recreate it on every render
 
 function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemove }) {
   const isOnline = app.mode_of_learning === 'online';
