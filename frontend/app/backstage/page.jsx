@@ -1,83 +1,116 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
-const COLORS = {
-  bg: "#071224",
-  panel: "#0C1B33",
-  border: "#16294A",
-  accent: "#5EA2FF",
-  accentSoft: "#1C3A63",
-  text: "#E6EDF7",
-  textDim: "#7E91AE",
-  danger: "#FF6B6B",
-  success: "#4ADE80",
-};
+// ─── Shared bits ──────────────────────────────────────────────────────────────
 
-const CATEGORY_CHOICES = [
-  { value: "technology", label: "Technology" },
-  { value: "business", label: "Business" },
-  { value: "vocational", label: "Vocational" },
-];
+function WindowChrome({ label, right }) {
+  return (
+    <div className="flex items-center gap-1.5 px-3 py-2 bg-[#0E121A] border-b border-[#1C2330]">
+      <span className="w-[7px] h-[7px] rounded-full bg-[#FF5F57] inline-block" />
+      <span className="w-[7px] h-[7px] rounded-full bg-[#FEBC2E] inline-block" />
+      <span className="w-[7px] h-[7px] rounded-full bg-[#28C840] inline-block" />
+      <span className="ml-1.5 text-[11px] text-[#6B7585] font-mono truncate">{label}</span>
+      {right && <div className="ml-auto shrink-0">{right}</div>}
+    </div>
+  );
+}
 
-// ---------- Small shared bits ----------
+function StatCard({ label, value, accent }) {
+  return (
+    <div
+      className="bg-[#11151D] border border-[#1C2330] rounded-r-lg px-4 py-3.5 flex flex-col justify-center"
+      style={{ borderLeftColor: accent, borderLeftWidth: 2 }}
+    >
+      <p className="text-[#6B7585] text-[11px] font-mono mb-1.5">{label}</p>
+      <p className="text-[#F1F3F7] text-2xl font-medium">{value}</p>
+    </div>
+  );
+}
 
-function TagInput({ label, items, onChange, placeholder }) {
-  const [draft, setDraft] = useState("");
+function StatusPill({ status }) {
+  const map = {
+    paid: ['bg-[#14201A]', 'text-[#7CFF6B]'],
+    approved: ['bg-[#14201A]', 'text-[#7CFF6B]'],
+    pending: ['bg-[#261B0E]', 'text-[#FFB454]'],
+    awaiting_confirmation: ['bg-[#261B0E]', 'text-[#FFB454]'],
+    expired: ['bg-[#2A1414]', 'text-[#F09595]'],
+    rejected: ['bg-[#2A1414]', 'text-[#F09595]'],
+  };
+  const [bg, text] = map[status] || ['bg-[#1C2330]', 'text-[#8B95A7]'];
+  return (
+    <span className={`text-[11px] px-2.5 py-1 rounded-md font-mono ${bg} ${text}`}>
+      {status?.replace(/_/g, ' ')}
+    </span>
+  );
+}
+
+function EmptyState({ text, hint }) {
+  return (
+    <div className="bg-[#11151D] border border-dashed border-[#2A2F3A] rounded-xl p-12 text-center">
+      <p className="text-[#6B7585] text-sm font-mono mb-2">{text}</p>
+      {hint && <p className="text-[#4A5263] text-xs">{hint}</p>}
+    </div>
+  );
+}
+
+// Tag-chip input for JSONField array values (e.g. topics, amenities)
+function TagChipInput({ label, value = [], onChange, placeholder }) {
+  const [draft, setDraft] = useState('');
 
   const addTag = () => {
     const v = draft.trim();
-    if (!v) return;
-    onChange([...items, v]);
-    setDraft("");
+    if (!v || value.includes(v)) { setDraft(''); return; }
+    onChange([...value, v]);
+    setDraft('');
   };
 
-  const removeTag = (idx) => onChange(items.filter((_, i) => i !== idx));
+  const removeTag = (tag) => onChange(value.filter((t) => t !== tag));
 
   return (
-    <div className="mb-4">
-      <label className="block text-xs font-medium mb-1.5" style={{ color: COLORS.textDim }}>
-        {label}
-      </label>
-      <div
-        className="flex flex-wrap gap-1.5 p-2 rounded-lg border min-h-[44px]"
-        style={{ borderColor: COLORS.border, background: COLORS.bg }}
-      >
-        {items.map((item, idx) => (
+    <div>
+      <label className="block text-[11px] text-[#6B7585] font-mono mb-1.5">{label}</label>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {value.map((tag) => (
           <span
-            key={idx}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs"
-            style={{ background: COLORS.accentSoft, color: COLORS.accent }}
+            key={tag}
+            className="flex items-center gap-1.5 bg-[#0E1829] border border-[#1C2B4A] text-[#7FAAFF] text-[11px] font-mono px-2.5 py-1 rounded-md"
           >
-            {item}
+            {tag}
             <button
               type="button"
-              onClick={() => removeTag(idx)}
-              className="ml-0.5 hover:opacity-70"
-              aria-label={`Remove ${item}`}
+              onClick={() => removeTag(tag)}
+              className="text-[#5A6275] hover:text-[#F09595] transition"
+              aria-label={`Remove ${tag}`}
             >
-              ×
+              ✕
             </button>
           </span>
         ))}
+        {value.length === 0 && (
+          <span className="text-[#4A5263] text-[11px] font-mono">none added yet</span>
+        )}
+      </div>
+      <div className="flex gap-2">
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addTag();
-            }
-            if (e.key === "Backspace" && !draft && items.length) {
-              removeTag(items.length - 1);
-            }
+            if (e.key === 'Enter') { e.preventDefault(); addTag(); }
           }}
-          placeholder={placeholder || "Type and press Enter"}
-          className="flex-1 min-w-[120px] bg-transparent outline-none text-sm py-1"
-          style={{ color: COLORS.text }}
+          placeholder={placeholder || 'Type and press enter'}
+          className="flex-1 bg-[#0D1118] border border-[#1C2330] focus:border-[#5B8CFF] outline-none rounded-md px-3 py-2 text-sm text-[#E6E9EF] placeholder:text-[#4A5263] transition"
         />
+        <button
+          type="button"
+          onClick={addTag}
+          className="text-xs font-mono px-3 py-2 rounded-md border border-[#1C2B4A] text-[#5B8CFF] hover:border-[#2A3F6A] hover:text-[#7FAAFF] transition"
+        >
+          add()
+        </button>
       </div>
     </div>
   );
@@ -85,727 +118,575 @@ function TagInput({ label, items, onChange, placeholder }) {
 
 function Field({ label, children }) {
   return (
-    <div className="mb-4">
-      <label className="block text-xs font-medium mb-1.5" style={{ color: COLORS.textDim }}>
-        {label}
-      </label>
+    <div>
+      <label className="block text-[11px] text-[#6B7585] font-mono mb-1.5">{label}</label>
       {children}
     </div>
   );
 }
 
-const inputStyle = {
-  background: "#071224",
-  border: `1px solid ${COLORS.border}`,
-  color: COLORS.text,
-};
+const inputClass =
+  'w-full bg-[#0D1118] border border-[#1C2330] focus:border-[#5B8CFF] outline-none rounded-md px-3 py-2 text-sm text-[#E6E9EF] placeholder:text-[#4A5263] transition';
 
-function TextInput(props) {
+function Modal({ title, onClose, children }) {
   return (
-    <input
-      {...props}
-      className={`w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-1 ${props.className || ""}`}
-      style={{ ...inputStyle, ...(props.style || {}) }}
-    />
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+      <div className="bg-[#11151D] border border-[#1C2330] rounded-xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
+        <WindowChrome
+          label={title}
+          right={
+            <button onClick={onClose} className="text-[#5A6275] hover:text-[#E6E9EF] text-xs font-mono transition">
+              ✕ close
+            </button>
+          }
+        />
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
   );
 }
 
-function TextArea(props) {
-  return (
-    <textarea
-      {...props}
-      className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-1 resize-none"
-      style={inputStyle}
-    />
-  );
-}
-
-function Select({ children, ...props }) {
-  return (
-    <select {...props} className="w-full px-3 py-2 rounded-lg text-sm outline-none" style={inputStyle}>
-      {children}
-    </select>
-  );
-}
-
-function Button({ variant = "primary", children, ...props }) {
-  const styles = {
-    primary: { background: COLORS.accent, color: "#071224" },
-    ghost: { background: "transparent", color: COLORS.text, border: `1px solid ${COLORS.border}` },
-    danger: { background: "transparent", color: COLORS.danger, border: `1px solid ${COLORS.danger}33` },
-  };
+function PrimaryButton({ children, ...props }) {
   return (
     <button
       {...props}
-      className="px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-85 disabled:opacity-40"
-      style={styles[variant]}
+      className="w-full bg-[#5B8CFF] hover:bg-[#7FAAFF] disabled:opacity-40 text-[#0B0E14] text-sm font-semibold py-2.5 rounded-lg transition"
     >
       {children}
     </button>
   );
 }
 
-function StatCard({ label, value }) {
+function GhostButton({ children, danger, ...props }) {
   return (
-    <div className="p-5 rounded-xl border" style={{ background: COLORS.panel, borderColor: COLORS.border }}>
-      <p className="text-xs mb-1" style={{ color: COLORS.textDim }}>
-        {label}
-      </p>
-      <p className="text-3xl font-semibold" style={{ color: COLORS.text }}>
-        {value}
-      </p>
+    <button
+      {...props}
+      className={`text-xs font-mono px-3 py-2 rounded-md border transition ${
+        danger
+          ? 'text-[#F09595] border-[#501313] hover:border-[#6A1A1A] hover:bg-[#2A1414]'
+          : 'text-[#5B8CFF] border-[#1C2B4A] hover:border-[#2A3F6A] hover:text-[#7FAAFF]'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Data hook ────────────────────────────────────────────────────────────────
+
+// basePath: list/create endpoint. detailPath(item): detail endpoint for an existing item.
+// supportsUpdate: whether the detail view accepts PATCH (applications only supports DELETE).
+function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }, token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE}${basePath}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Could not load ${label}.`);
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [basePath, label, token]);
+
+  useEffect(() => {
+    if (token) refresh();
+  }, [token, refresh]);
+
+  const save = async (payload, existingItem) => {
+    if (existingItem && !supportsUpdate) {
+      throw new Error(`Updating ${label} isn't supported by the API yet.`);
+    }
+    const url = existingItem ? `${API_BASE}${detailPath(existingItem)}` : `${API_BASE}${basePath}`;
+    const res = await fetch(url, {
+      method: existingItem ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Save failed. Check the fields and try again.');
+    await refresh();
+  };
+
+  const remove = async (item) => {
+    const res = await fetch(`${API_BASE}${detailPath(item)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Delete failed.');
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
+  };
+
+  return { items, loading, error, refresh, save, remove, supportsUpdate };
+}
+
+// ─── Overview tab ─────────────────────────────────────────────────────────────
+
+function OverviewTab({ courses, locations, applications }) {
+  const totalRevenue = applications.items
+    .filter((a) => a.payment_status === 'paid')
+    .reduce((sum, a) => sum + (Number(a.course_detail?.fee) || 0), 0);
+
+  const pending = applications.items.filter((a) =>
+    ['pending', 'awaiting_confirmation'].includes(a.payment_status)
+  ).length;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard label="courses.length" value={courses.items.length} accent="#5B8CFF" />
+        <StatCard label="locations.length" value={locations.items.length} accent="#FFB454" />
+        <StatCard label="applications.pending" value={pending} accent="#FFB454" />
+        <StatCard
+          label="revenue.paid()"
+          value={`₦${totalRevenue >= 1000000 ? `${(totalRevenue / 1000000).toFixed(1)}M` : totalRevenue.toLocaleString()}`}
+          accent="#7CFF6B"
+        />
+      </div>
+
+      <div className="bg-[#11151D] border border-[#1C2330] rounded-xl overflow-hidden">
+        <WindowChrome label="recent_applications.tail(5)" />
+        <div className="p-5">
+          {applications.items.length === 0 ? (
+            <p className="text-[#4A5263] text-xs">No applications yet.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {applications.items.slice(0, 5).map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between border-b border-[#1C2330] last:border-0 pb-2.5 last:pb-0"
+                >
+                  <div>
+                    <p className="text-[#E6E9EF] text-sm">{a.applicant_name || a.user_detail?.email}</p>
+                    <p className="text-[#6B7585] text-[11px] font-mono">{a.course_detail?.title}</p>
+                  </div>
+                  <StatusPill status={a.payment_status} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-// ---------- Course form (create/edit) ----------
+// ─── Courses tab ──────────────────────────────────────────────────────────────
 
-function emptyCourse() {
-  return {
-    title: "",
-    slug: "",
-    category: "technology",
-    fee: "",
-    duration: "",
-    description: "",
-    overview: "",
-    featured: false,
-    skills: [],
-    outcomes: [],
-    requirements: [],
-    modules: [],
-    locations: [],
-    imageFile: null,
-  };
-}
+const emptyCourse = { title: '', description: '', duration: '', fee: '', mode_of_learning: 'online', topics: [] };
 
-function slugify(text) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
-function CourseForm({ initial, locations, onCancel, onSaved }) {
-  const [form, setForm] = useState(initial ? { ...emptyCourse(), ...initial, imageFile: null } : emptyCourse());
+function CoursesTab({ courses }) {
+  const [modal, setModal] = useState(null); // null | 'new' | course object
+  const [form, setForm] = useState(emptyCourse);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [err, setErr] = useState('');
 
-  const update = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const openNew = () => { setForm(emptyCourse); setModal('new'); setErr(''); };
+  const openEdit = (course) => { setForm({ ...emptyCourse, ...course }); setModal(course); setErr(''); };
+  const close = () => setModal(null);
 
-  const toggleLocation = (id) => {
-    setForm((f) => {
-      const exists = f.locations.includes(id);
-      return { ...f, locations: exists ? f.locations.filter((l) => l !== id) : [...f.locations, id] };
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSave = async () => {
     setSaving(true);
-    setError("");
-
-    const fd = new FormData();
-    fd.append("title", form.title);
-    fd.append("slug", form.slug || slugify(form.title));
-    fd.append("category", form.category);
-    fd.append("fee", form.fee);
-    fd.append("duration", form.duration);
-    fd.append("description", form.description);
-    fd.append("overview", form.overview);
-    fd.append("featured", form.featured);
-    fd.append("skills", JSON.stringify(form.skills));
-    fd.append("outcomes", JSON.stringify(form.outcomes));
-    fd.append("requirements", JSON.stringify(form.requirements));
-    fd.append("modules", JSON.stringify(form.modules));
-    form.locations.forEach((id) => fd.append("locations", id));
-    if (form.imageFile) fd.append("image", form.imageFile);
-
+    setErr('');
     try {
-      const isEdit = Boolean(initial?.slug);
-      const url = isEdit ? `${API}/api/courses/${initial.slug}/` : `${API}/api/courses/`;
-      const res = await fetch(url, {
-        method: isEdit ? "PUT" : "POST",
-        body: fd,
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(JSON.stringify(errData));
-      }
-      onSaved();
-    } catch (err) {
-      setError(err.message || "Something went wrong saving this course.");
+      await courses.save(form, modal === 'new' ? null : modal);
+      close();
+    } catch (e) {
+      setErr(e.message);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-1">
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Title">
-          <TextInput
-            required
-            value={form.title}
-            onChange={(e) => update("title", e.target.value)}
-            placeholder="Data Analysis"
-          />
-        </Field>
-        <Field label="Slug">
-          <TextInput
-            value={form.slug}
-            onChange={(e) => update("slug", e.target.value)}
-            placeholder={slugify(form.title) || "auto-generated from title"}
-          />
-        </Field>
+    <div>
+      <div className="flex items-center justify-between mb-3.5">
+        <h2 className="text-[#F1F3F7] font-medium text-[15px]">Courses</h2>
+        <button onClick={openNew} className="text-[#7CFF6B] text-xs font-mono hover:text-[#9AFF8C] transition">
+          + add_course()
+        </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Category">
-          <Select value={form.category} onChange={(e) => update("category", e.target.value)}>
-            {CATEGORY_CHOICES.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Duration">
-          <TextInput
-            required
-            value={form.duration}
-            onChange={(e) => update("duration", e.target.value)}
-            placeholder="8 weeks"
-          />
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Fee (₦)">
-          <TextInput
-            required
-            type="number"
-            step="0.01"
-            value={form.fee}
-            onChange={(e) => update("fee", e.target.value)}
-            placeholder="150000"
-          />
-        </Field>
-        <Field label="Course image">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => update("imageFile", e.target.files?.[0] || null)}
-            className="w-full text-sm"
-            style={{ color: COLORS.textDim }}
-          />
-        </Field>
-      </div>
-
-      <Field label="Description (short summary)">
-        <TextArea
-          required
-          rows={2}
-          value={form.description}
-          onChange={(e) => update("description", e.target.value)}
-        />
-      </Field>
-
-      <Field label="Overview (full detail)">
-        <TextArea rows={3} value={form.overview} onChange={(e) => update("overview", e.target.value)} />
-      </Field>
-
-      <TagInput label="Skills" items={form.skills} onChange={(v) => update("skills", v)} />
-      <TagInput label="Outcomes" items={form.outcomes} onChange={(v) => update("outcomes", v)} />
-      <TagInput label="Requirements" items={form.requirements} onChange={(v) => update("requirements", v)} />
-      <TagInput label="Modules" items={form.modules} onChange={(v) => update("modules", v)} />
-
-      <Field label="Locations">
-        <div className="flex flex-wrap gap-2">
-          {locations.length === 0 && (
-            <span className="text-xs" style={{ color: COLORS.textDim }}>
-              No locations yet — add one in the Locations tab.
-            </span>
-          )}
-          {locations.map((loc) => {
-            const active = form.locations.includes(loc.id);
-            return (
-              <button
-                type="button"
-                key={loc.id}
-                onClick={() => toggleLocation(loc.id)}
-                className="px-3 py-1.5 rounded-full text-xs border transition"
-                style={{
-                  borderColor: active ? COLORS.accent : COLORS.border,
-                  background: active ? COLORS.accentSoft : "transparent",
-                  color: active ? COLORS.accent : COLORS.textDim,
-                }}
-              >
-                {loc.name}
-              </button>
-            );
-          })}
+      {courses.error && (
+        <div className="bg-[#2A1414] border border-[#501313] text-[#F09595] text-xs rounded-lg px-4 py-3 mb-4 font-mono">
+          {courses.error}
         </div>
-      </Field>
-
-      <label className="flex items-center gap-2 mb-5 text-sm" style={{ color: COLORS.text }}>
-        <input
-          type="checkbox"
-          checked={form.featured}
-          onChange={(e) => update("featured", e.target.checked)}
-        />
-        Featured course
-      </label>
-
-      {error && (
-        <p className="text-xs mb-3 p-2 rounded-lg" style={{ color: COLORS.danger, background: "#FF6B6B14" }}>
-          {error}
-        </p>
       )}
 
-      <div className="flex gap-2 justify-end pt-2 border-t" style={{ borderColor: COLORS.border }}>
-        <Button variant="ghost" type="button" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : initial?.slug ? "Save changes" : "Create course"}
-        </Button>
-      </div>
-    </form>
+      {courses.loading ? (
+        <p className="text-[#6B7585] text-sm font-mono animate-pulse">loading_courses...</p>
+      ) : courses.items.length === 0 ? (
+        <EmptyState text="courses.length === 0" hint="Add your first course to get started." />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {courses.items.map((c) => (
+            <div key={c.id} className="bg-[#11151D] border border-[#1C2330] rounded-lg overflow-hidden hover:border-[#2A2F3A] transition">
+              <WindowChrome
+                label={`${(c.title || 'course').toLowerCase().replace(/[^a-z0-9]+/g, '_')}.course`}
+                right={
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => openEdit(c)} className="text-[11px] text-[#5B8CFF] hover:text-[#7FAAFF] font-mono transition">
+                      edit()
+                    </button>
+                    <button onClick={() => courses.remove(c)} className="text-[11px] text-[#5A6275] hover:text-[#F09595] font-mono transition">
+                      remove()
+                    </button>
+                  </div>
+                }
+              />
+              <div className="p-4">
+                <h3 className="text-[#F1F3F7] font-medium text-sm mb-2.5">{c.title}</h3>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className={`text-[11px] px-2.5 py-1 rounded-md font-mono ${c.mode_of_learning === 'online' ? 'bg-[#14201A] text-[#7CFF6B]' : 'bg-[#261B0E] text-[#FFB454]'}`}>
+                    {c.mode_of_learning}
+                  </span>
+                  <span className="text-[11px] text-[#6B7585]">{c.duration}</span>
+                </div>
+                {c.topics?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2.5">
+                    {c.topics.map((t) => (
+                      <span key={t} className="text-[10px] bg-[#0E1829] text-[#7FAAFF] font-mono px-2 py-0.5 rounded-md">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[#5B8CFF] font-medium text-sm pt-2.5 border-t border-[#1C2330]">
+                  ₦{Number(c.fee || 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {modal && (
+        <Modal title={modal === 'new' ? 'course.create()' : 'course.update()'} onClose={close}>
+          <div className="space-y-4">
+            {err && <p className="text-[#F09595] text-xs font-mono">{err}</p>}
+            <Field label="title">
+              <input className={inputClass} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Full-Stack Web Development" />
+            </Field>
+            <Field label="description">
+              <textarea className={inputClass} rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Short course summary" />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="duration">
+                <input className={inputClass} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="e.g. 12 weeks" />
+              </Field>
+              <Field label="fee (₦)">
+                <input type="number" className={inputClass} value={form.fee} onChange={(e) => setForm({ ...form, fee: e.target.value })} placeholder="150000" />
+              </Field>
+            </div>
+            <Field label="mode_of_learning">
+              <select className={inputClass} value={form.mode_of_learning} onChange={(e) => setForm({ ...form, mode_of_learning: e.target.value })}>
+                <option value="online">online</option>
+                <option value="physical">physical</option>
+              </select>
+            </Field>
+            <TagChipInput label="topics" value={form.topics} onChange={(topics) => setForm({ ...form, topics })} placeholder="e.g. React, add and press enter" />
+            <PrimaryButton onClick={handleSave} disabled={saving}>
+              {saving ? 'saving...' : 'Save course'}
+            </PrimaryButton>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }
 
-// ---------- Courses tab ----------
+// ─── Locations tab ────────────────────────────────────────────────────────────
 
-function CoursesTab() {
-  const [courses, setCourses] = useState([]);
-  const [locations, setLocations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(null); // null | course | "new"
-  const [error, setError] = useState("");
+const emptyLocation = { name: '', address: '', amenities: [] };
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
+function LocationsTab({ locations }) {
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState(emptyLocation);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const openNew = () => { setForm(emptyLocation); setModal('new'); setErr(''); };
+  const openEdit = (loc) => { setForm({ ...emptyLocation, ...loc }); setModal(loc); setErr(''); };
+  const close = () => setModal(null);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setErr('');
     try {
-      const [cRes, lRes] = await Promise.all([
-        fetch(`${API}/api/courses/`),
-        fetch(`${API}/api/courses/locations/`),
-      ]);
-      if (!cRes.ok || !lRes.ok) throw new Error("Could not load courses or locations.");
-      setCourses(await cRes.json());
-      setLocations(await lRes.json());
-    } catch (err) {
-      setError(err.message);
+      await locations.save(form, modal === 'new' ? null : modal);
+      close();
+    } catch (e) {
+      setErr(e.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleDelete = async (slug) => {
-    if (!confirm("Delete this course? This cannot be undone.")) return;
-    await fetch(`${API}/api/courses/${slug}/`, { method: "DELETE" });
-    load();
   };
 
-  if (editing) {
-    return (
-      <div
-        className="p-6 rounded-xl border"
-        style={{ background: COLORS.panel, borderColor: COLORS.border }}
-      >
-        <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.text }}>
-          {editing === "new" ? "New course" : `Edit “${editing.title}”`}
-        </h3>
-        <CourseForm
-          initial={editing === "new" ? null : editing}
-          locations={locations}
-          onCancel={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            load();
-          }}
-        />
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3.5">
+        <h2 className="text-[#F1F3F7] font-medium text-[15px]">Locations</h2>
+        <button onClick={openNew} className="text-[#7CFF6B] text-xs font-mono hover:text-[#9AFF8C] transition">
+          + add_location()
+        </button>
       </div>
+
+      {locations.error && (
+        <div className="bg-[#2A1414] border border-[#501313] text-[#F09595] text-xs rounded-lg px-4 py-3 mb-4 font-mono">
+          {locations.error}
+        </div>
+      )}
+
+      {locations.loading ? (
+        <p className="text-[#6B7585] text-sm font-mono animate-pulse">loading_locations...</p>
+      ) : locations.items.length === 0 ? (
+        <EmptyState text="locations.length === 0" hint="Add a study location to get started." />
+      ) : (
+        <div className="space-y-3">
+          {locations.items.map((l) => (
+            <div key={l.id} className="bg-[#11151D] border border-[#1C2330] rounded-lg px-5 py-4 flex items-center justify-between hover:border-[#2A2F3A] transition">
+              <div>
+                <p className="text-[#F1F3F7] font-medium text-sm mb-1">{l.name}</p>
+                <p className="text-[#6B7585] text-[11px] font-mono mb-1.5">{l.address}</p>
+                {l.amenities?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {l.amenities.map((t) => (
+                      <span key={t} className="text-[10px] bg-[#0E1829] text-[#7FAAFF] font-mono px-2 py-0.5 rounded-md">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <button onClick={() => openEdit(l)} className="text-[11px] text-[#5B8CFF] hover:text-[#7FAAFF] font-mono transition">
+                  edit()
+                </button>
+                <button onClick={() => locations.remove(l)} className="text-[11px] text-[#5A6275] hover:text-[#F09595] font-mono transition">
+                  remove()
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {modal && (
+        <Modal title={modal === 'new' ? 'location.create()' : 'location.update()'} onClose={close}>
+          <div className="space-y-4">
+            {err && <p className="text-[#F09595] text-xs font-mono">{err}</p>}
+            <Field label="name">
+              <input className={inputClass} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Ajah Campus" />
+            </Field>
+            <Field label="address">
+              <input className={inputClass} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Full address" />
+            </Field>
+            <TagChipInput label="amenities" value={form.amenities} onChange={(amenities) => setForm({ ...form, amenities })} placeholder="e.g. Parking, add and press enter" />
+            <PrimaryButton onClick={handleSave} disabled={saving}>
+              {saving ? 'saving...' : 'Save location'}
+            </PrimaryButton>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── Applications tab ─────────────────────────────────────────────────────────
+
+function ApplicationsTab({ applications }) {
+  const [filter, setFilter] = useState('all');
+
+  const filtered = useMemo(() => {
+    if (filter === 'all') return applications.items;
+    return applications.items.filter((a) => a.payment_status === filter);
+  }, [applications.items, filter]);
+
+  const filters = ['all', 'pending', 'awaiting_confirmation', 'paid', 'expired'];
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3.5 flex-wrap gap-3">
+        <h2 className="text-[#F1F3F7] font-medium text-[15px]">Applications</h2>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {filters.map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-[11px] font-mono px-2.5 py-1.5 rounded-md border transition ${
+                filter === f
+                  ? 'border-[#2A3F6A] text-[#7FAAFF] bg-[#0E1829]'
+                  : 'border-[#1C2330] text-[#6B7585] hover:border-[#2A2F3A] hover:text-[#8B95A7]'
+              }`}
+            >
+              {f.replace(/_/g, ' ')}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {applications.error && (
+        <div className="bg-[#2A1414] border border-[#501313] text-[#F09595] text-xs rounded-lg px-4 py-3 mb-4 font-mono">
+          {applications.error}
+        </div>
+      )}
+
+      {applications.loading ? (
+        <p className="text-[#6B7585] text-sm font-mono animate-pulse">loading_applications...</p>
+      ) : filtered.length === 0 ? (
+        <EmptyState text="applications.length === 0" hint="Nothing matches this filter yet." />
+      ) : (
+        <div className="bg-[#11151D] border border-[#1C2330] rounded-xl overflow-hidden">
+          <WindowChrome label="applications.table()" />
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#1C2330] text-left">
+                  <th className="px-4 py-3 text-[#6B7585] text-[11px] font-mono font-normal">applicant</th>
+                  <th className="px-4 py-3 text-[#6B7585] text-[11px] font-mono font-normal">course</th>
+                  <th className="px-4 py-3 text-[#6B7585] text-[11px] font-mono font-normal">mode</th>
+                  <th className="px-4 py-3 text-[#6B7585] text-[11px] font-mono font-normal">fee</th>
+                  <th className="px-4 py-3 text-[#6B7585] text-[11px] font-mono font-normal">status</th>
+                  <th className="px-4 py-3 text-[#6B7585] text-[11px] font-mono font-normal">date</th>
+                  <th className="px-4 py-3 text-[#6B7585] text-[11px] font-mono font-normal"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((a) => (
+                  <tr key={a.id} className="border-b border-[#1C2330] last:border-0 hover:bg-[#0E121A] transition">
+                    <td className="px-4 py-3 text-[#E6E9EF]">{a.applicant_name || a.user_detail?.email}</td>
+                    <td className="px-4 py-3 text-[#8B95A7] text-[13px]">{a.course_detail?.title}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-md font-mono ${a.mode_of_learning === 'online' ? 'bg-[#14201A] text-[#7CFF6B]' : 'bg-[#261B0E] text-[#FFB454]'}`}>
+                        {a.mode_of_learning}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-[#5B8CFF]">₦{Number(a.course_detail?.fee || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3"><StatusPill status={a.payment_status} /></td>
+                    <td className="px-4 py-3 text-[#6B7585] text-[11px] font-mono">
+                      {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => applications.remove(a)}
+                        className="text-[11px] text-[#5A6275] hover:text-[#F09595] font-mono transition"
+                      >
+                        remove()
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'courses', label: 'Courses' },
+  { key: 'locations', label: 'Locations' },
+  { key: 'applications', label: 'Applications' },
+];
+
+export default function BackstagePage() {
+  const router = useRouter();
+  const [token, setToken] = useState('');
+  const [authChecked, setAuthChecked] = useState(false);
+  const [tab, setTab] = useState('overview');
+
+  useEffect(() => {
+    const t = localStorage.getItem('access');
+    if (!t) { router.push('/login'); return; }
+    setToken(t);
+    setAuthChecked(true);
+  }, []);
+
+  const courses = useAdminResource(
+    { label: 'courses', basePath: '/api/courses/', detailPath: (c) => `/api/courses/${c.slug}/` },
+    token
+  );
+  const locations = useAdminResource(
+    {
+      label: 'locations',
+      basePath: '/api/courses/locations/',
+      detailPath: (l) => `/api/courses/locations/${l.id}/`,
+    },
+    token
+  );
+  const applications = useAdminResource(
+    {
+      label: 'applications',
+      basePath: '/api/applications/',
+      detailPath: (a) => `/api/applications/${a.id}/`,
+      supportsUpdate: false, // API only exposes delete on the detail route
+    },
+    token
+  );
+
+  const handleLogout = () => {
+    localStorage.removeItem('access');
+    localStorage.removeItem('refresh');
+    router.push('/login');
+  };
+
+  if (!authChecked) {
+    return (
+      <main className="min-h-screen bg-[#0B0E14] flex items-center justify-center">
+        <p className="text-[#6B7585] text-sm font-mono animate-pulse">loading_backstage...</p>
+      </main>
     );
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold" style={{ color: COLORS.text }}>
-          Courses
-        </h2>
-        <Button onClick={() => setEditing("new")}>+ New course</Button>
-      </div>
-
-      {loading && <p style={{ color: COLORS.textDim }}>Loading courses…</p>}
-      {error && <p style={{ color: COLORS.danger }}>{error}</p>}
-
-      {!loading && !error && courses.length === 0 && (
-        <p style={{ color: COLORS.textDim }}>No courses yet. Create the first one above.</p>
-      )}
-
-      <div className="grid gap-3">
-        {courses.map((course) => (
-          <div
-            key={course.id}
-            className="flex items-center justify-between p-4 rounded-xl border"
-            style={{ background: COLORS.panel, borderColor: COLORS.border }}
-          >
-            <div>
-              <p className="font-medium" style={{ color: COLORS.text }}>
-                {course.title}{" "}
-                {course.featured && (
-                  <span
-                    className="ml-2 text-[10px] px-2 py-0.5 rounded-full"
-                    style={{ background: COLORS.accentSoft, color: COLORS.accent }}
-                  >
-                    Featured
-                  </span>
-                )}
-              </p>
-              <p className="text-xs mt-0.5" style={{ color: COLORS.textDim }}>
-                {course.category} · {course.duration} · ₦{course.fee}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setEditing(course)}>
-                Edit
-              </Button>
-              <Button variant="danger" onClick={() => handleDelete(course.slug)}>
-                Delete
-              </Button>
-            </div>
+    <main className="min-h-screen bg-[#0B0E14]">
+      <div className="border-b border-[#1C2330] bg-[#0E121A]">
+        <div className="max-w-5xl mx-auto px-5 md:px-8 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-[#5B8CFF] inline-block" />
+            <span className="text-xs text-[#8B95A7] font-mono tracking-wide">lasop / backstage</span>
           </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ---------- Locations tab ----------
-
-function LocationsTab() {
-  const [locations, setLocations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [form, setForm] = useState({ name: "", address: "" });
-  const [editingId, setEditingId] = useState(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(`${API}/api/courses/locations/`);
-      if (!res.ok) throw new Error("Could not load locations.");
-      setLocations(await res.json());
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const resetForm = () => {
-    setForm({ name: "", address: "" });
-    setEditingId(null);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const isEdit = Boolean(editingId);
-    const url = isEdit ? `${API}/api/courses/locations/${editingId}/` : `${API}/api/courses/locations/`;
-    await fetch(url, {
-      method: isEdit ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    resetForm();
-    load();
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm("Delete this location?")) return;
-    await fetch(`${API}/api/courses/locations/${id}/`, { method: "DELETE" });
-    load();
-  };
-
-  return (
-    <div className="grid grid-cols-[1fr_320px] gap-6">
-      <div>
-        <h2 className="text-lg font-semibold mb-4" style={{ color: COLORS.text }}>
-          Locations
-        </h2>
-        {loading && <p style={{ color: COLORS.textDim }}>Loading…</p>}
-        {error && <p style={{ color: COLORS.danger }}>{error}</p>}
-        <div className="grid gap-3">
-          {locations.map((loc) => (
-            <div
-              key={loc.id}
-              className="flex items-center justify-between p-4 rounded-xl border"
-              style={{ background: COLORS.panel, borderColor: COLORS.border }}
-            >
-              <div>
-                <p className="font-medium" style={{ color: COLORS.text }}>
-                  {loc.name}
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: COLORS.textDim }}>
-                  {loc.address}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setForm({ name: loc.name, address: loc.address });
-                    setEditingId(loc.id);
-                  }}
-                >
-                  Edit
-                </Button>
-                <Button variant="danger" onClick={() => handleDelete(loc.id)}>
-                  Delete
-                </Button>
-              </div>
-            </div>
-          ))}
-          {!loading && locations.length === 0 && (
-            <p style={{ color: COLORS.textDim }}>No locations yet.</p>
-          )}
+          <button onClick={handleLogout} className="text-xs text-[#8B95A7] hover:text-[#E6E9EF] font-mono transition">
+            log_out()
+          </button>
         </div>
       </div>
 
-      <div
-        className="p-5 rounded-xl border self-start"
-        style={{ background: COLORS.panel, borderColor: COLORS.border }}
-      >
-        <h3 className="text-sm font-semibold mb-3" style={{ color: COLORS.text }}>
-          {editingId ? "Edit location" : "Add location"}
-        </h3>
-        <form onSubmit={handleSubmit}>
-          <Field label="Name">
-            <TextInput
-              required
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="Lekki Campus"
-            />
-          </Field>
-          <Field label="Address">
-            <TextArea
-              required
-              rows={3}
-              value={form.address}
-              onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-              placeholder="12 Admiralty Way, Lekki Phase 1, Lagos"
-            />
-          </Field>
-          <div className="flex gap-2 justify-end">
-            {editingId && (
-              <Button variant="ghost" type="button" onClick={resetForm}>
-                Cancel
-              </Button>
-            )}
-            <Button type="submit">{editingId ? "Save" : "Add"}</Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ---------- Applications tab ----------
-// Note: backend currently only exposes "my applications" for the logged-in
-// student. This will show empty/error until an admin-only list-all endpoint
-// is added on the backend.
-
-function ApplicationsTab() {
-  const [applications, setApplications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(`${API}/api/applications/`, { credentials: "include" });
-        if (!res.ok) throw new Error("This endpoint currently only returns the logged-in user's own applications — an admin-wide list endpoint still needs to be added on the backend.");
-        setApplications(await res.json());
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  return (
-    <div>
-      <h2 className="text-lg font-semibold mb-4" style={{ color: COLORS.text }}>
-        Applications
-      </h2>
-
-      {loading && <p style={{ color: COLORS.textDim }}>Loading…</p>}
-      {error && (
-        <p
-          className="text-sm p-3 rounded-lg"
-          style={{ color: COLORS.danger, background: "#FF6B6B14" }}
-        >
-          {error}
-        </p>
-      )}
-
-      {!loading && !error && (
-        <div className="rounded-xl border overflow-hidden" style={{ borderColor: COLORS.border }}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ background: COLORS.panel }}>
-                {["Student", "Course", "Mode", "Location", "Applied"].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left px-4 py-3 font-medium text-xs"
-                    style={{ color: COLORS.textDim }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {applications.map((app) => (
-                <tr key={app.id} style={{ borderTop: `1px solid ${COLORS.border}` }}>
-                  <td className="px-4 py-3" style={{ color: COLORS.text }}>
-                    {app.student}
-                  </td>
-                  <td className="px-4 py-3" style={{ color: COLORS.text }}>
-                    {app.course_detail?.title}
-                  </td>
-                  <td className="px-4 py-3" style={{ color: COLORS.textDim }}>
-                    {app.mode_of_learning}
-                  </td>
-                  <td className="px-4 py-3" style={{ color: COLORS.textDim }}>
-                    {app.location_detail?.name || "—"}
-                  </td>
-                  <td className="px-4 py-3" style={{ color: COLORS.textDim }}>
-                    {new Date(app.created_at).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-              {applications.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center" style={{ color: COLORS.textDim }}>
-                    No applications yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------- Overview tab ----------
-
-function OverviewTab({ goTo }) {
-  const [stats, setStats] = useState({ courses: null, locations: null, applications: null });
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const [c, l] = await Promise.all([
-          fetch(`${API}/api/courses/`).then((r) => r.json()),
-          fetch(`${API}/api/courses/locations/`).then((r) => r.json()),
-        ]);
-        setStats((s) => ({ ...s, courses: c.length, locations: l.length }));
-      } catch {
-        // silently leave as null — individual tabs surface their own errors
-      }
-    })();
-  }, []);
-
-  return (
-    <div>
-      <h2 className="text-lg font-semibold mb-4" style={{ color: COLORS.text }}>
-        Overview
-      </h2>
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <StatCard label="Courses" value={stats.courses ?? "—"} />
-        <StatCard label="Locations" value={stats.locations ?? "—"} />
-        <StatCard label="Applications" value="—" />
-      </div>
-      <div className="flex gap-3">
-        <Button onClick={() => goTo("courses")}>Manage courses</Button>
-        <Button variant="ghost" onClick={() => goTo("locations")}>
-          Manage locations
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ---------- Shell ----------
-
-const NAV = [
-  { key: "overview", label: "Overview" },
-  { key: "courses", label: "Courses" },
-  { key: "locations", label: "Locations" },
-  { key: "applications", label: "Applications" },
-];
-
-export default function BackstagePage() {
-  const [tab, setTab] = useState("overview");
-
-  return (
-    <div
-      className="min-h-screen flex"
-      style={{ background: COLORS.bg, fontFamily: "Inter, system-ui, sans-serif" }}
-    >
-      <aside
-        className="w-60 shrink-0 border-r px-4 py-6 flex flex-col"
-        style={{ borderColor: COLORS.border }}
-      >
-        <div className="mb-8 px-2">
-          <p className="text-xs uppercase tracking-wider" style={{ color: COLORS.textDim }}>
-            LASOP
-          </p>
-          <p className="text-lg font-semibold" style={{ color: COLORS.text }}>
-            Backstage
-          </p>
-        </div>
-        <nav className="flex flex-col gap-1">
-          {NAV.map((item) => (
+      <div className="max-w-5xl mx-auto px-5 md:px-8 pt-8 pb-16">
+        <div className="flex items-center gap-1.5 mb-8 border-b border-[#1C2330] overflow-x-auto">
+          {TABS.map((t) => (
             <button
-              key={item.key}
-              onClick={() => setTab(item.key)}
-              className="text-left px-3 py-2 rounded-lg text-sm transition"
-              style={{
-                background: tab === item.key ? COLORS.accentSoft : "transparent",
-                color: tab === item.key ? COLORS.accent : COLORS.textDim,
-              }}
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`text-sm font-mono px-4 py-2.5 -mb-px border-b-2 transition whitespace-nowrap ${
+                tab === t.key
+                  ? 'border-[#5B8CFF] text-[#F1F3F7]'
+                  : 'border-transparent text-[#6B7585] hover:text-[#8B95A7]'
+              }`}
             >
-              {item.label}
+              {t.label.toLowerCase()}()
             </button>
           ))}
-        </nav>
-      </aside>
+        </div>
 
-      <main className="flex-1 p-8 max-w-5xl">
-        {tab === "overview" && <OverviewTab goTo={setTab} />}
-        {tab === "courses" && <CoursesTab />}
-        {tab === "locations" && <LocationsTab />}
-        {tab === "applications" && <ApplicationsTab />}
-      </main>
-    </div>
+        {tab === 'overview' && <OverviewTab courses={courses} locations={locations} applications={applications} />}
+        {tab === 'courses' && <CoursesTab courses={courses} />}
+        {tab === 'locations' && <LocationsTab locations={locations} />}
+        {tab === 'applications' && <ApplicationsTab applications={applications} />}
+      </div>
+    </main>
   );
 }
