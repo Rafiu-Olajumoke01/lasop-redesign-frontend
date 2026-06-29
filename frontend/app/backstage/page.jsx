@@ -611,8 +611,31 @@ export default function BackstagePage() {
   useEffect(() => {
     const t = localStorage.getItem('access');
     if (!t) { router.push('/login'); return; }
-    setToken(t);
-    setAuthChecked(true);
+
+    const verifyStaff = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/users/profile/`, {
+          headers: { Authorization: `Bearer ${t}` },
+        });
+        if (res.status === 401) {
+          localStorage.removeItem('access');
+          localStorage.removeItem('refresh');
+          router.push('/login');
+          return;
+        }
+        const profile = await res.json();
+        if (!profile.is_staff) {
+          router.push('/dashboard');
+          return;
+        }
+        setToken(t);
+        setAuthChecked(true);
+      } catch {
+        router.push('/login');
+      }
+    };
+
+    verifyStaff();
   }, []);
 
   const courses = useAdminResource(
