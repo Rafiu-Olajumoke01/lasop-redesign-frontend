@@ -3,17 +3,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Script from 'next/script';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 // ─── Payment Transfer ─────────────────────────────────────────────────────────
 
-function PaymentTransfer({ applicationId, authToken, onClose }) {
+function PaymentTransfer({ applicationId, authToken, userEmail, onClose }) {
   const [payment, setPayment] = useState(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const [paystackLoading, setPaystackLoading] = useState(false);
 
   const pollRef = useRef(null);
   const timerRef = useRef(null);
@@ -87,6 +89,29 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
 
     return () => clearInterval(pollRef.current);
   }, [payment, applicationId, authToken, getAuthHeaders]);
+
+  const openPaystackPopup = () => {
+    if (!payment?.authorization_url) return;
+
+    const handler = window.PaystackPop.setup({
+      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+      email: userEmail,
+      amount: Math.round(parseFloat(payment.amount) * 100), // kobo
+      ref: payment.id,
+      currency: 'NGN',
+      onClose: () => {
+        setPaystackLoading(false);
+      },
+      callback: (response) => {
+        // Payment done — flip to awaiting_confirmation and let polling confirm it
+        setPaystackLoading(false);
+        setPayment((p) => ({ ...p, status: 'awaiting_confirmation' }));
+      },
+    });
+
+    setPaystackLoading(true);
+    handler.openIframe();
+  };
 
   const handleConfirmClicked = async () => {
     setConfirming(true);
@@ -185,23 +210,21 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
                 </div>
 
                 <p className="text-[#4A5263] text-[11px]">
-                  Click the button below to complete your payment securely via Paystack. Come back to this page after payment.
+                  Click below to pay securely. A payment popup will open right here on this page.
                 </p>
 
-                {/* Paystack checkout button */}
-                {payment.authorization_url && (
-                  <a
-                    href={payment.authorization_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-[#5B8CFF] hover:bg-[#7FAAFF] text-[#0B0E14] text-sm font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+                {/* Paystack inline popup button */}
+                {payment.status !== 'awaiting_confirmation' && (
+                  <button
+                    onClick={openPaystackPopup}
+                    disabled={paystackLoading}
+                    className="w-full bg-[#5B8CFF] hover:bg-[#7FAAFF] disabled:opacity-40 text-[#0B0E14] text-sm font-semibold py-3 rounded-lg transition"
                   >
-                    <span>Complete Payment on Paystack</span>
-                    <span className="text-xs opacity-70">↗</span>
-                  </a>
+                    {paystackLoading ? 'opening payment...' : 'Pay Now'}
+                  </button>
                 )}
 
-                {/* Confirm button / verifying state */}
+                {/* Verifying state */}
                 {payment.status === 'awaiting_confirmation' ? (
                   <div className="flex items-center gap-2.5 bg-[#0E1829] border border-[#1C2B4A] rounded-lg px-4 py-3">
                     <span className="w-2 h-2 rounded-full bg-[#5B8CFF] animate-pulse shrink-0" />
@@ -227,7 +250,7 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
 
 // ─── Course Card ──────────────────────────────────────────────────────────────
 
-function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemove }) {
+function CourseCard({ app, featured, token, userEmail, openPayment, setOpenPayment, onRemove }) {
   const isOnline = app.mode_of_learning === 'online';
   const slug = (app.course_detail?.title || 'course')
     .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -301,6 +324,7 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
           <PaymentTransfer
             applicationId={app.id}
             authToken={token}
+            userEmail={userEmail}
             onClose={() => setOpenPayment(null)}
           />
         )}
@@ -388,135 +412,142 @@ export default function DashboardPage() {
   const physicalDash = CIRC * physicalPct;
 
   return (
-    <main className="min-h-screen bg-[#0B0E14]">
-      <div className="border-b border-[#1C2330] bg-[#0E121A]">
-        <div className="max-w-5xl mx-auto px-5 md:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="w-2 h-2 rounded-full bg-[#7CFF6B] inline-block" />
-            <span className="text-xs text-[#8B95A7] font-mono tracking-wide">lasop / dashboard</span>
-          </div>
-          <span className="text-xs text-[#5B8CFF] font-mono hidden sm:inline">~/student/session</span>
-        </div>
-      </div>
+    <>
+      {/* Load Paystack inline script once for the whole page */}
+      <Script src="https://js.paystack.co/v1/inline.js" strategy="lazyOnload" />
 
-      <div className="max-w-5xl mx-auto px-5 md:px-8 pt-12 pb-16">
-        {/* Profile */}
-        <div className="flex items-center justify-between bg-[#11151D] border border-[#1C2330] rounded-xl px-6 py-6 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-md bg-[#14201A] border border-[#2A4034] flex items-center justify-center font-mono text-base font-medium text-[#7CFF6B] shrink-0">
-              {initials || '··'}
+      <main className="min-h-screen bg-[#0B0E14]">
+        <div className="border-b border-[#1C2330] bg-[#0E121A]">
+          <div className="max-w-5xl mx-auto px-5 md:px-8 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2 h-2 rounded-full bg-[#7CFF6B] inline-block" />
+              <span className="text-xs text-[#8B95A7] font-mono tracking-wide">lasop / dashboard</span>
             </div>
-            <div>
-              <p className="text-[#F1F3F7] font-medium text-lg leading-tight">{user?.first_name} {user?.last_name}</p>
-              <p className="text-[#6B7585] text-xs font-mono mt-1">
-                {user?.email}{user?.phone_number ? ` · ${user.phone_number}` : ''}
-              </p>
-            </div>
-          </div>
-          <button onClick={handleLogout} className="text-xs text-[#8B95A7] hover:text-[#E6E9EF] border border-[#2A2F3A] hover:border-[#3A4050] px-4 py-2.5 rounded-md transition shrink-0">
-            Log out
-          </button>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-4 mb-8 items-stretch">
-          <div className="bg-[#11151D] border border-[#1C2330] rounded-xl p-6 flex items-center gap-6 justify-center lg:justify-start">
-            <div className="relative w-[140px] h-[140px] shrink-0">
-              <svg viewBox="0 0 140 140" className="w-full h-full -rotate-90">
-                <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#1C2330" strokeWidth={STROKE} />
-                {count > 0 && (
-                  <>
-                    <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#7CFF6B" strokeWidth={STROKE}
-                      strokeDasharray={`${onlineDash} ${CIRC - onlineDash}`} strokeLinecap="butt" />
-                    <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#FFB454" strokeWidth={STROKE}
-                      strokeDasharray={`${physicalDash} ${CIRC - physicalDash}`}
-                      strokeDashoffset={-onlineDash} strokeLinecap="butt" />
-                  </>
-                )}
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[#F1F3F7] text-2xl font-medium">{count}</span>
-                <span className="text-[#6B7585] text-[10px] font-mono">enrolled</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-3">
-              <p className="text-[#8B95A7] text-xs font-mono mb-1">learning_mode.split()</p>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#7CFF6B] inline-block shrink-0" />
-                <span className="text-[#E6E9EF] text-sm">{onlineCount} online</span>
-                <span className="text-[#6B7585] text-xs font-mono">{count > 0 ? Math.round(onlinePct * 100) : 0}%</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#FFB454] inline-block shrink-0" />
-                <span className="text-[#E6E9EF] text-sm">{physicalCount} physical</span>
-                <span className="text-[#6B7585] text-xs font-mono">{count > 0 ? Math.round(physicalPct * 100) : 0}%</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {[
-              { label: 'enrolled.length', value: count, accent: '#7CFF6B' },
-              { label: 'total_fees.sum()', value: `₦${totalFees >= 1000000 ? `${(totalFees / 1000000).toFixed(1)}M` : totalFees.toLocaleString()}`, accent: '#5B8CFF' },
-              { label: 'mode === online', value: onlineCount, accent: '#7CFF6B' },
-              { label: 'mode === physical', value: physicalCount, accent: '#FFB454' },
-            ].map(({ label, value, accent }) => (
-              <div key={label} className="bg-[#11151D] border border-[#1C2330] rounded-r-lg px-4 py-3.5 flex flex-col justify-center"
-                style={{ borderLeftColor: accent, borderLeftWidth: 2 }}>
-                <p className="text-[#6B7585] text-[11px] font-mono mb-1.5">{label}</p>
-                <p className="text-[#F1F3F7] text-2xl font-medium">{value}</p>
-              </div>
-            ))}
+            <span className="text-xs text-[#5B8CFF] font-mono hidden sm:inline">~/student/session</span>
           </div>
         </div>
 
-        {error && (
-          <div className="bg-[#2A1414] border border-[#501313] text-[#F09595] text-xs rounded-lg px-4 py-3 mb-5 font-mono">
-            {error}
+        <div className="max-w-5xl mx-auto px-5 md:px-8 pt-12 pb-16">
+          {/* Profile */}
+          <div className="flex items-center justify-between bg-[#11151D] border border-[#1C2330] rounded-xl px-6 py-6 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-md bg-[#14201A] border border-[#2A4034] flex items-center justify-center font-mono text-base font-medium text-[#7CFF6B] shrink-0">
+                {initials || '··'}
+              </div>
+              <div>
+                <p className="text-[#F1F3F7] font-medium text-lg leading-tight">{user?.first_name} {user?.last_name}</p>
+                <p className="text-[#6B7585] text-xs font-mono mt-1">
+                  {user?.email}{user?.phone_number ? ` · ${user.phone_number}` : ''}
+                </p>
+              </div>
+            </div>
+            <button onClick={handleLogout} className="text-xs text-[#8B95A7] hover:text-[#E6E9EF] border border-[#2A2F3A] hover:border-[#3A4050] px-4 py-2.5 rounded-md transition shrink-0">
+              Log out
+            </button>
           </div>
-        )}
 
-        {/* Courses */}
-        <div className="flex items-center justify-between mb-3.5">
-          <h2 className="text-[#F1F3F7] font-medium text-[15px]">My courses</h2>
-          <Link href="/apply" className="text-[#7CFF6B] text-xs font-mono hover:text-[#9AFF8C] transition">
-            + add_course()
-          </Link>
-        </div>
+          {/* Stats */}
+          <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-4 mb-8 items-stretch">
+            <div className="bg-[#11151D] border border-[#1C2330] rounded-xl p-6 flex items-center gap-6 justify-center lg:justify-start">
+              <div className="relative w-[140px] h-[140px] shrink-0">
+                <svg viewBox="0 0 140 140" className="w-full h-full -rotate-90">
+                  <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#1C2330" strokeWidth={STROKE} />
+                  {count > 0 && (
+                    <>
+                      <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#7CFF6B" strokeWidth={STROKE}
+                        strokeDasharray={`${onlineDash} ${CIRC - onlineDash}`} strokeLinecap="butt" />
+                      <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#FFB454" strokeWidth={STROKE}
+                        strokeDasharray={`${physicalDash} ${CIRC - physicalDash}`}
+                        strokeDashoffset={-onlineDash} strokeLinecap="butt" />
+                    </>
+                  )}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[#F1F3F7] text-2xl font-medium">{count}</span>
+                  <span className="text-[#6B7585] text-[10px] font-mono">enrolled</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <p className="text-[#8B95A7] text-xs font-mono mb-1">learning_mode.split()</p>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#7CFF6B] inline-block shrink-0" />
+                  <span className="text-[#E6E9EF] text-sm">{onlineCount} online</span>
+                  <span className="text-[#6B7585] text-xs font-mono">{count > 0 ? Math.round(onlinePct * 100) : 0}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#FFB454] inline-block shrink-0" />
+                  <span className="text-[#E6E9EF] text-sm">{physicalCount} physical</span>
+                  <span className="text-[#6B7585] text-xs font-mono">{count > 0 ? Math.round(physicalPct * 100) : 0}%</span>
+                </div>
+              </div>
+            </div>
 
-        {count === 0 ? (
-          <div className="bg-[#11151D] border border-dashed border-[#2A2F3A] rounded-xl p-12 text-center">
-            <p className="text-[#6B7585] text-sm font-mono mb-2">applications.length === 0</p>
-            <p className="text-[#4A5263] text-xs mb-4">No courses yet — your enrolled courses will show up here.</p>
-            <Link href="/apply" className="inline-block text-[#7CFF6B] text-sm font-mono hover:text-[#9AFF8C] transition border border-[#1F3326] hover:border-[#2A4034] rounded-md px-4 py-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { label: 'enrolled.length', value: count, accent: '#7CFF6B' },
+                { label: 'total_fees.sum()', value: `₦${totalFees >= 1000000 ? `${(totalFees / 1000000).toFixed(1)}M` : totalFees.toLocaleString()}`, accent: '#5B8CFF' },
+                { label: 'mode === online', value: onlineCount, accent: '#7CFF6B' },
+                { label: 'mode === physical', value: physicalCount, accent: '#FFB454' },
+              ].map(({ label, value, accent }) => (
+                <div key={label} className="bg-[#11151D] border border-[#1C2330] rounded-r-lg px-4 py-3.5 flex flex-col justify-center"
+                  style={{ borderLeftColor: accent, borderLeftWidth: 2 }}>
+                  <p className="text-[#6B7585] text-[11px] font-mono mb-1.5">{label}</p>
+                  <p className="text-[#F1F3F7] text-2xl font-medium">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-[#2A1414] border border-[#501313] text-[#F09595] text-xs rounded-lg px-4 py-3 mb-5 font-mono">
+              {error}
+            </div>
+          )}
+
+          {/* Courses */}
+          <div className="flex items-center justify-between mb-3.5">
+            <h2 className="text-[#F1F3F7] font-medium text-[15px]">My courses</h2>
+            <Link href="/apply" className="text-[#7CFF6B] text-xs font-mono hover:text-[#9AFF8C] transition">
               + add_course()
             </Link>
           </div>
-        ) : count === 1 ? (
-          <CourseCard
-            app={applications[0]}
-            featured
-            token={token}
-            openPayment={openPayment}
-            setOpenPayment={setOpenPayment}
-            onRemove={handleRemoveCourse}
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            {applications.map((app, i) => (
-              <CourseCard
-                key={app.id}
-                app={app}
-                featured={count % 2 !== 0 && i === count - 1}
-                token={token}
-                openPayment={openPayment}
-                setOpenPayment={setOpenPayment}
-                onRemove={handleRemoveCourse}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </main>
+
+          {count === 0 ? (
+            <div className="bg-[#11151D] border border-dashed border-[#2A2F3A] rounded-xl p-12 text-center">
+              <p className="text-[#6B7585] text-sm font-mono mb-2">applications.length === 0</p>
+              <p className="text-[#4A5263] text-xs mb-4">No courses yet — your enrolled courses will show up here.</p>
+              <Link href="/apply" className="inline-block text-[#7CFF6B] text-sm font-mono hover:text-[#9AFF8C] transition border border-[#1F3326] hover:border-[#2A4034] rounded-md px-4 py-2">
+                + add_course()
+              </Link>
+            </div>
+          ) : count === 1 ? (
+            <CourseCard
+              app={applications[0]}
+              featured
+              token={token}
+              userEmail={user?.email}
+              openPayment={openPayment}
+              setOpenPayment={setOpenPayment}
+              onRemove={handleRemoveCourse}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {applications.map((app, i) => (
+                <CourseCard
+                  key={app.id}
+                  app={app}
+                  featured={count % 2 !== 0 && i === count - 1}
+                  token={token}
+                  userEmail={user?.email}
+                  openPayment={openPayment}
+                  setOpenPayment={setOpenPayment}
+                  onRemove={handleRemoveCourse}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    </>
   );
 }
