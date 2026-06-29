@@ -14,12 +14,10 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const pollRef = useRef(null);
   const timerRef = useRef(null);
 
-  // FIX: moved authHeaders inside functions / passed as arg to avoid stale closure issues
   const getAuthHeaders = useCallback(() => ({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${authToken}`,
@@ -108,13 +106,6 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
     }
   };
 
-  const copyAccNumber = () => {
-    if (!payment?.account_number) return;
-    navigator.clipboard.writeText(payment.account_number);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
     const s = (secs % 60).toString().padStart(2, '0');
@@ -137,7 +128,7 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
 
       <div className="p-5">
         {loading && (
-          <p className="text-[#6B7585] text-sm font-mono animate-pulse">fetching_account_details...</p>
+          <p className="text-[#6B7585] text-sm font-mono animate-pulse">initializing_payment...</p>
         )}
 
         {error && (
@@ -173,6 +164,7 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
 
             {!['paid', 'expired'].includes(payment.status) && (
               <div className="space-y-4">
+                {/* Timer */}
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[11px] text-[#6B7585] font-mono">session.expires_in</span>
                   <span className={`font-mono text-sm px-3 py-1 rounded-md ${urgency ? 'text-[#F09595] bg-[#2A1414] border border-[#501313]' : 'text-[#7CFF6B] bg-[#14201A] border border-[#2A4034]'}`}>
@@ -186,30 +178,30 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
                   />
                 </div>
 
-                <div className="bg-[#11151D] border border-[#1C2330] rounded-lg divide-y divide-[#1C2330]">
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-[#6B7585] text-xs font-mono">bank</span>
-                    <span className="text-[#E6E9EF] text-sm">{payment.bank_name}</span>
-                  </div>
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-[#6B7585] text-xs font-mono">account_number</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#E6E9EF] font-mono text-sm tracking-widest">{payment.account_number}</span>
-                      <button onClick={copyAccNumber} className="text-[10px] text-[#5B8CFF] font-mono hover:text-[#7FAAFF] transition">
-                        {copied ? 'copied ✓' : 'copy'}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-[#6B7585] text-xs font-mono">amount</span>
-                    <span className="text-[#5B8CFF] font-medium text-sm">₦{Number(payment.amount).toLocaleString()}</span>
-                  </div>
+                {/* Amount */}
+                <div className="bg-[#11151D] border border-[#1C2330] rounded-lg px-4 py-3 flex items-center justify-between">
+                  <span className="text-[#6B7585] text-xs font-mono">amount</span>
+                  <span className="text-[#5B8CFF] font-medium text-sm">₦{Number(payment.amount).toLocaleString()}</span>
                 </div>
 
                 <p className="text-[#4A5263] text-[11px]">
-                  Transfer the exact amount shown. Do not add or subtract any kobo — mismatched amounts delay confirmation.
+                  Click the button below to complete your payment securely via Paystack. Come back to this page after payment.
                 </p>
 
+                {/* Paystack checkout button */}
+                {payment.authorization_url && (
+                  <a
+                    href={payment.authorization_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-[#5B8CFF] hover:bg-[#7FAAFF] text-[#0B0E14] text-sm font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+                  >
+                    <span>Complete Payment on Paystack</span>
+                    <span className="text-xs opacity-70">↗</span>
+                  </a>
+                )}
+
+                {/* Confirm button / verifying state */}
                 {payment.status === 'awaiting_confirmation' ? (
                   <div className="flex items-center gap-2.5 bg-[#0E1829] border border-[#1C2B4A] rounded-lg px-4 py-3">
                     <span className="w-2 h-2 rounded-full bg-[#5B8CFF] animate-pulse shrink-0" />
@@ -219,9 +211,9 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
                   <button
                     onClick={handleConfirmClicked}
                     disabled={confirming}
-                    className="w-full bg-[#5B8CFF] hover:bg-[#7FAAFF] disabled:opacity-40 text-[#0B0E14] text-sm font-semibold py-3 rounded-lg transition"
+                    className="w-full bg-transparent hover:bg-[#11151D] disabled:opacity-40 text-[#6B7585] hover:text-[#E6E9EF] text-xs font-mono py-2.5 rounded-lg border border-[#1C2330] hover:border-[#2A2F3A] transition"
                   >
-                    {confirming ? 'confirming...' : 'I have made this transfer'}
+                    {confirming ? 'confirming...' : 'I have completed payment'}
                   </button>
                 )}
               </div>
