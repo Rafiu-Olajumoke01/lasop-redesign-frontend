@@ -105,6 +105,19 @@ function ModePill({ mode }) {
   return <Pill color={mode === 'online' ? 'blue' : 'slate'}>{mode}</Pill>;
 }
 
+function PaymentPill({ payment }) {
+  if (!payment) return <span className="text-slate-600 text-xs">—</span>;
+  const map = {
+    pending: { label: 'Pending', color: 'slate' },
+    awaiting_confirmation: { label: 'In review', color: 'amber' },
+    paid: { label: 'Paid', color: 'emerald' },
+    expired: { label: 'Expired', color: 'rose' },
+    failed: { label: 'Failed', color: 'rose' },
+  };
+  const cfg = map[payment.status] || { label: payment.status, color: 'slate' };
+  return <Pill color={cfg.color}>{cfg.label}</Pill>;
+}
+
 function EmptyState({ title, hint }) {
   return (
     <div className="py-20 text-center">
@@ -548,15 +561,38 @@ function LocationsTab({ locations }) {
 
 // ─── Applications ─────────────────────────────────────────────────────────────
 
-function ApplicationsTab({ applications }) {
+function ApplicationsTab({ applications, token }) {
   const [filter, setFilter] = useState('all');
+  const [confirmingId, setConfirmingId] = useState(null);
+  const [actionError, setActionError] = useState('');
 
   const filtered = useMemo(() => {
     if (filter === 'all') return applications.items;
-    return applications.items.filter((a) => a.payment_status === filter);
+    return applications.items.filter((a) => a.payment?.status === filter);
   }, [applications.items, filter]);
 
   const filters = ['all', 'pending', 'awaiting_confirmation', 'paid', 'expired'];
+
+  const handleMarkPaid = async (application) => {
+    setActionError('');
+    setConfirmingId(application.id);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/applications/${application.id}/payments/admin-confirm/`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({}),
+        }
+      );
+      if (!res.ok) throw new Error('Could not confirm payment. Please try again.');
+      await applications.refresh();
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setConfirmingId(null);
+    }
+  };
 
   return (
     <div>
@@ -581,7 +617,7 @@ function ApplicationsTab({ applications }) {
         </div>
       </PageHeader>
 
-      <ErrorBanner message={applications.error} />
+      <ErrorBanner message={applications.error || actionError} />
 
       {applications.loading ? <Spinner text="Loading applications…" /> : filtered.length === 0 ? (
         <Card><EmptyState title="No applications" hint="Nothing matches this filter yet." /></Card>
@@ -591,7 +627,7 @@ function ApplicationsTab({ applications }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[#1F2937] bg-[#0A0F1E]/60 text-left">
-                  {['Applicant', 'Course', 'Mode', 'Fee', 'Date', ''].map((h, i) => (
+                  {['Applicant', 'Course', 'Mode', 'Fee', 'Payment', 'Date', ''].map((h, i) => (
                     <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                       {h}
                     </th>
@@ -605,6 +641,7 @@ function ApplicationsTab({ applications }) {
                   const course = getCourseTitle(a);
                   const mode   = a.mode_of_learning;
                   const date   = formatDate(a.created_at);
+                  const canConfirm = a.payment?.status === 'awaiting_confirmation';
                   return (
                     <tr key={a.id} className="border-b border-[#1F2937]/50 hover:bg-[#1F2937]/40 transition last:border-0">
                       <td className="px-5 py-4">
@@ -631,11 +668,27 @@ function ApplicationsTab({ applications }) {
                       <td className="px-5 py-4">
                         {mode ? <ModePill mode={mode} /> : <span className="text-slate-600 text-xs">—</span>}
                       </td>
-                      <td className="px-5 py-4 text-slate-200 font-bold">{formatMoney(getCourseFee(a))}</td>
+                      <td className="px-5 py-4 text-slate-200 font-bold">
+                        {a.payment ? formatMoney(a.payment.confirmed_amount || a.payment.amount) : formatMoney(getCourseFee(a))}
+                      </td>
+                      <td className="px-5 py-4">
+                        <PaymentPill payment={a.payment} />
+                      </td>
                       <td className="px-5 py-4 text-slate-500 text-xs whitespace-nowrap">
                         {date || '—'}
                       </td>
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-5 py-4 text-right whitespace-nowrap">
+                        {canConfirm && (
+                          <button
+                            onClick={() => handleMarkPaid(a)}
+                            disabled={confirmingId === a.id}
+                            className="text-[12px] font-semibold text-emerald-400 hover:text-emerald-300
+                              border border-emerald-500/30 hover:border-emerald-500/50 bg-emerald-500/10
+                              px-3 py-1.5 rounded-lg transition disabled:opacity-40 mr-3"
+                          >
+                            {confirmingId === a.id ? 'Confirming…' : 'Mark as paid'}
+                          </button>
+                        )}
                         <LinkButton danger onClick={() => applications.remove(a)}>Delete</LinkButton>
                       </td>
                     </tr>
@@ -853,7 +906,7 @@ export default function BackstagePage() {
             {tab === 'overview'     && <OverviewTab courses={courses} locations={locations} applications={applications} />}
             {tab === 'courses'      && <CoursesTab courses={courses} />}
             {tab === 'locations'    && <LocationsTab locations={locations} />}
-            {tab === 'applications' && <ApplicationsTab applications={applications} />}
+            {tab === 'applications' && <ApplicationsTab applications={applications} token={token} />}
           </div>
         </div>
       </div>
