@@ -489,104 +489,116 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0B0E14] flex items-center justify-center">
+      <main className="min-h-screen bg-[#0A0C10] flex items-center justify-center">
         <p className="text-[#6B7585] text-sm font-mono animate-pulse">loading_dashboard...</p>
       </main>
     );
   }
 
-  const initials = `${user?.first_name?.[0] ?? ''}${user?.last_name?.[0] ?? ''}`;
+  const firstName = user?.first_name || '';
+  const lastName = user?.last_name || '';
+  const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`;
   const onlineCount = applications.filter((a) => a.mode_of_learning === 'online').length;
   const physicalCount = applications.filter((a) => a.mode_of_learning === 'physical').length;
   const count = applications.length;
   const totalFees = applications.reduce((sum, a) => sum + (Number(a.course_detail?.fee) || 0), 0);
+  const paidCount = applications.filter((a) => a.payment_status === 'paid').length;
+  const reviewCount = applications.filter((a) => a.payment_status === 'in_review').length;
 
-  const RADIUS = 54, STROKE = 16, CIRC = 2 * Math.PI * RADIUS;
+  const RADIUS = 50, STROKE = 14, CIRC = 2 * Math.PI * RADIUS;
   const onlinePct = count > 0 ? onlineCount / count : 0;
   const physicalPct = count > 0 ? physicalCount / count : 0;
   const onlineDash = CIRC * onlinePct;
   const physicalDash = CIRC * physicalPct;
 
+  const formattedFees = totalFees >= 1000000
+    ? `₦${(totalFees / 1000000).toFixed(1)}M`
+    : `₦${totalFees.toLocaleString()}`;
+
   return (
-    <main className="min-h-screen bg-[#0B0E14]">
-      <div className="border-b border-[#1C2330] bg-[#0E121A]">
+    <main className="min-h-screen bg-[#0A0C10] bg-[radial-gradient(circle_at_top,_#0E121A_0%,_#0A0C10_55%)]">
+      {/* Top bar */}
+      <div className="border-b border-[#1C2330]/80 bg-[#0A0C10]/95 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-5 md:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="w-2 h-2 rounded-full bg-[#7CFF6B] inline-block" />
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7CFF6B] opacity-60" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7CFF6B]" />
+            </span>
             <span className="text-xs text-[#8B95A7] font-mono tracking-wide">lasop / dashboard</span>
           </div>
           <span className="text-xs text-[#5B8CFF] font-mono hidden sm:inline">~/student/session</span>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-5 md:px-8 pt-12 pb-16">
-        {/* Profile */}
-        <div className="flex items-center justify-between bg-[#11151D] border border-[#1C2330] rounded-xl px-6 py-6 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-md bg-[#14201A] border border-[#2A4034] flex items-center justify-center font-mono text-base font-medium text-[#7CFF6B] shrink-0">
-              {initials || '··'}
-            </div>
-            <div>
-              <p className="text-[#F1F3F7] font-medium text-lg leading-tight">{user?.first_name} {user?.last_name}</p>
-              <p className="text-[#6B7585] text-xs font-mono mt-1">
-                {user?.email}{user?.phone_number ? ` · ${user.phone_number}` : ''}
-              </p>
-            </div>
-          </div>
-          <button onClick={handleLogout} className="text-xs text-[#8B95A7] hover:text-[#E6E9EF] border border-[#2A2F3A] hover:border-[#3A4050] px-4 py-2.5 rounded-md transition shrink-0">
-            Log out
-          </button>
-        </div>
+      <div className="max-w-5xl mx-auto px-5 md:px-8 pt-10 pb-16">
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-4 mb-8 items-stretch">
-          <div className="bg-[#11151D] border border-[#1C2330] rounded-xl p-6 flex items-center gap-6 justify-center lg:justify-start">
-            <div className="relative w-[140px] h-[140px] shrink-0">
-              <svg viewBox="0 0 140 140" className="w-full h-full -rotate-90">
-                <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#1C2330" strokeWidth={STROKE} />
-                {count > 0 && (
-                  <>
-                    <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#7CFF6B" strokeWidth={STROKE}
-                      strokeDasharray={`${onlineDash} ${CIRC - onlineDash}`} strokeLinecap="butt" />
-                    <circle cx="70" cy="70" r={RADIUS} fill="none" stroke="#FFB454" strokeWidth={STROKE}
-                      strokeDasharray={`${physicalDash} ${CIRC - physicalDash}`}
-                      strokeDashoffset={-onlineDash} strokeLinecap="butt" />
-                  </>
-                )}
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[#F1F3F7] text-2xl font-medium">{count}</span>
-                <span className="text-[#6B7585] text-[10px] font-mono">enrolled</span>
-              </div>
+        {/* ── Session window: profile + stats unified as one IDE-style panel ── */}
+        <div className="bg-[#0D1118] border border-[#1C2330] rounded-2xl overflow-hidden mb-9 shadow-xl shadow-black/20">
+          {/* Window chrome */}
+          <div className="flex items-center justify-between px-4 py-2.5 bg-[#0F131B] border-b border-[#1C2330]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-[9px] h-[9px] rounded-full bg-[#FF5F57] inline-block" />
+              <span className="w-[9px] h-[9px] rounded-full bg-[#FEBC2E] inline-block" />
+              <span className="w-[9px] h-[9px] rounded-full bg-[#28C840] inline-block" />
+              <span className="ml-2 text-[11px] text-[#5A6275] font-mono">session.json</span>
             </div>
-            <div className="flex flex-col gap-3">
-              <p className="text-[#8B95A7] text-xs font-mono mb-1">learning_mode.split()</p>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#7CFF6B] inline-block shrink-0" />
-                <span className="text-[#E6E9EF] text-sm">{onlineCount} online</span>
-                <span className="text-[#6B7585] text-xs font-mono">{count > 0 ? Math.round(onlinePct * 100) : 0}%</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#FFB454] inline-block shrink-0" />
-                <span className="text-[#E6E9EF] text-sm">{physicalCount} physical</span>
-                <span className="text-[#6B7585] text-xs font-mono">{count > 0 ? Math.round(physicalPct * 100) : 0}%</span>
-              </div>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="text-[11px] text-[#6B7585] hover:text-[#F09595] font-mono transition"
+            >
+              logout()
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {[
-              { label: 'enrolled.length', value: count, accent: '#7CFF6B' },
-              { label: 'total_fees.sum()', value: `₦${totalFees >= 1000000 ? `${(totalFees / 1000000).toFixed(1)}M` : totalFees.toLocaleString()}`, accent: '#5B8CFF' },
-              { label: 'mode === online', value: onlineCount, accent: '#7CFF6B' },
-              { label: 'mode === physical', value: physicalCount, accent: '#FFB454' },
-            ].map(({ label, value, accent }) => (
-              <div key={label} className="bg-[#11151D] border border-[#1C2330] rounded-r-lg px-4 py-3.5 flex flex-col justify-center"
-                style={{ borderLeftColor: accent, borderLeftWidth: 2 }}>
-                <p className="text-[#6B7585] text-[11px] font-mono mb-1.5">{label}</p>
-                <p className="text-[#F1F3F7] text-2xl font-medium">{value}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-0">
+            {/* Left: identity + key:value rows */}
+            <div className="p-6 md:p-7">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-14 h-14 rounded-xl bg-[#14201A] border border-[#2A4034] flex items-center justify-center font-mono text-base font-semibold text-[#7CFF6B] shrink-0">
+                  {initials || '··'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[#F1F3F7] font-semibold text-lg leading-tight truncate">
+                    {firstName} {lastName}
+                  </p>
+                  <p className="text-[#5A6275] text-xs font-mono mt-1 truncate">
+                    {user?.email}{user?.phone_number ? ` · ${user.phone_number}` : ''}
+                  </p>
+                </div>
               </div>
-            ))}
+
+              <div className="font-mono text-[13px] space-y-2">
+                <Row k="enrolled" v={count} vColor="#F1F3F7" />
+                <Row k="online" v={`${onlineCount} (${count > 0 ? Math.round(onlinePct * 100) : 0}%)`} vColor="#7CFF6B" />
+                <Row k="physical" v={`${physicalCount} (${count > 0 ? Math.round(physicalPct * 100) : 0}%)`} vColor="#FFB454" />
+                <Row k="total_fees" v={formattedFees} vColor="#5B8CFF" />
+                {reviewCount > 0 && <Row k="in_review" v={reviewCount} vColor="#FFB454" />}
+                {paidCount > 0 && <Row k="paid" v={paidCount} vColor="#7CFF6B" />}
+              </div>
+            </div>
+
+            {/* Right: donut chart */}
+            <div className="flex items-center justify-center px-6 pb-7 lg:pb-0 lg:pr-8 lg:pl-2 border-t lg:border-t-0 lg:border-l border-[#1C2330]">
+              <div className="relative w-[130px] h-[130px] shrink-0">
+                <svg viewBox="0 0 130 130" className="w-full h-full -rotate-90">
+                  <circle cx="65" cy="65" r={RADIUS} fill="none" stroke="#1C2330" strokeWidth={STROKE} />
+                  {count > 0 && (
+                    <>
+                      <circle cx="65" cy="65" r={RADIUS} fill="none" stroke="#7CFF6B" strokeWidth={STROKE}
+                        strokeDasharray={`${onlineDash} ${CIRC - onlineDash}`} strokeLinecap="butt" />
+                      <circle cx="65" cy="65" r={RADIUS} fill="none" stroke="#FFB454" strokeWidth={STROKE}
+                        strokeDasharray={`${physicalDash} ${CIRC - physicalDash}`}
+                        strokeDashoffset={-onlineDash} strokeLinecap="butt" />
+                    </>
+                  )}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[#F1F3F7] text-2xl font-semibold">{count}</span>
+                  <span className="text-[#5A6275] text-[10px] font-mono">courses</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -596,16 +608,19 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Courses */}
+        {/* ── Courses ── */}
         <div className="flex items-center justify-between mb-3.5">
-          <h2 className="text-[#F1F3F7] font-medium text-[15px]">My courses</h2>
-          <Link href="/apply" className="text-[#7CFF6B] text-xs font-mono hover:text-[#9AFF8C] transition">
-            + add_course()
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-[#F1F3F7] font-semibold text-[15px]">My courses</h2>
+            <span className="text-[#3A4254] text-[11px] font-mono">/{count}</span>
+          </div>
+          <Link href="/apply" className="text-[#7CFF6B] text-xs font-mono hover:text-[#9AFF8C] transition flex items-center gap-1">
+            <span className="text-sm leading-none">+</span> add_course()
           </Link>
         </div>
 
         {count === 0 ? (
-          <div className="bg-[#11151D] border border-dashed border-[#2A2F3A] rounded-xl p-12 text-center">
+          <div className="bg-[#0D1118] border border-dashed border-[#232B3A] rounded-xl p-12 text-center">
             <p className="text-[#6B7585] text-sm font-mono mb-2">applications.length === 0</p>
             <p className="text-[#4A5263] text-xs mb-4">No courses yet — your enrolled courses will show up here.</p>
             <Link href="/apply" className="inline-block text-[#7CFF6B] text-sm font-mono hover:text-[#9AFF8C] transition border border-[#1F3326] hover:border-[#2A4034] rounded-md px-4 py-2">
@@ -640,5 +655,16 @@ export default function DashboardPage() {
         )}
       </div>
     </main>
+  );
+}
+
+// ─── Small helper: JSON-style key:value row ────────────────────────────────
+
+function Row({ k, v, vColor }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[#5A6275]">{k}:</span>
+      <span style={{ color: vColor }} className="font-medium">{v}</span>
+    </div>
   );
 }
