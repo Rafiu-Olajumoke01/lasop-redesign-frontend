@@ -6,120 +6,110 @@ import Link from 'next/link';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
-// ─── Payment Transfer ─────────────────────────────────────────────────────────
+const BANK_DETAILS = {
+  accountName: 'Lagos School of Programming Ltd',
+  bankName: 'Zenith Bank',
+  accountNumber: '1223017613',
+};
 
-function PaymentTransfer({ applicationId, authToken, onClose }) {
-  const [payment, setPayment] = useState(null);
-  const [secondsLeft, setSecondsLeft] = useState(0);
-  const [loading, setLoading] = useState(true);
+
+function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmitted }) {
+  // step: 'choose' -> 'amount' (part only) -> 'bank_details'
+  const [step, setStep] = useState('choose');
+  const [paymentType, setPaymentType] = useState(null); 
+  const [amount, setAmount] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [confirming, setConfirming] = useState(false);
-
-  const pollRef = useRef(null);
-  const timerRef = useRef(null);
+  const [copiedField, setCopiedField] = useState('');
 
   const getAuthHeaders = useCallback(() => ({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${authToken}`,
   }), [authToken]);
 
-  const initiatePayment = useCallback(async () => {
+
+  const formatAmountInput = (raw) => {
+    const digitsOnly = raw.replace(/[^\d]/g, '');
+    if (!digitsOnly) return '';
+    return Number(digitsOnly).toLocaleString();
+  };
+
+  const handleAmountChange = (e) => {
+    setAmount(formatAmountInput(e.target.value));
+  };
+
+  const rawAmount = () => Number(amount.replace(/,/g, '')) || 0;
+
+  const handleChoosePaymentType = (type) => {
+    setPaymentType(type);
+    setError('');
+    if (type === 'full') {
+      setAmount(totalFee ? totalFee.toLocaleString() : '');
+      setStep('bank_details');
+    } else {
+      setStep('amount');
+    }
+  };
+
+  const handleSubmitAmount = () => {
+    if (rawAmount() <= 0) {
+      setError('Please enter an amount greater than ₦0');
+      return;
+    }
+    setError('');
+    setStep('bank_details');
+  };
+
+  const handleInitiatePayment = async () => {
     setLoading(true);
     setError('');
     try {
       const res = await fetch(
-        `${API_BASE}/api/applications/${applicationId}/payments/initiate/`,
+        `${API_BASE}/api/applications/${applicationId}/payments/manual/initiate/`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            payment_type: paymentType,
+            amount: rawAmount(),
+          }),
+        }
+      );
+      if (!res.ok) throw new Error('Could not save payment details. Please try again.');
+      await handleConfirmClicked();
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmClicked = async () => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/applications/${applicationId}/payments/manual/confirm-clicked/`,
         { method: 'POST', headers: getAuthHeaders() }
       );
-      if (!res.ok) throw new Error('Could not start payment. Please try again.');
-      const data = await res.json();
-      setPayment(data);
-      setSecondsLeft(data.seconds_remaining);
+      if (!res.ok) throw new Error('Could not confirm. Please refresh and try again.');
+      onSubmitted();
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [applicationId, authToken, getAuthHeaders]);
-
-  useEffect(() => {
-    initiatePayment();
-    return () => {
-      clearInterval(pollRef.current);
-      clearInterval(timerRef.current);
-    };
-  }, [initiatePayment]);
-
-  // Countdown timer
-  useEffect(() => {
-    clearInterval(timerRef.current);
-    if (!payment || payment.status === 'paid' || payment.status === 'expired') return;
-    timerRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          setPayment((p) => (p ? { ...p, status: 'expired' } : p));
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timerRef.current);
-  }, [payment]);
-
-  // Poll for payment status every 5 seconds
-  useEffect(() => {
-    clearInterval(pollRef.current);
-    if (!payment || payment.status === 'paid' || payment.status === 'expired') return;
-
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(
-          `${API_BASE}/api/applications/${applicationId}/payments/status/`,
-          { headers: getAuthHeaders() }
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        setPayment(data);
-        setSecondsLeft(data.seconds_remaining);
-      } catch {}
-    }, 5000);
-
-    return () => clearInterval(pollRef.current);
-  }, [payment, applicationId, authToken, getAuthHeaders]);
-
-  const handleConfirmClicked = async () => {
-    setConfirming(true);
-    setError('');
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/applications/${applicationId}/payments/confirm-clicked/`,
-        { method: 'POST', headers: getAuthHeaders() }
-      );
-      if (!res.ok) throw new Error('Could not confirm. Please refresh and try again.');
-      const data = await res.json();
-      setPayment((p) => ({ ...p, status: data.status }));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setConfirming(false);
-    }
   };
 
-  const formatTime = (secs) => {
-    const m = Math.floor(secs / 60).toString().padStart(2, '0');
-    const s = (secs % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
+  const handleCopy = (field, value) => {
+    navigator.clipboard.writeText(value);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(''), 1500);
   };
-
-  const urgency = secondsLeft < 300;
 
   return (
     <div className="mt-3 rounded-xl border border-[#1C2330] bg-[#0D1118] overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3.5 bg-[#0E121A] border-b border-[#1C2330]">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-[#5B8CFF] inline-block" />
-          <span className="text-[11px] text-[#6B7585] font-mono">payment.initiate()</span>
+          <span className="text-[11px] text-[#6B7585] font-mono">payment.bank_transfer()</span>
         </div>
         <button onClick={onClose} className="text-[#5A6275] hover:text-[#E6E9EF] text-xs font-mono transition">
           ✕ close
@@ -127,111 +117,157 @@ function PaymentTransfer({ applicationId, authToken, onClose }) {
       </div>
 
       <div className="p-5">
-        {loading && (
-          <p className="text-[#6B7585] text-sm font-mono animate-pulse">initializing_payment...</p>
+        {error && (
+          <div className="bg-[#2A1414] border border-[#501313] rounded-lg px-4 py-3 mb-4">
+            <p className="text-[#F09595] text-xs font-mono">{error}</p>
+          </div>
         )}
 
-        {error && (
-          <div className="bg-[#2A1414] border border-[#501313] rounded-lg px-4 py-3 mb-3">
-            <p className="text-[#F09595] text-xs font-mono mb-2">{error}</p>
-            <button onClick={initiatePayment} className="text-xs text-[#5B8CFF] font-mono hover:text-[#7FAAFF] transition">
-              retry()
+        {/* Step 1: Choose payment type */}
+        {step === 'choose' && (
+          <div className="space-y-3">
+            <p className="text-[#8B95A7] text-xs font-mono mb-3">choose_payment_option</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                onClick={() => handleChoosePaymentType('full')}
+                className="text-left bg-[#11151D] border border-[#1C2330] hover:border-[#2A4034] rounded-lg p-4 transition group"
+              >
+                <p className="text-[#7CFF6B] text-sm font-medium mb-1">Pay in Full</p>
+                <p className="text-[#6B7585] text-xs">
+                  {totalFee ? `₦${totalFee.toLocaleString()}` : 'Pay the complete course fee'}
+                </p>
+              </button>
+              <button
+                onClick={() => handleChoosePaymentType('part')}
+                className="text-left bg-[#11151D] border border-[#1C2330] hover:border-[#2A3F6A] rounded-lg p-4 transition group"
+              >
+                <p className="text-[#5B8CFF] text-sm font-medium mb-1">Part Payment</p>
+                <p className="text-[#6B7585] text-xs">Pay an amount of your choice</p>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Enter amount (part payment only) */}
+        {step === 'amount' && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-[#8B95A7] text-xs font-mono mb-2.5">
+                Type how much you want to pay in the box below
+              </p>
+              <div className="flex items-center bg-[#11151D] border border-[#1C2330] focus-within:border-[#2A3F6A] rounded-lg px-4 py-3 transition">
+                <span className="text-[#5B8CFF] font-medium text-base mr-1.5 shrink-0">₦</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={amount}
+                  onChange={handleAmountChange}
+                  placeholder="0"
+                  autoFocus
+                  className="bg-transparent outline-none text-[#F1F3F7] text-base font-medium w-full placeholder:text-[#3A4050]"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => { setStep('choose'); setError(''); }}
+                className="text-xs font-mono px-3 py-2.5 rounded-md border border-[#1C2330] text-[#6B7585] hover:text-[#E6E9EF] hover:border-[#2A2F3A] transition"
+              >
+                back
+              </button>
+              <button
+                onClick={handleSubmitAmount}
+                className="flex-1 bg-[#5B8CFF] hover:bg-[#7FAAFF] text-[#0B0E14] text-sm font-semibold py-2.5 rounded-lg transition"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Bank details */}
+        {step === 'bank_details' && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-[#8B95A7] text-xs font-mono mb-2.5">transfer_to</p>
+              <div className="bg-[#11151D] border border-[#1C2330] rounded-lg divide-y divide-[#1C2330]">
+                {[
+                  { label: 'Account Name', value: BANK_DETAILS.accountName, field: 'name' },
+                  { label: 'Bank', value: BANK_DETAILS.bankName, field: 'bank' },
+                  { label: 'Account Number', value: BANK_DETAILS.accountNumber, field: 'number' },
+                ].map(({ label, value, field }) => (
+                  <div key={field} className="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <p className="text-[#6B7585] text-[11px] font-mono mb-0.5">{label}</p>
+                      <p className="text-[#F1F3F7] text-sm font-medium">{value}</p>
+                    </div>
+                    <button
+                      onClick={() => handleCopy(field, value)}
+                      className="text-[11px] font-mono text-[#5B8CFF] hover:text-[#7FAAFF] transition shrink-0 ml-3"
+                    >
+                      {copiedField === field ? 'copied ✓' : 'copy'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-[#11151D] border border-[#1C2330] rounded-lg px-4 py-3 flex items-center justify-between">
+              <span className="text-[#6B7585] text-xs font-mono">amount to pay</span>
+              <span className="text-[#5B8CFF] font-medium text-sm">₦{amount || '0'}</span>
+            </div>
+
+            <p className="text-[#4A5263] text-[11px] leading-relaxed">
+              Make the transfer using your bank app, then click the button below to let us know. Your payment will be reviewed and confirmed shortly after.
+            </p>
+
+            <button
+              onClick={handleInitiatePayment}
+              disabled={loading}
+              className="w-full bg-[#7CFF6B] hover:bg-[#9AFF8C] disabled:opacity-50 text-[#0B0E14] text-sm font-semibold py-3 rounded-lg transition"
+            >
+              {loading ? 'submitting...' : 'I have made payment'}
             </button>
           </div>
         )}
 
-        {!loading && !error && payment && (
-          <>
-            {payment.status === 'paid' && (
-              <div className="bg-[#14201A] border border-[#2A4034] rounded-lg px-4 py-4 text-center">
-                <p className="text-[#7CFF6B] font-mono text-sm mb-1">payment.status === "paid" ✓</p>
-                <p className="text-[#8B95A7] text-xs">₦{Number(payment.amount).toLocaleString()} received and confirmed.</p>
-              </div>
-            )}
-
-            {payment.status === 'expired' && (
-              <div className="bg-[#1E1A0E] border border-[#3A2E0A] rounded-lg px-4 py-4">
-                <p className="text-[#FFB454] font-mono text-sm mb-1">session.expired()</p>
-                <p className="text-[#8B95A7] text-xs mb-3">Your 30-minute window ended. Start a new one to continue.</p>
-                <button
-                  onClick={initiatePayment}
-                  className="text-xs text-[#5B8CFF] font-mono hover:text-[#7FAAFF] transition border border-[#1C2B4A] hover:border-[#2A3F6A] px-3 py-1.5 rounded-md"
-                >
-                  new_session()
-                </button>
-              </div>
-            )}
-
-            {!['paid', 'expired'].includes(payment.status) && (
-              <div className="space-y-4">
-                {/* Timer */}
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] text-[#6B7585] font-mono">session.expires_in</span>
-                  <span className={`font-mono text-sm px-3 py-1 rounded-md ${urgency ? 'text-[#F09595] bg-[#2A1414] border border-[#501313]' : 'text-[#7CFF6B] bg-[#14201A] border border-[#2A4034]'}`}>
-                    {formatTime(secondsLeft)}
-                  </span>
-                </div>
-                <div className="w-full h-[3px] bg-[#1C2330] rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-1000 ${urgency ? 'bg-[#F09595]' : 'bg-[#5B8CFF]'}`}
-                    style={{ width: `${(secondsLeft / 1800) * 100}%` }}
-                  />
-                </div>
-
-                {/* Amount */}
-                <div className="bg-[#11151D] border border-[#1C2330] rounded-lg px-4 py-3 flex items-center justify-between">
-                  <span className="text-[#6B7585] text-xs font-mono">amount</span>
-                  <span className="text-[#5B8CFF] font-medium text-sm">₦{Number(payment.amount).toLocaleString()}</span>
-                </div>
-
-                <p className="text-[#4A5263] text-[11px]">
-                  Click the button below to complete your payment securely via Paystack. Come back to this page after payment.
-                </p>
-
-                {/* Paystack checkout button */}
-                {payment.authorization_url && (
-                  <a
-                    href={payment.authorization_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-[#5B8CFF] hover:bg-[#7FAAFF] text-[#0B0E14] text-sm font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
-                  >
-                    <span>Complete Payment on Paystack</span>
-                    <span className="text-xs opacity-70">↗</span>
-                  </a>
-                )}
-
-                {/* Confirm button / verifying state */}
-                {payment.status === 'awaiting_confirmation' ? (
-                  <div className="flex items-center gap-2.5 bg-[#0E1829] border border-[#1C2B4A] rounded-lg px-4 py-3">
-                    <span className="w-2 h-2 rounded-full bg-[#5B8CFF] animate-pulse shrink-0" />
-                    <p className="text-[#7FAAFF] text-xs font-mono">verifying... updates automatically when confirmed.</p>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleConfirmClicked}
-                    disabled={confirming}
-                    className="w-full bg-transparent hover:bg-[#11151D] disabled:opacity-40 text-[#6B7585] hover:text-[#E6E9EF] text-xs font-mono py-2.5 rounded-lg border border-[#1C2330] hover:border-[#2A2F3A] transition"
-                  >
-                    {confirming ? 'confirming...' : 'I have completed payment'}
-                  </button>
-                )}
-              </div>
-            )}
-          </>
-        )}
       </div>
     </div>
   );
 }
+// ─── Payment Status Badge ───────────────────────────────────────────────────
+
+function PaymentStatusBadge({ status, amountPaid }) {
+  if (!status || status === 'not_started') return null;
+
+  if (status === 'in_review') {
+    return (
+      <span className="text-[11px] px-2.5 py-1 rounded-md font-mono bg-[#1E1A0E] text-[#FFB454] border border-[#3A2E0A]">
+        Payment in review
+      </span>
+    );
+  }
+
+  if (status === 'paid') {
+    return (
+      <span className="text-[11px] px-2.5 py-1 rounded-md font-mono bg-[#14201A] text-[#7CFF6B] border border-[#2A4034]">
+        Paid · ₦{Number(amountPaid).toLocaleString()}
+      </span>
+    );
+  }
+
+  return null;
+}
 
 // ─── Course Card ──────────────────────────────────────────────────────────────
 
-function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemove }) {
+function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemove, onPaymentUpdate }) {
   const isOnline = app.mode_of_learning === 'online';
   const slug = (app.course_detail?.title || 'course')
     .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
   const isPaymentOpen = openPayment === app.id;
+  const paymentStatus = app.payment_status || 'not_started';
+  const isPaid = paymentStatus === 'paid';
 
   return (
     <div
@@ -260,11 +296,12 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
             <h3 className={'text-[#F1F3F7] font-medium leading-snug mb-2.5 ' + (featured ? 'text-base' : 'text-sm')}>
               {app.course_detail?.title}
             </h3>
-            <div className="flex items-center gap-2 mb-2.5">
+            <div className="flex items-center gap-2 mb-2.5 flex-wrap">
               <span className={'text-[11px] px-2.5 py-1 rounded-md font-mono ' + (isOnline ? 'bg-[#14201A] text-[#7CFF6B]' : 'bg-[#261B0E] text-[#FFB454]')}>
                 {app.mode_of_learning}
               </span>
               <span className="text-[11px] text-[#6B7585]">{app.course_detail?.duration}</span>
+              <PaymentStatusBadge status={paymentStatus} amountPaid={app.amount_paid} />
             </div>
             {app.location_detail && (
               <p className="text-[11px] text-[#6B7585] mb-2.5">
@@ -284,24 +321,31 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
         </div>
 
         {/* Pay button */}
-        <div className="mt-4 pt-3.5 border-t border-[#1C2330]">
-          <button
-            onClick={() => setOpenPayment(isPaymentOpen ? null : app.id)}
-            className={`text-xs font-mono px-3 py-2 rounded-md border transition ${
-              isPaymentOpen
-                ? 'text-[#6B7585] border-[#2A2F3A] hover:text-[#F09595] hover:border-[#501313]'
-                : 'text-[#5B8CFF] border-[#1C2B4A] hover:border-[#2A3F6A] hover:text-[#7FAAFF]'
-            }`}
-          >
-            {isPaymentOpen ? 'cancel_payment()' : 'pay_now()'}
-          </button>
-        </div>
+        {!isPaid && (
+          <div className="mt-4 pt-3.5 border-t border-[#1C2330]">
+            <button
+              onClick={() => setOpenPayment(isPaymentOpen ? null : app.id)}
+              className={`text-sm font-semibold px-4 py-2.5 rounded-lg transition ${
+                isPaymentOpen
+                  ? 'bg-transparent border border-[#2A2F3A] text-[#6B7585] hover:text-[#F09595] hover:border-[#501313]'
+                  : 'bg-[#5B8CFF] hover:bg-[#7FAAFF] text-[#0B0E14]'
+              }`}
+            >
+              {isPaymentOpen ? 'Cancel' : 'Pay Now'}
+            </button>
+          </div>
+        )}
 
         {isPaymentOpen && (
           <PaymentTransfer
             applicationId={app.id}
             authToken={token}
+            totalFee={Number(app.course_detail?.fee) || 0}
             onClose={() => setOpenPayment(null)}
+            onSubmitted={() => {
+              onPaymentUpdate(app.id, 'in_review');
+              setOpenPayment(null);
+            }}
           />
         )}
       </div>
@@ -359,6 +403,16 @@ export default function DashboardPage() {
     } catch {
       setError('Failed to remove course');
     }
+  };
+
+  const handlePaymentUpdate = (applicationId, newStatus, amountPaid) => {
+    setApplications((prev) =>
+      prev.map((a) =>
+        a.id === applicationId
+          ? { ...a, payment_status: newStatus, ...(amountPaid !== undefined ? { amount_paid: amountPaid } : {}) }
+          : a
+      )
+    );
   };
 
   const handleLogout = () => {
@@ -500,6 +554,7 @@ export default function DashboardPage() {
             openPayment={openPayment}
             setOpenPayment={setOpenPayment}
             onRemove={handleRemoveCourse}
+            onPaymentUpdate={handlePaymentUpdate}
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -512,6 +567,7 @@ export default function DashboardPage() {
                 openPayment={openPayment}
                 setOpenPayment={setOpenPayment}
                 onRemove={handleRemoveCourse}
+                onPaymentUpdate={handlePaymentUpdate}
               />
             ))}
           </div>
