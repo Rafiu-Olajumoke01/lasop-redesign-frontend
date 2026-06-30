@@ -6,17 +6,37 @@ import Link from 'next/link';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
+// ─── Bank Account Details ──────────────────────────────────────────────────
 const BANK_DETAILS = {
   accountName: 'Lagos School of Programming Ltd',
   bankName: 'Zenith Bank',
   accountNumber: '1223017613',
 };
 
+// ─── Step Indicator ─────────────────────────────────────────────────────────
+
+function StepDots({ step }) {
+  const steps = ['choose', 'amount', 'bank_details'];
+  const activeIndex = steps.indexOf(step);
+  return (
+    <div className="flex items-center gap-1.5">
+      {steps.map((s, i) => (
+        <span
+          key={s}
+          className={`h-1 rounded-full transition-all duration-300 ${
+            i === activeIndex ? 'w-5 bg-[#5B8CFF]' : i < activeIndex ? 'w-1 bg-[#3A4A6E]' : 'w-1 bg-[#1C2330]'
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Payment Transfer Modal (Manual Bank Transfer Flow) ────────────────────
 
 function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmitted }) {
-  // step: 'choose' -> 'amount' (part only) -> 'bank_details'
   const [step, setStep] = useState('choose');
-  const [paymentType, setPaymentType] = useState(null); 
+  const [paymentType, setPaymentType] = useState(null);
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,6 +47,15 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
     Authorization: `Bearer ${authToken}`,
   }), [authToken]);
 
+  useEffect(() => {
+    const handleKey = (e) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', handleKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
 
   const formatAmountInput = (raw) => {
     const digitsOnly = raw.replace(/[^\d]/g, '');
@@ -34,10 +63,7 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
     return Number(digitsOnly).toLocaleString();
   };
 
-  const handleAmountChange = (e) => {
-    setAmount(formatAmountInput(e.target.value));
-  };
-
+  const handleAmountChange = (e) => setAmount(formatAmountInput(e.target.value));
   const rawAmount = () => Number(amount.replace(/,/g, '')) || 0;
 
   const handleChoosePaymentType = (type) => {
@@ -60,29 +86,6 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
     setStep('bank_details');
   };
 
-  const handleInitiatePayment = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/applications/${applicationId}/payments/manual/initiate/`,
-        {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({
-            payment_type: paymentType,
-            amount: rawAmount(),
-          }),
-        }
-      );
-      if (!res.ok) throw new Error('Could not save payment details. Please try again.');
-      await handleConfirmClicked();
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
-    }
-  };
-
   const handleConfirmClicked = async () => {
     try {
       const res = await fetch(
@@ -98,6 +101,26 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
     }
   };
 
+  const handleInitiatePayment = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/applications/${applicationId}/payments/manual/initiate/`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ payment_type: paymentType, amount: rawAmount() }),
+        }
+      );
+      if (!res.ok) throw new Error('Could not save payment details. Please try again.');
+      await handleConfirmClicked();
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
   const handleCopy = (field, value) => {
     navigator.clipboard.writeText(value);
     setCopiedField(field);
@@ -105,132 +128,176 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
   };
 
   return (
-    <div className="mt-3 rounded-xl border border-[#1C2330] bg-[#0D1118] overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3.5 bg-[#0E121A] border-b border-[#1C2330]">
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#5B8CFF] inline-block" />
-          <span className="text-[11px] text-[#6B7585] font-mono">payment.bank_transfer()</span>
-        </div>
-        <button onClick={onClose} className="text-[#5A6275] hover:text-[#E6E9EF] text-xs font-mono transition">
-          ✕ close
-        </button>
-      </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-[#05070B]/80 backdrop-blur-sm" />
 
-      <div className="p-5">
-        {error && (
-          <div className="bg-[#2A1414] border border-[#501313] rounded-lg px-4 py-3 mb-4">
-            <p className="text-[#F09595] text-xs font-mono">{error}</p>
+      {/* Modal card */}
+      <div className="relative w-full max-w-[420px] bg-[#0D1118] border border-[#232B3A] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden">
+        {/* Accent top bar */}
+        <div className="h-[3px] w-full bg-gradient-to-r from-[#5B8CFF] via-[#7CFF6B] to-[#5B8CFF]" />
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-4">
+          <div>
+            <p className="text-[#F1F3F7] text-[15px] font-semibold">Bank Transfer</p>
+            <p className="text-[#5A6275] text-[11px] font-mono mt-0.5">secure · manual review</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-[#6B7585] hover:text-[#E6E9EF] hover:bg-[#1A2030] transition shrink-0"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        {step !== 'choose' && (
+          <div className="px-6 pb-4">
+            <StepDots step={step} />
           </div>
         )}
 
-        {/* Step 1: Choose payment type */}
-        {step === 'choose' && (
-          <div className="space-y-3">
-            <p className="text-[#8B95A7] text-xs font-mono mb-3">choose_payment_option</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="px-6 pb-6">
+          {error && (
+            <div className="bg-[#2A1414] border border-[#501313] rounded-lg px-4 py-3 mb-4">
+              <p className="text-[#F09595] text-xs">{error}</p>
+            </div>
+          )}
+
+          {/* Step 1: Choose payment type */}
+          {step === 'choose' && (
+            <div className="space-y-2.5">
               <button
                 onClick={() => handleChoosePaymentType('full')}
-                className="text-left bg-[#11151D] border border-[#1C2330] hover:border-[#2A4034] rounded-lg p-4 transition group"
+                className="w-full text-left bg-[#11151D] hover:bg-[#141925] border border-[#1C2330] hover:border-[#2A4034] rounded-xl p-4 transition flex items-center justify-between"
               >
-                <p className="text-[#7CFF6B] text-sm font-medium mb-1">Pay in Full</p>
-                <p className="text-[#6B7585] text-xs">
-                  {totalFee ? `₦${totalFee.toLocaleString()}` : 'Pay the complete course fee'}
-                </p>
+                <div>
+                  <p className="text-[#F1F3F7] text-sm font-semibold mb-1">Pay in Full</p>
+                  <p className="text-[#6B7585] text-xs">
+                    {totalFee ? `₦${totalFee.toLocaleString()}` : 'Complete course fee'}
+                  </p>
+                </div>
+                <span className="w-8 h-8 rounded-full bg-[#14201A] border border-[#2A4034] flex items-center justify-center text-[#7CFF6B] shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </span>
               </button>
               <button
                 onClick={() => handleChoosePaymentType('part')}
-                className="text-left bg-[#11151D] border border-[#1C2330] hover:border-[#2A3F6A] rounded-lg p-4 transition group"
+                className="w-full text-left bg-[#11151D] hover:bg-[#141925] border border-[#1C2330] hover:border-[#2A3F6A] rounded-xl p-4 transition flex items-center justify-between"
               >
-                <p className="text-[#5B8CFF] text-sm font-medium mb-1">Part Payment</p>
-                <p className="text-[#6B7585] text-xs">Pay an amount of your choice</p>
+                <div>
+                  <p className="text-[#F1F3F7] text-sm font-semibold mb-1">Part Payment</p>
+                  <p className="text-[#6B7585] text-xs">Pay an amount of your choice</p>
+                </div>
+                <span className="w-8 h-8 rounded-full bg-[#0E1829] border border-[#1C2B4A] flex items-center justify-center text-[#5B8CFF] shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </span>
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Step 2: Enter amount (part payment only) */}
-        {step === 'amount' && (
-          <div className="space-y-4">
-            <div>
-              <p className="text-[#8B95A7] text-xs font-mono mb-2.5">
-                Type how much you want to pay in the box below
-              </p>
-              <div className="flex items-center bg-[#11151D] border border-[#1C2330] focus-within:border-[#2A3F6A] rounded-lg px-4 py-3 transition">
-                <span className="text-[#5B8CFF] font-medium text-base mr-1.5 shrink-0">₦</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={amount}
-                  onChange={handleAmountChange}
-                  placeholder="0"
-                  autoFocus
-                  className="bg-transparent outline-none text-[#F1F3F7] text-base font-medium w-full placeholder:text-[#3A4050]"
-                />
+          {/* Step 2: Enter amount */}
+          {step === 'amount' && (
+            <div className="space-y-5">
+              <div>
+                <p className="text-[#8B95A7] text-[13px] mb-3">
+                  Type how much you want to pay
+                </p>
+                <div className="flex items-center bg-[#11151D] border border-[#232B3A] focus-within:border-[#5B8CFF] rounded-xl px-4 py-4 transition">
+                  <span className="text-[#5B8CFF] font-semibold text-xl mr-2 shrink-0">₦</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={amount}
+                    onChange={handleAmountChange}
+                    placeholder="0"
+                    autoFocus
+                    className="bg-transparent outline-none text-[#F1F3F7] text-xl font-semibold w-full placeholder:text-[#2A3142]"
+                  />
+                </div>
+                {totalFee > 0 && (
+                  <p className="text-[#4A5263] text-[11px] mt-2">Total course fee: ₦{totalFee.toLocaleString()}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => { setStep('choose'); setError(''); }}
+                  className="px-4 py-3 rounded-xl border border-[#232B3A] text-[#8B95A7] hover:text-[#E6E9EF] hover:border-[#2A2F3A] transition text-sm"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleSubmitAmount}
+                  className="flex-1 bg-[#5B8CFF] hover:bg-[#7FAAFF] text-[#0B0E14] text-sm font-semibold py-3 rounded-xl transition"
+                >
+                  Continue
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2.5">
-              <button
-                onClick={() => { setStep('choose'); setError(''); }}
-                className="text-xs font-mono px-3 py-2.5 rounded-md border border-[#1C2330] text-[#6B7585] hover:text-[#E6E9EF] hover:border-[#2A2F3A] transition"
-              >
-                back
-              </button>
-              <button
-                onClick={handleSubmitAmount}
-                className="flex-1 bg-[#5B8CFF] hover:bg-[#7FAAFF] text-[#0B0E14] text-sm font-semibold py-2.5 rounded-lg transition"
-              >
-                Submit
-              </button>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Step 3: Bank details */}
-        {step === 'bank_details' && (
-          <div className="space-y-4">
-            <div>
-              <p className="text-[#8B95A7] text-xs font-mono mb-2.5">transfer_to</p>
-              <div className="bg-[#11151D] border border-[#1C2330] rounded-lg divide-y divide-[#1C2330]">
+          {/* Step 3: Bank details */}
+          {step === 'bank_details' && (
+            <div className="space-y-4">
+              <div className="bg-[#11151D] border border-[#232B3A] rounded-xl overflow-hidden">
                 {[
                   { label: 'Account Name', value: BANK_DETAILS.accountName, field: 'name' },
                   { label: 'Bank', value: BANK_DETAILS.bankName, field: 'bank' },
                   { label: 'Account Number', value: BANK_DETAILS.accountNumber, field: 'number' },
-                ].map(({ label, value, field }) => (
-                  <div key={field} className="flex items-center justify-between px-4 py-3">
+                ].map(({ label, value, field }, i) => (
+                  <div
+                    key={field}
+                    className={`flex items-center justify-between px-4 py-3.5 ${i !== 0 ? 'border-t border-[#1C2330]' : ''}`}
+                  >
                     <div>
-                      <p className="text-[#6B7585] text-[11px] font-mono mb-0.5">{label}</p>
-                      <p className="text-[#F1F3F7] text-sm font-medium">{value}</p>
+                      <p className="text-[#5A6275] text-[10px] uppercase tracking-wide mb-1">{label}</p>
+                      <p className="text-[#F1F3F7] text-[15px] font-semibold">{value}</p>
                     </div>
                     <button
                       onClick={() => handleCopy(field, value)}
-                      className="text-[11px] font-mono text-[#5B8CFF] hover:text-[#7FAAFF] transition shrink-0 ml-3"
+                      className={`text-[11px] font-medium px-2.5 py-1.5 rounded-md transition shrink-0 ml-3 ${
+                        copiedField === field
+                          ? 'bg-[#14201A] text-[#7CFF6B]'
+                          : 'bg-[#1A2030] text-[#5B8CFF] hover:bg-[#202840]'
+                      }`}
                     >
-                      {copiedField === field ? 'copied ✓' : 'copy'}
+                      {copiedField === field ? '✓ Copied' : 'Copy'}
                     </button>
                   </div>
                 ))}
               </div>
+
+              <div className="bg-gradient-to-r from-[#0E1829] to-[#0E1424] border border-[#1C2B4A] rounded-xl px-4 py-3.5 flex items-center justify-between">
+                <span className="text-[#7FAAFF] text-xs">Amount to pay</span>
+                <span className="text-[#F1F3F7] font-bold text-base">₦{amount || '0'}</span>
+              </div>
+
+              <p className="text-[#5A6275] text-[12px] leading-relaxed">
+                Transfer this amount using your bank app, then confirm below. Your payment status will show as <span className="text-[#FFB454]">in review</span> until our team verifies it.
+              </p>
+
+              <button
+                onClick={handleInitiatePayment}
+                disabled={loading}
+                className="w-full bg-[#7CFF6B] hover:bg-[#9AFF8C] disabled:opacity-50 text-[#0B0E14] text-sm font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  'Submitting...'
+                ) : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2.5 8L6 11.5L12.5 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    I have made payment
+                  </>
+                )}
+              </button>
             </div>
-
-            <div className="bg-[#11151D] border border-[#1C2330] rounded-lg px-4 py-3 flex items-center justify-between">
-              <span className="text-[#6B7585] text-xs font-mono">amount to pay</span>
-              <span className="text-[#5B8CFF] font-medium text-sm">₦{amount || '0'}</span>
-            </div>
-
-            <p className="text-[#4A5263] text-[11px] leading-relaxed">
-              Make the transfer using your bank app, then click the button below to let us know. Your payment will be reviewed and confirmed shortly after.
-            </p>
-
-            <button
-              onClick={handleInitiatePayment}
-              disabled={loading}
-              className="w-full bg-[#7CFF6B] hover:bg-[#9AFF8C] disabled:opacity-50 text-[#0B0E14] text-sm font-semibold py-3 rounded-lg transition"
-            >
-              {loading ? 'submitting...' : 'I have made payment'}
-            </button>
-          </div>
-        )}
-
+          )}
+        </div>
       </div>
     </div>
   );
@@ -352,7 +419,6 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
     </div>
   );
 }
-
 // ─── Dashboard Page ───────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
