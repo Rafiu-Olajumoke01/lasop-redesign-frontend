@@ -490,7 +490,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-[#0A0C10] flex items-center justify-center">
-        <p className="text-[#6B7585] text-sm font-mono animate-pulse">loading_dashboard...</p>
+        <p className="text-[#6B7585] text-sm">Loading dashboard...</p>
       </main>
     );
   }
@@ -505,126 +505,94 @@ export default function DashboardPage() {
   const paidCount = applications.filter((a) => a.payment_status === 'paid').length;
   const reviewCount = applications.filter((a) => a.payment_status === 'in_review').length;
 
-  const RADIUS = 50, STROKE = 14, CIRC = 2 * Math.PI * RADIUS;
-  const onlinePct = count > 0 ? onlineCount / count : 0;
-  const physicalPct = count > 0 ? physicalCount / count : 0;
-  const onlineDash = CIRC * onlinePct;
-  const physicalDash = CIRC * physicalPct;
-
   const formattedFees = totalFees >= 1000000
     ? `₦${(totalFees / 1000000).toFixed(1)}M`
     : `₦${totalFees.toLocaleString()}`;
 
   return (
-    <main className="min-h-screen bg-[#0A0C10] bg-[radial-gradient(circle_at_top,_#0E121A_0%,_#0A0C10_55%)]">
+    <main className="min-h-screen bg-[#0A0C10]">
       {/* Top bar */}
-      <div className="border-b border-[#1C2330]/80 bg-[#0A0C10]/95 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-5 md:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7CFF6B] opacity-60" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#7CFF6B]" />
-            </span>
-            <span className="text-xs text-[#8B95A7] font-mono tracking-wide">lasop / dashboard</span>
-          </div>
-          <span className="text-xs text-[#5B8CFF] font-mono hidden sm:inline">~/student/session</span>
+      <div className="border-b border-[#1C2330] bg-[#0A0C10]">
+        <div className="max-w-5xl mx-auto px-5 md:px-8 py-4 flex items-center justify-between">
+          <span className="text-[#F1F3F7] font-semibold text-[15px]">LASOP</span>
+          <button
+            onClick={handleLogout}
+            className="text-xs text-[#8B95A7] hover:text-[#E6E9EF] border border-[#2A2F3A] hover:border-[#3A4050] px-3.5 py-2 rounded-md transition"
+          >
+            Log out
+          </button>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-5 md:px-8 pt-10 pb-16">
 
-        {/* ── Session window: profile + stats unified as one IDE-style panel ── */}
-        <div className="bg-[#0D1118] border border-[#1C2330] rounded-2xl overflow-hidden mb-9 shadow-xl shadow-black/20">
-          {/* Window chrome */}
-          <div className="flex items-center justify-between px-4 py-2.5 bg-[#0F131B] border-b border-[#1C2330]">
-            <div className="flex items-center gap-1.5">
-              <span className="w-[9px] h-[9px] rounded-full bg-[#FF5F57] inline-block" />
-              <span className="w-[9px] h-[9px] rounded-full bg-[#FEBC2E] inline-block" />
-              <span className="w-[9px] h-[9px] rounded-full bg-[#28C840] inline-block" />
-              <span className="ml-2 text-[11px] text-[#5A6275] font-mono">session.json</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="text-[11px] text-[#6B7585] hover:text-[#F09595] font-mono transition"
-            >
-              logout()
-            </button>
+        {/* ── Profile ── */}
+        <div className="flex items-center gap-4 mb-9">
+          <div className="w-16 h-16 rounded-full bg-[#14201A] border border-[#2A4034] flex items-center justify-center text-xl font-semibold text-[#7CFF6B] shrink-0">
+            {initials || '··'}
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-0">
-            {/* Left: identity + key:value rows */}
-            <div className="p-6 md:p-7">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 rounded-xl bg-[#14201A] border border-[#2A4034] flex items-center justify-center font-mono text-base font-semibold text-[#7CFF6B] shrink-0">
-                  {initials || '··'}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[#F1F3F7] font-semibold text-lg leading-tight truncate">
-                    {firstName} {lastName}
-                  </p>
-                  <p className="text-[#5A6275] text-xs font-mono mt-1 truncate">
-                    {user?.email}{user?.phone_number ? ` · ${user.phone_number}` : ''}
-                  </p>
-                </div>
-              </div>
-
-              <div className="font-mono text-[13px] space-y-2">
-                <Row k="enrolled" v={count} vColor="#F1F3F7" />
-                <Row k="online" v={`${onlineCount} (${count > 0 ? Math.round(onlinePct * 100) : 0}%)`} vColor="#7CFF6B" />
-                <Row k="physical" v={`${physicalCount} (${count > 0 ? Math.round(physicalPct * 100) : 0}%)`} vColor="#FFB454" />
-                <Row k="total_fees" v={formattedFees} vColor="#5B8CFF" />
-                {reviewCount > 0 && <Row k="in_review" v={reviewCount} vColor="#FFB454" />}
-                {paidCount > 0 && <Row k="paid" v={paidCount} vColor="#7CFF6B" />}
-              </div>
-            </div>
-
-            {/* Right: donut chart */}
-            <div className="flex items-center justify-center px-6 pb-7 lg:pb-0 lg:pr-8 lg:pl-2 border-t lg:border-t-0 lg:border-l border-[#1C2330]">
-              <div className="relative w-[130px] h-[130px] shrink-0">
-                <svg viewBox="0 0 130 130" className="w-full h-full -rotate-90">
-                  <circle cx="65" cy="65" r={RADIUS} fill="none" stroke="#1C2330" strokeWidth={STROKE} />
-                  {count > 0 && (
-                    <>
-                      <circle cx="65" cy="65" r={RADIUS} fill="none" stroke="#7CFF6B" strokeWidth={STROKE}
-                        strokeDasharray={`${onlineDash} ${CIRC - onlineDash}`} strokeLinecap="butt" />
-                      <circle cx="65" cy="65" r={RADIUS} fill="none" stroke="#FFB454" strokeWidth={STROKE}
-                        strokeDasharray={`${physicalDash} ${CIRC - physicalDash}`}
-                        strokeDashoffset={-onlineDash} strokeLinecap="butt" />
-                    </>
-                  )}
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[#F1F3F7] text-2xl font-semibold">{count}</span>
-                  <span className="text-[#5A6275] text-[10px] font-mono">courses</span>
-                </div>
-              </div>
-            </div>
+          <div className="min-w-0">
+            <h1 className="text-[#F1F3F7] font-semibold text-2xl leading-tight truncate">
+              {firstName} {lastName}
+            </h1>
+            <p className="text-[#6B7585] text-sm mt-1 truncate">
+              {user?.email}{user?.phone_number ? ` · ${user.phone_number}` : ''}
+            </p>
           </div>
         </div>
 
+        {/* ── Stats ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[#1C2330] border border-[#1C2330] rounded-xl overflow-hidden mb-9">
+          {[
+            { label: 'Courses enrolled', value: count, accent: '#7CFF6B' },
+            { label: 'Total fees', value: formattedFees, accent: '#5B8CFF' },
+            { label: 'Online', value: onlineCount, accent: '#7CFF6B' },
+            { label: 'Physical', value: physicalCount, accent: '#FFB454' },
+          ].map(({ label, value, accent }) => (
+            <div key={label} className="bg-[#0D1118] px-5 py-5">
+              <p className="text-[#5A6275] text-xs mb-2">{label}</p>
+              <p className="text-3xl font-semibold" style={{ color: accent }}>{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {(reviewCount > 0 || paidCount > 0) && (
+          <div className="flex items-center gap-3 mb-9 -mt-4">
+            {reviewCount > 0 && (
+              <span className="text-xs text-[#FFB454] bg-[#1E1A0E] border border-[#3A2E0A] rounded-full px-3 py-1.5">
+                {reviewCount} payment{reviewCount > 1 ? 's' : ''} in review
+              </span>
+            )}
+            {paidCount > 0 && (
+              <span className="text-xs text-[#7CFF6B] bg-[#14201A] border border-[#2A4034] rounded-full px-3 py-1.5">
+                {paidCount} paid
+              </span>
+            )}
+          </div>
+        )}
+
         {error && (
-          <div className="bg-[#2A1414] border border-[#501313] text-[#F09595] text-xs rounded-lg px-4 py-3 mb-5 font-mono">
+          <div className="bg-[#2A1414] border border-[#501313] text-[#F09595] text-xs rounded-lg px-4 py-3 mb-5">
             {error}
           </div>
         )}
 
         {/* ── Courses ── */}
-        <div className="flex items-center justify-between mb-3.5">
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-[#F1F3F7] font-semibold text-[15px]">My courses</h2>
-            <span className="text-[#3A4254] text-[11px] font-mono">/{count}</span>
-          </div>
-          <Link href="/apply" className="text-[#7CFF6B] text-xs font-mono hover:text-[#9AFF8C] transition flex items-center gap-1">
-            <span className="text-sm leading-none">+</span> add_course()
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[#F1F3F7] font-semibold text-lg">
+            Courses{count > 0 ? ` (${count})` : ''}
+          </h2>
+          <Link href="/apply" className="text-[#7CFF6B] text-sm hover:text-[#9AFF8C] transition font-medium">
+            + Add course
           </Link>
         </div>
 
         {count === 0 ? (
           <div className="bg-[#0D1118] border border-dashed border-[#232B3A] rounded-xl p-12 text-center">
-            <p className="text-[#6B7585] text-sm font-mono mb-2">applications.length === 0</p>
-            <p className="text-[#4A5263] text-xs mb-4">No courses yet — your enrolled courses will show up here.</p>
-            <Link href="/apply" className="inline-block text-[#7CFF6B] text-sm font-mono hover:text-[#9AFF8C] transition border border-[#1F3326] hover:border-[#2A4034] rounded-md px-4 py-2">
-              + add_course()
+            <p className="text-[#8B95A7] text-sm mb-1">No courses yet</p>
+            <p className="text-[#4A5263] text-xs mb-4">Your enrolled courses will show up here.</p>
+            <Link href="/apply" className="inline-block text-[#7CFF6B] text-sm hover:text-[#9AFF8C] transition border border-[#1F3326] hover:border-[#2A4034] rounded-md px-4 py-2 font-medium">
+              + Add course
             </Link>
           </div>
         ) : count === 1 ? (
@@ -655,16 +623,5 @@ export default function DashboardPage() {
         )}
       </div>
     </main>
-  );
-}
-
-// ─── Small helper: JSON-style key:value row ────────────────────────────────
-
-function Row({ k, v, vColor }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[#5A6275]">{k}:</span>
-      <span style={{ color: vColor }} className="font-medium">{v}</span>
-    </div>
   );
 }
