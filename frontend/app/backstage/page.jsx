@@ -295,10 +295,37 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
   const save = async (payload, existingItem) => {
     if (existingItem && !supportsUpdate) throw new Error(`Updating ${label} isn't supported yet.`);
     const url = existingItem ? `${API_BASE}${detailPath(existingItem)}` : `${API_BASE}${basePath}`;
+
+    const hasFile = Object.values(payload).some((v) => v instanceof File);
+
+    let body;
+    let headers = { Authorization: `Bearer ${token}` };
+
+    if (hasFile) {
+      // Multipart so the actual file bytes travel with the request.
+      // Do NOT set Content-Type manually — the browser sets the correct
+      // multipart boundary automatically.
+      const formData = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        if (value instanceof File) {
+          formData.append(key, value);
+        } else if (Array.isArray(value) || typeof value === 'object') {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, value);
+        }
+      });
+      body = formData;
+    } else {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(payload);
+    }
+
     const res = await fetch(url, {
       method: existingItem ? 'PATCH' : 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(payload),
+      headers,
+      body,
     });
     if (!res.ok) throw new Error('Save failed. Check the fields and try again.');
     await refresh();
