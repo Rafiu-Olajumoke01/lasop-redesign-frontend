@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import ApplyButton from "@/components/ApplyButton";
 
 async function getCourse(slug) {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/courses/${slug}/`, {
@@ -179,9 +180,10 @@ export default async function CourseDetailsPage({ params }) {
               Join LASOP and gain the practical skills needed to build a successful career.
             </p>
 
-            <button className="mt-8 bg-white text-[#0057E7] px-8 py-4 rounded-xl font-semibold hover:scale-105 transition cursor-pointer">
-              Apply Now
-            </button>
+            <ApplyButton
+              course={course}
+              className="mt-8 bg-white text-[#0057E7] px-8 py-4 rounded-xl font-semibold hover:scale-105 transition cursor-pointer"
+            />
           </div>
         </div>
       </section>
