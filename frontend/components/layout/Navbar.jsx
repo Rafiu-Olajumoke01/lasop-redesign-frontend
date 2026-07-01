@@ -6,6 +6,7 @@ import Image from "next/image";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { FiChevronDown, FiX } from "react-icons/fi";
+import ApplyButton from "@/components/ApplyButton";
 
 
 const courses = [
@@ -179,12 +180,15 @@ export default function Navbar() {
         </nav>
 
         {/* Desktop CTA */}
-        <Link
-          href="/signup"
-          className="hidden lg:flex items-center justify-center bg-[#0057E7] text-white px-5 py-2 rounded-lg font-semibold shadow-[0_10px_30px_rgba(0,87,231,0.35)] hover:bg-[#0A66FF] hover:-translate-y-[2px] transition-all duration-300"
-        >
-          Sign Up
-        </Link>
+        <div className="hidden lg:flex items-center gap-3">
+          <ApplyButton className="flex items-center justify-center bg-white/10 border border-white/20 text-white px-5 py-2 rounded-lg font-semibold hover:bg-white/20 transition-all duration-300" />
+          <Link
+            href="/signup"
+            className="flex items-center justify-center bg-[#0057E7] text-white px-5 py-2 rounded-lg font-semibold shadow-[0_10px_30px_rgba(0,87,231,0.35)] hover:bg-[#0A66FF] hover:-translate-y-[2px] transition-all duration-300"
+          >
+            Sign Up
+          </Link>
+        </div>
 
         {/* Mobile Toggle */}
         <button
@@ -281,13 +285,16 @@ export default function Navbar() {
               </div>
 
               {/* Mobile CTA */}
-              <Link
-                href="/signup"
-                onClick={() => setIsOpen(false)}
-                className="w-full mt-8 flex items-center justify-center bg-[#0057E7] hover:bg-[#0A66FF] text-white py-4 rounded-xl font-semibold transition"
-              >
-                Sign Up
-              </Link>
+              <div className="flex flex-col gap-3 mt-8">
+                <ApplyButton className="w-full flex items-center justify-center bg-white/10 border border-white/20 text-white py-4 rounded-xl font-semibold transition" />
+                <Link
+                  href="/signup"
+                  onClick={() => setIsOpen(false)}
+                  className="w-full flex items-center justify-center bg-[#0057E7] hover:bg-[#0A66FF] text-white py-4 rounded-xl font-semibold transition"
+                >
+                  Sign Up
+                </Link>
+              </div>
             </motion.div>
           </>
         )}
