@@ -28,6 +28,18 @@ const courses = [
     path: "/courses/data-analysis",
   },
   {
+    title: "Frontend Web Development",
+    duration: "3 Months",
+    fee: "₦300K",
+    path: "/courses/frontend-development",
+  },
+  {
+    title: "Backend Web Development",
+    duration: "3 Months",
+    fee: "₦300K",
+    path: "/courses/backend-development",
+  },
+  {
     title: "AI Automation",
     duration: "3 Months",
     fee: "₦450K",
