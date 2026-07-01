@@ -413,21 +413,47 @@ function OverviewTab({ courses, locations, applications }) {
 
 // ─── Courses ──────────────────────────────────────────────────────────────────
 
-const emptyCourse = { title: '', description: '', duration: '', fee: '', mode_of_learning: 'online', topics: [] };
+const emptyCourse = {
+  title: '', slug: '', category: 'technology', duration: '', fee: '',
+  image: null, description: '', overview: '', featured: false,
+  skills: [], outcomes: [], requirements: [], modules: [],
+};
+
+function slugify(text) {
+  return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
 
 function CoursesTab({ courses }) {
-  const [modal, setModal]   = useState(null);
-  const [form, setForm]     = useState(emptyCourse);
-  const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState('');
+  const [modal, setModal]           = useState(null);
+  const [form, setForm]             = useState(emptyCourse);
+  const [saving, setSaving]         = useState(false);
+  const [err, setErr]               = useState('');
+  const [imagePreview, setImagePreview] = useState(null);
 
-  const openNew  = () => { setForm(emptyCourse); setModal('new'); setErr(''); };
-  const openEdit = (c) => { setForm({ ...emptyCourse, ...c }); setModal(c); setErr(''); };
-  const close    = () => setModal(null);
+  const openNew  = () => { setForm(emptyCourse); setImagePreview(null); setModal('new'); setErr(''); };
+  const openEdit = (c) => {
+    setForm({ ...emptyCourse, ...c, image: null }); // image starts as null = "no change"
+    setImagePreview(c.image ? `${API_BASE}${c.image}` : null);
+    setModal(c);
+    setErr('');
+  };
+  const close = () => setModal(null);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setForm({ ...form, image: file });
+    setImagePreview(URL.createObjectURL(file));
+  };
 
   const handleSave = async () => {
     setSaving(true); setErr('');
-    try { await courses.save(form, modal === 'new' ? null : modal); close(); }
+    try {
+      const payload = { ...form, slug: form.slug || slugify(form.title) };
+      if (!payload.image) delete payload.image; // don't overwrite existing image with nothing
+      await courses.save(payload, modal === 'new' ? null : modal);
+      close();
+    }
     catch (e) { setErr(e.message); }
     finally { setSaving(false); }
   };
@@ -444,6 +470,11 @@ function CoursesTab({ courses }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {courses.items.map((c) => (
             <Card key={c.id} className="p-5 hover:border-[#374151] transition-colors">
+              {c.image && (
+                <div className="w-full h-32 rounded-xl overflow-hidden mb-3 bg-[#1F2937]">
+                  <img src={`${API_BASE}${c.image}`} alt={c.title} className="w-full h-full object-cover" />
+                </div>
+              )}
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-slate-100 font-bold text-base leading-snug pr-4">{c.title}</h3>
                 <div className="flex items-center gap-2 shrink-0">
@@ -456,16 +487,10 @@ function CoursesTab({ courses }) {
                 <p className="text-slate-500 text-sm leading-relaxed mb-3 line-clamp-2">{c.description}</p>
               )}
               <div className="flex items-center gap-2 mb-3">
-                {c.mode_of_learning && <ModePill mode={c.mode_of_learning} />}
+                {c.category && <Pill color="blue">{c.category}</Pill>}
                 {c.duration && <span className="text-slate-500 text-xs">{c.duration}</span>}
+                {!c.image && <Pill color="rose">No image</Pill>}
               </div>
-              {c.topics?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {c.topics.map((t) => (
-                    <span key={t} className="text-[11px] bg-[#1F2937] text-slate-400 px-2 py-0.5 rounded-full">{t}</span>
-                  ))}
-                </div>
-              )}
               <div className="pt-3 border-t border-[#1F2937]">
                 <p className="text-slate-100 font-black text-lg">{formatMoney(c.fee)}</p>
               </div>
@@ -478,27 +503,55 @@ function CoursesTab({ courses }) {
         <Modal title={modal === 'new' ? 'Add new course' : 'Edit course'} onClose={close}>
           <div className="space-y-4">
             {err && <ErrorBanner message={err} />}
+
+            <Field label="Course image">
+              <div className="flex items-center gap-3">
+                {imagePreview && (
+                  <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-[#1F2937]" />
+                )}
+                <input type="file" accept="image/*" onChange={handleImageChange} className={inputClass} />
+              </div>
+            </Field>
+
             <Field label="Title">
               <input className={inputClass} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Full-Stack Web Development" />
             </Field>
+
+            <Field label="Category">
+              <select className={inputClass} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                <option value="technology">Technology</option>
+                <option value="business">Business</option>
+                <option value="vocational">Vocational</option>
+              </select>
+            </Field>
+
             <Field label="Description">
               <textarea className={inputClass} rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Short course summary" />
             </Field>
+
+            <Field label="Overview">
+              <textarea className={inputClass} rows={3} value={form.overview} onChange={(e) => setForm({ ...form, overview: e.target.value })} placeholder="Longer overview shown on the course page" />
+            </Field>
+
             <div className="grid grid-cols-2 gap-3">
               <Field label="Duration">
-                <input className={inputClass} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="e.g. 12 weeks" />
+                <input className={inputClass} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="e.g. 2 Months" />
               </Field>
               <Field label="Fee (₦)">
                 <input type="number" className={inputClass} value={form.fee} onChange={(e) => setForm({ ...form, fee: e.target.value })} placeholder="150000" />
               </Field>
             </div>
-            <Field label="Mode of learning">
-              <select className={inputClass} value={form.mode_of_learning} onChange={(e) => setForm({ ...form, mode_of_learning: e.target.value })}>
-                <option value="online">Online</option>
-                <option value="physical">Physical</option>
-              </select>
-            </Field>
-            <TagChipInput label="Topics" value={form.topics} onChange={(topics) => setForm({ ...form, topics })} placeholder="e.g. React" />
+
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" checked={form.featured} onChange={(e) => setForm({ ...form, featured: e.target.checked })} />
+              Featured course
+            </label>
+
+            <TagChipInput label="Skills" value={form.skills} onChange={(skills) => setForm({ ...form, skills })} placeholder="e.g. Python" />
+            <TagChipInput label="Career outcomes" value={form.outcomes} onChange={(outcomes) => setForm({ ...form, outcomes })} placeholder="e.g. Backend Developer" />
+            <TagChipInput label="Requirements" value={form.requirements} onChange={(requirements) => setForm({ ...form, requirements })} placeholder="e.g. Laptop Computer" />
+            <TagChipInput label="Modules" value={form.modules} onChange={(modules) => setForm({ ...form, modules })} placeholder="e.g. Database Design" />
+
             <PrimaryButton className="w-full justify-center" onClick={handleSave} disabled={saving}>
               {saving ? 'Saving…' : 'Save course'}
             </PrimaryButton>
