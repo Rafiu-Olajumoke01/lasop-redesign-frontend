@@ -38,7 +38,18 @@ export default function LoginPage() {
 
       localStorage.setItem('access', data.access);
       localStorage.setItem('refresh', data.refresh);
-      router.push('/dashboard');
+
+      // Check if this user is staff/admin, redirect accordingly
+      const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile/`, {
+        headers: { Authorization: `Bearer ${data.access}` },
+      });
+
+      if (profileRes.ok) {
+        const profile = await profileRes.json();
+        router.push(profile.is_staff ? '/backstage' : '/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
 
     } catch (err) {
       setError('Network error, please try again');
