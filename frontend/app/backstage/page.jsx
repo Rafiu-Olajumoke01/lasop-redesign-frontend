@@ -346,10 +346,6 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
 // ─── Overview ─────────────────────────────────────────────────────────────────
 
 function OverviewTab({ courses, locations, applications }) {
-  const totalRevenue = applications.items
-    .filter((a) => a.payment_status === 'paid')
-    .reduce((sum, a) => sum + getCourseFee(a), 0);
-
   const pending = applications.items.filter((a) =>
     ['pending', 'awaiting_confirmation'].includes(a.payment_status)
   ).length;
@@ -357,10 +353,10 @@ function OverviewTab({ courses, locations, applications }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Courses"           value={courses.items.length}      accentIndex={0} />
-        <StatCard label="Locations"         value={locations.items.length}    accentIndex={1} />
-        <StatCard label="Pending payments"  value={pending}                   accentIndex={2} />
-        <StatCard label="Revenue collected" value={formatMoney(totalRevenue)} accentIndex={3} />
+        <StatCard label="Courses"            value={courses.items.length}       accentIndex={0} />
+        <StatCard label="Locations"          value={locations.items.length}     accentIndex={1} />
+        <StatCard label="Pending payments"   value={pending}                    accentIndex={2} />
+        <StatCard label="Total applications" value={applications.items.length}  accentIndex={3} />
       </div>
 
       <Card>
