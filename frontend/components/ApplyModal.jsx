@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 
 export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
   const router = useRouter();
@@ -110,7 +111,7 @@ export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
@@ -237,6 +238,7 @@ export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
