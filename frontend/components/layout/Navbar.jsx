@@ -17,6 +17,12 @@ const courses = [
     path: "/courses/full-stack-ai",
   },
   {
+    title: "Mobile App Development (Android & iOS)",
+    duration: "8 Months",
+    fee: "₦650K",
+    path: "/courses/mobile-app-development",
+  },
+  {
     title: "Data Science with Python & R",
     duration: "5 Months",
     fee: "₦450K",
@@ -25,19 +31,19 @@ const courses = [
   {
     title: "Data Analysis",
     duration: "3 Months",
-    fee: "₦450K",
+    fee: "₦350K",
     path: "/courses/data-analysis",
   },
   {
     title: "Frontend Web Development",
-    duration: "3 Months",
-    fee: "₦300K",
+    duration: "4 Months",
+    fee: "₦350K",
     path: "/courses/frontend-development",
   },
   {
     title: "Backend Web Development",
     duration: "3 Months",
-    fee: "₦300K",
+    fee: "₦350K",
     path: "/courses/backend-development",
   },
   {
@@ -238,80 +244,82 @@ export default function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed top-0 right-0 h-screen w-[90%] max-w-[380px] bg-[#071224] border-l border-white/10 z-50 p-6 overflow-y-auto"
+              className="fixed top-0 right-0 h-screen w-[90%] max-w-[380px] bg-[#071224] border-l border-white/10 z-50 flex flex-col"
             >
-              {/* Drawer Header */}
-              <div className="flex justify-between items-center mb-10">
-                <h2 className="text-white text-xl font-bold">LASOP</h2>
-                <button onClick={() => setIsOpen(false)} className="text-white text-3xl">
-                  <FiX />
-                </button>
-              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                {/* Drawer Header */}
+                <div className="flex justify-between items-center mb-10">
+                  <h2 className="text-white text-xl font-bold">LASOP</h2>
+                  <button onClick={() => setIsOpen(false)} className="text-white text-3xl">
+                    <FiX />
+                  </button>
+                </div>
 
-              {/* Courses Accordion */}
-              <div className="border-b border-white/10 pb-4">
-                <button
-                  onClick={() => setShowCourses(!showCourses)}
-                  className="w-full flex justify-between items-center text-white font-medium py-3"
-                >
-                  Courses
-                  <FiChevronDown className={`transition-transform duration-300 ${showCourses ? "rotate-180" : ""}`} />
-                </button>
+                {/* Courses Accordion */}
+                <div className="border-b border-white/10 pb-4">
+                  <button
+                    onClick={() => setShowCourses(!showCourses)}
+                    className="w-full flex justify-between items-center text-white font-medium py-3"
+                  >
+                    Courses
+                    <FiChevronDown className={`transition-transform duration-300 ${showCourses ? "rotate-180" : ""}`} />
+                  </button>
 
-                <AnimatePresence>
-                  {showCourses && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="flex flex-col gap-3 pt-2 pl-3">
-                        {courses.map((course) => (
-                          <Link
-                            key={course.title}
-                            href={course.path}
-                            onClick={() => setIsOpen(false)}
-                            className="text-slate-300 hover:text-blue-400 text-sm"
-                          >
-                            {course.title}
-                            <span className="block text-xs text-slate-500">
-                              {course.duration} · {course.fee}
-                            </span>
-                          </Link>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                  <AnimatePresence>
+                    {showCourses && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex flex-col gap-3 pt-2 pl-3">
+                          {courses.map((course) => (
+                            <Link
+                              key={course.title}
+                              href={course.path}
+                              onClick={() => setIsOpen(false)}
+                              className="text-slate-300 hover:text-blue-400 text-sm"
+                            >
+                              {course.title}
+                              <span className="block text-xs text-slate-500">
+                                {course.duration} · {course.fee}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
-              {/* Mobile Links */}
-              <div className="flex flex-col mt-4">
-                <Link href="/webinar" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
-                  Webinar
-                </Link>
-                <Link href="/calendar" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
-                  Calendar
-                </Link>
-                <Link href="/about" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
-                  About
-                </Link>
-                <Link href="/faqs" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
-                  FAQs
-                </Link>
-                <Link href="/contact" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
-                  Contact
-                </Link>
-                {isLoggedIn && (
-                  <Link href="/dashboard" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
-                    Dashboard
+                {/* Mobile Links */}
+                <div className="flex flex-col mt-4">
+                  <Link href="/webinar" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
+                    Webinar
                   </Link>
-                )}
+                  <Link href="/calendar" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
+                    Calendar
+                  </Link>
+                  <Link href="/about" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
+                    About
+                  </Link>
+                  <Link href="/faqs" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
+                    FAQs
+                  </Link>
+                  <Link href="/contact" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
+                    Contact
+                  </Link>
+                  {isLoggedIn && (
+                    <Link href="/dashboard" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
+                      Dashboard
+                    </Link>
+                  )}
+                </div>
               </div>
 
-              {/* Mobile CTA */}
-              <div className="flex flex-col gap-3 mt-8">
+              {/* Mobile CTA — pinned, always visible without scrolling */}
+              <div className="shrink-0 p-6 pt-4 border-t border-white/10 flex flex-col gap-3">
                 <ApplyButton className="w-full flex items-center justify-center bg-white/10 border border-white/20 text-white py-4 rounded-xl font-semibold transition" />
                 {!isLoggedIn && (
                   <Link
