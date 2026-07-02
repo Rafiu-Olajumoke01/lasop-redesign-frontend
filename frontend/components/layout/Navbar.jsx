@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { FiChevronDown, FiX } from "react-icons/fi";
@@ -91,9 +92,10 @@ const courses = [
 ];
 
 export default function Navbar() {
-
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [showCourses, setShowCourses] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "auto";
@@ -101,6 +103,24 @@ export default function Navbar() {
       document.body.style.overflow = "auto";
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    // Check login state on mount
+    setIsLoggedIn(!!localStorage.getItem("access"));
+
+    // Keep it in sync if login/logout happens in another tab
+    const handleStorage = () => setIsLoggedIn(!!localStorage.getItem("access"));
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    setIsLoggedIn(false);
+    setIsOpen(false);
+    router.push("/");
+  };
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-gradient-to-r from-[#071224]/95 via-[#0B1730]/95 to-[#0A1A38]/95 backdrop-blur-xl border-b border-blue-900/40 shadow-[0_8px_32px_rgba(0,0,0,0.18)]">
@@ -181,13 +201,32 @@ export default function Navbar() {
 
         {/* Desktop CTA */}
         <div className="hidden lg:flex items-center gap-3">
-          <ApplyButton className="flex items-center justify-center bg-white/10 border border-white/20 text-white px-5 py-2 rounded-lg font-semibold hover:bg-white/20 transition-all duration-300" />
-          <Link
-            href="/signup"
-            className="flex items-center justify-center bg-[#0057E7] text-white px-5 py-2 rounded-lg font-semibold shadow-[0_10px_30px_rgba(0,87,231,0.35)] hover:bg-[#0A66FF] hover:-translate-y-[2px] transition-all duration-300"
-          >
-            Sign Up
-          </Link>
+          {isLoggedIn ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="flex items-center justify-center bg-white/10 border border-white/20 text-white px-5 py-2 rounded-lg font-semibold hover:bg-white/20 transition-all duration-300"
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center justify-center bg-[#0057E7] text-white px-5 py-2 rounded-lg font-semibold shadow-[0_10px_30px_rgba(0,87,231,0.35)] hover:bg-[#0A66FF] hover:-translate-y-[2px] transition-all duration-300"
+              >
+                Log Out
+              </button>
+            </>
+          ) : (
+            <>
+              <ApplyButton className="flex items-center justify-center bg-white/10 border border-white/20 text-white px-5 py-2 rounded-lg font-semibold hover:bg-white/20 transition-all duration-300" />
+              <Link
+                href="/signup"
+                className="flex items-center justify-center bg-[#0057E7] text-white px-5 py-2 rounded-lg font-semibold shadow-[0_10px_30px_rgba(0,87,231,0.35)] hover:bg-[#0A66FF] hover:-translate-y-[2px] transition-all duration-300"
+              >
+                Sign Up
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Toggle */}
@@ -286,14 +325,34 @@ export default function Navbar() {
 
               {/* Mobile CTA */}
               <div className="flex flex-col gap-3 mt-8">
-                <ApplyButton className="w-full flex items-center justify-center bg-white/10 border border-white/20 text-white py-4 rounded-xl font-semibold transition" />
-                <Link
-                  href="/signup"
-                  onClick={() => setIsOpen(false)}
-                  className="w-full flex items-center justify-center bg-[#0057E7] hover:bg-[#0A66FF] text-white py-4 rounded-xl font-semibold transition"
-                >
-                  Sign Up
-                </Link>
+                {isLoggedIn ? (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setIsOpen(false)}
+                      className="w-full flex items-center justify-center bg-white/10 border border-white/20 text-white py-4 rounded-xl font-semibold transition"
+                    >
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center justify-center bg-[#0057E7] hover:bg-[#0A66FF] text-white py-4 rounded-xl font-semibold transition"
+                    >
+                      Log Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <ApplyButton className="w-full flex items-center justify-center bg-white/10 border border-white/20 text-white py-4 rounded-xl font-semibold transition" />
+                    <Link
+                      href="/signup"
+                      onClick={() => setIsOpen(false)}
+                      className="w-full flex items-center justify-center bg-[#0057E7] hover:bg-[#0A66FF] text-white py-4 rounded-xl font-semibold transition"
+                    >
+                      Sign Up
+                    </Link>
+                  </>
+                )}
               </div>
             </motion.div>
           </>
