@@ -91,6 +91,10 @@ const courses = [
   },
 ];
 
+// Shared underline-hover style used by every plain nav link (Webinar, Calendar, About, FAQs, Contact, Apply)
+const navLinkClass =
+  "relative text-slate-200 hover:text-[#60A5FA] transition duration-300 after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-[#60A5FA] after:transition-all after:duration-300 hover:after:w-full";
+
 export default function Navbar() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -105,10 +109,7 @@ export default function Navbar() {
   }, [isOpen]);
 
   useEffect(() => {
-    // Check login state on mount
     setIsLoggedIn(!!localStorage.getItem("access"));
-
-    // Keep it in sync if login/logout happens in another tab
     const handleStorage = () => setIsLoggedIn(!!localStorage.getItem("access"));
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
@@ -182,50 +183,44 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Links */}
-          <Link href="/webinar" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
+          <Link href="/webinar" className={navLinkClass}>
             Webinar
           </Link>
-          <Link href="/calendar" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
+          <Link href="/calendar" className={navLinkClass}>
             Calendar
           </Link>
-          <Link href="/about" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
+          <Link href="/about" className={navLinkClass}>
             About
           </Link>
-          <Link href="/faqs" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
+          <Link href="/faqs" className={navLinkClass}>
             FAQs
           </Link>
-          <Link href="/contact" className="text-slate-200 hover:text-[#60A5FA] transition duration-300">
+          <Link href="/contact" className={navLinkClass}>
             Contact
           </Link>
+
+          {/* Apply — same style as other nav links, always visible */}
+          <ApplyButton className={navLinkClass}>Apply</ApplyButton>
         </nav>
 
         {/* Desktop CTA */}
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-4">
           {isLoggedIn ? (
             <>
-              <Link
-                href="/dashboard"
-                className="flex items-center justify-center bg-white/10 border border-white/20 text-white px-5 py-2 rounded-lg font-semibold hover:bg-white/20 transition-all duration-300"
-              >
+              <Link href="/dashboard" className={navLinkClass}>
                 Dashboard
               </Link>
-              <button
-                onClick={handleLogout}
-                className="flex items-center justify-center bg-[#0057E7] text-white px-5 py-2 rounded-lg font-semibold shadow-[0_10px_30px_rgba(0,87,231,0.35)] hover:bg-[#0A66FF] hover:-translate-y-[2px] transition-all duration-300"
-              >
+              <button onClick={handleLogout} className={navLinkClass}>
                 Log Out
               </button>
             </>
           ) : (
-            <>
-              <ApplyButton className="flex items-center justify-center bg-white/10 border border-white/20 text-white px-5 py-2 rounded-lg font-semibold hover:bg-white/20 transition-all duration-300" />
-              <Link
-                href="/signup"
-                className="flex items-center justify-center bg-[#0057E7] text-white px-5 py-2 rounded-lg font-semibold shadow-[0_10px_30px_rgba(0,87,231,0.35)] hover:bg-[#0A66FF] hover:-translate-y-[2px] transition-all duration-300"
-              >
-                Sign Up
-              </Link>
-            </>
+            <Link
+              href="/signup"
+              className="flex items-center justify-center bg-[#0057E7] text-white px-5 py-2 rounded-lg font-semibold shadow-[0_10px_30px_rgba(0,87,231,0.35)] hover:bg-[#0A66FF] hover:-translate-y-[2px] transition-all duration-300"
+            >
+              Sign Up
+            </Link>
           )}
         </div>
 
@@ -264,6 +259,11 @@ export default function Navbar() {
                 <button onClick={() => setIsOpen(false)} className="text-white text-3xl">
                   <FiX />
                 </button>
+              </div>
+
+              {/* Apply — pinned near the top of the mobile drawer too */}
+              <div className="border-b border-white/10 pb-4 mb-4">
+                <ApplyButton className="text-white font-medium py-3 block" />
               </div>
 
               {/* Courses Accordion */}
@@ -321,37 +321,30 @@ export default function Navbar() {
                 <Link href="/contact" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
                   Contact
                 </Link>
+                {isLoggedIn && (
+                  <Link href="/dashboard" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
+                    Dashboard
+                  </Link>
+                )}
               </div>
 
               {/* Mobile CTA */}
-              <div className="flex flex-col gap-3 mt-8">
+              <div className="mt-8">
                 {isLoggedIn ? (
-                  <>
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setIsOpen(false)}
-                      className="w-full flex items-center justify-center bg-white/10 border border-white/20 text-white py-4 rounded-xl font-semibold transition"
-                    >
-                      Dashboard
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center justify-center bg-[#0057E7] hover:bg-[#0A66FF] text-white py-4 rounded-xl font-semibold transition"
-                    >
-                      Log Out
-                    </button>
-                  </>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center bg-white/10 border border-white/20 text-white py-4 rounded-xl font-semibold transition"
+                  >
+                    Log Out
+                  </button>
                 ) : (
-                  <>
-                    <ApplyButton className="w-full flex items-center justify-center bg-white/10 border border-white/20 text-white py-4 rounded-xl font-semibold transition" />
-                    <Link
-                      href="/signup"
-                      onClick={() => setIsOpen(false)}
-                      className="w-full flex items-center justify-center bg-[#0057E7] hover:bg-[#0A66FF] text-white py-4 rounded-xl font-semibold transition"
-                    >
-                      Sign Up
-                    </Link>
-                  </>
+                  <Link
+                    href="/signup"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full flex items-center justify-center bg-[#0057E7] hover:bg-[#0A66FF] text-white py-4 rounded-xl font-semibold transition"
+                  >
+                    Sign Up
+                  </Link>
                 )}
               </div>
             </motion.div>
