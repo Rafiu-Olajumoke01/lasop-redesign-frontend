@@ -1,5 +1,7 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
 
 const webinars = [
   {
@@ -72,6 +74,8 @@ const webinars = [
   },
 ];
 
+/* ---------------- Icons ---------------- */
+
 function CalendarIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="shrink-0">
@@ -108,7 +112,25 @@ function ArrowIcon() {
   );
 }
 
-function FeaturedCard({ webinar }) {
+function CloseIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+      <path d="M20 6L9 17l-5-5" />
+    </svg>
+  );
+}
+
+/* ---------------- Cards ---------------- */
+
+function FeaturedCard({ webinar, onRegister }) {
   return (
     <div className="grid lg:grid-cols-2 rounded-2xl overflow-hidden border border-white/[0.07] bg-white/[0.02] hover:border-[#5EA2FF]/30 transition-all duration-200">
       <div className="relative min-h-[260px]">
@@ -147,16 +169,19 @@ function FeaturedCard({ webinar }) {
               <p className="text-[11px] text-slate-500">{webinar.speakerRole}</p>
             </div>
           </div>
-          <Link href="/webinars/register" className="inline-flex items-center gap-2 bg-[#0057E7] hover:bg-[#0A66FF] text-white text-[12px] font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 whitespace-nowrap">
+          <button
+            onClick={() => onRegister(webinar)}
+            className="inline-flex items-center gap-2 bg-[#0057E7] hover:bg-[#0A66FF] text-white text-[12px] font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 whitespace-nowrap"
+          >
             Register Free <ArrowIcon />
-          </Link>
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function SmallCard({ webinar }) {
+function SmallCard({ webinar, onRegister }) {
   return (
     <div className="flex flex-col rounded-2xl overflow-hidden border border-white/[0.07] bg-white/[0.02] hover:border-[#5EA2FF]/30 hover:-translate-y-0.5 transition-all duration-200">
       <div className="relative h-[170px]">
@@ -186,18 +211,226 @@ function SmallCard({ webinar }) {
               <p className="text-[10px] text-slate-500">{webinar.speakerRole}</p>
             </div>
           </div>
-          <Link href="/webinars/register" className="inline-flex items-center gap-1.5 bg-[#0057E7] hover:bg-[#0A66FF] text-white text-[11px] font-semibold px-3.5 py-2 rounded-lg transition-all duration-200 whitespace-nowrap">
+          <button
+            onClick={() => onRegister(webinar)}
+            className="inline-flex items-center gap-1.5 bg-[#0057E7] hover:bg-[#0A66FF] text-white text-[11px] font-semibold px-3.5 py-2 rounded-lg transition-all duration-200 whitespace-nowrap"
+          >
             Register <ArrowIcon />
-          </Link>
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
+/* ---------------- Register Modal ---------------- */
+
+function RegisterModal({ webinar, onClose }) {
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+  });
+  const [errors, setErrors] = useState({});
+  const [status, setStatus] = useState("idle"); // idle | loading | success | error
+
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: null }));
+    }
+  }
+
+  function validate() {
+    const newErrors = {};
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = "Full name is required";
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Enter a valid email address";
+    }
+    return newErrors;
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setStatus("loading");
+
+    try {
+      // TODO: EmailJS integration goes here.
+      // For now we just simulate a network delay so the UI flow works.
+      await new Promise((resolve) => setTimeout(resolve, 900));
+
+      setStatus("success");
+    } catch (err) {
+      console.error("Registration failed:", err);
+      setStatus("error");
+    }
+  }
+
+  function handleBackdropClick(e) {
+    if (e.target === e.currentTarget) onClose();
+  }
+
+  return (
+    <div
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 py-8"
+    >
+      <div className="relative w-full max-w-md rounded-2xl border border-white/[0.08] bg-[#0B1830] shadow-2xl">
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+        >
+          <CloseIcon />
+        </button>
+
+        {status === "success" ? (
+          <div className="flex flex-col items-center text-center px-8 py-12">
+            <div className="w-14 h-14 rounded-full bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-400 mb-5">
+              <CheckIcon />
+            </div>
+            <h3 className="text-[18px] font-bold text-white mb-2">You're registered!</h3>
+            <p className="text-[13px] text-slate-400 leading-relaxed mb-6">
+              We've saved your spot for <span className="text-slate-200">{webinar.title}</span>. Check your inbox for confirmation details.
+            </p>
+            <button
+              onClick={onClose}
+              className="bg-[#0057E7] hover:bg-[#0A66FF] text-white text-[13px] font-semibold px-6 py-2.5 rounded-xl transition-all duration-200"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <div className="px-7 pt-7 pb-8">
+            <span className="text-[11px] font-semibold tracking-[0.08em] uppercase text-[#5EA2FF]">
+              {webinar.topic}
+            </span>
+            <h3 className="text-[18px] font-bold text-white leading-snug mt-1.5 mb-1">
+              {webinar.title}
+            </h3>
+            <p className="text-[12px] text-slate-500 mb-6">
+              {webinar.date} · {webinar.time}
+            </p>
+
+            <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+              <div>
+                <label htmlFor="fullName" className="block text-[12px] font-medium text-slate-300 mb-1.5">
+                  Full name
+                </label>
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  placeholder="Your full name"
+                  className={`w-full rounded-xl bg-white/[0.04] border ${
+                    errors.fullName ? "border-red-500/60" : "border-white/[0.08]"
+                  } text-white text-[13px] placeholder:text-slate-600 px-4 py-3 outline-none focus:border-[#5EA2FF]/50 transition-colors`}
+                />
+                {errors.fullName && (
+                  <p className="text-[11px] text-red-400 mt-1.5">{errors.fullName}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-[12px] font-medium text-slate-300 mb-1.5">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="you@example.com"
+                  className={`w-full rounded-xl bg-white/[0.04] border ${
+                    errors.email ? "border-red-500/60" : "border-white/[0.08]"
+                  } text-white text-[13px] placeholder:text-slate-600 px-4 py-3 outline-none focus:border-[#5EA2FF]/50 transition-colors`}
+                />
+                {errors.email && (
+                  <p className="text-[11px] text-red-400 mt-1.5">{errors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block text-[12px] font-medium text-slate-300 mb-1.5">
+                  Phone number <span className="text-slate-600">(optional)</span>
+                </label>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="080..."
+                  className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] text-white text-[13px] placeholder:text-slate-600 px-4 py-3 outline-none focus:border-[#5EA2FF]/50 transition-colors"
+                />
+              </div>
+
+              {status === "error" && (
+                <p className="text-[12px] text-red-400">
+                  Something went wrong. Please try again.
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={status === "loading"}
+                className="mt-2 bg-[#0057E7] hover:bg-[#0A66FF] disabled:opacity-60 disabled:cursor-not-allowed text-white text-[13px] font-semibold px-5 py-3 rounded-xl transition-all duration-200"
+              >
+                {status === "loading" ? "Registering..." : "Confirm Registration"}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Page ---------------- */
+
 export default function WebinarsPage() {
+  const [selectedWebinar, setSelectedWebinar] = useState(null);
+
   const featuredWebinars = webinars.filter((w) => w.featured);
   const smallWebinars = webinars.filter((w) => !w.featured);
+
+  function handleRegister(webinar) {
+    setSelectedWebinar(webinar);
+  }
+
+  function handleCloseModal() {
+    setSelectedWebinar(null);
+  }
 
   return (
     <main className="relative bg-[#071224] min-h-screen overflow-hidden">
@@ -234,13 +467,13 @@ export default function WebinarsPage() {
 
       <section className="relative z-10 pb-24">
         <div className="container-width flex flex-col gap-5">
-          <FeaturedCard webinar={featuredWebinars[0]} />
+          <FeaturedCard webinar={featuredWebinars[0]} onRegister={handleRegister} />
           <div className="grid lg:grid-cols-2 gap-5">
             {smallWebinars.map((w) => (
-              <SmallCard key={w.id} webinar={w} />
+              <SmallCard key={w.id} webinar={w} onRegister={handleRegister} />
             ))}
           </div>
-          {featuredWebinars[1] && <FeaturedCard webinar={featuredWebinars[1]} />}
+          {featuredWebinars[1] && <FeaturedCard webinar={featuredWebinars[1]} onRegister={handleRegister} />}
         </div>
       </section>
 
@@ -250,11 +483,15 @@ export default function WebinarsPage() {
             <p className="text-[14px] font-semibold text-white mb-1">Missed a session?</p>
             <p className="text-[13px] text-slate-500">All recordings are shared with registered attendees within 24 hours.</p>
           </div>
-          <Link href="/contact" className="inline-flex items-center gap-2 border border-blue-700 hover:border-blue-500 text-slate-200 hover:text-white text-[13px] font-semibold px-5 py-[11px] rounded-xl transition-all duration-200 whitespace-nowrap">
+          <a href="/contact" className="inline-flex items-center gap-2 border border-blue-700 hover:border-blue-500 text-slate-200 hover:text-white text-[13px] font-semibold px-5 py-[11px] rounded-xl transition-all duration-200 whitespace-nowrap">
             Get notified <ArrowIcon />
-          </Link>
+          </a>
         </div>
       </section>
+
+      {selectedWebinar && (
+        <RegisterModal webinar={selectedWebinar} onClose={handleCloseModal} />
+      )}
     </main>
   );
 }
