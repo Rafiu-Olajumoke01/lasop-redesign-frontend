@@ -7,6 +7,7 @@ import emailjs from "@emailjs/browser";
 const EMAILJS_SERVICE_ID = "service_90bids9";
 const EMAILJS_TEMPLATE_ID = "template_xjk0npe";
 const EMAILJS_PUBLIC_KEY = "jmMjHWm08bK1xNwwI";
+const WEBINAR_MEET_LINK = "https://meet.google.com/hbu-kfgj-bem";
 
 const webinars = [
   {
@@ -297,6 +298,7 @@ function RegisterModal({ webinar, onClose }) {
         webinar_title: webinar.title,
         webinar_date: webinar.date,
         webinar_time: webinar.time,
+        meet_link: WEBINAR_MEET_LINK,
       });
 
       console.log("EmailJS success:", result);
@@ -334,6 +336,14 @@ function RegisterModal({ webinar, onClose }) {
             <p className="text-[13px] text-slate-400 leading-relaxed mb-6">
               We've saved your spot for <span className="text-slate-200">{webinar.title}</span>. Check your inbox for confirmation details.
             </p>
+            <a
+              href={WEBINAR_MEET_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full mb-3 bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.1] text-slate-200 text-[13px] font-semibold px-5 py-3 rounded-xl transition-all duration-200"
+            >
+              Save Google Meet link: {WEBINAR_MEET_LINK}
+            </a>
             <button
               onClick={onClose}
               className="bg-[#0057E7] hover:bg-[#0A66FF] text-white text-[13px] font-semibold px-6 py-2.5 rounded-xl transition-all duration-200"
