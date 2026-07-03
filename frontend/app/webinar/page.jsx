@@ -240,6 +240,10 @@ function RegisterModal({ webinar, onClose }) {
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
 
   useEffect(() => {
+    emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  }, []);
+
+  useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === "Escape") onClose();
     }
@@ -287,22 +291,18 @@ function RegisterModal({ webinar, onClose }) {
     setStatus("loading");
 
     try {
-      await emailjs.send(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        {
-          to_name: formData.fullName,
-          to_email: formData.email,
-          webinar_title: webinar.title,
-          webinar_date: webinar.date,
-          webinar_time: webinar.time,
-        },
-        EMAILJS_PUBLIC_KEY
-      );
+      const result = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        to_name: formData.fullName,
+        to_email: formData.email,
+        webinar_title: webinar.title,
+        webinar_date: webinar.date,
+        webinar_time: webinar.time,
+      });
 
+      console.log("EmailJS success:", result);
       setStatus("success");
     } catch (err) {
-      console.error("Registration failed:", err);
+      console.error("EmailJS error:", err);
       setStatus("error");
     }
   }
