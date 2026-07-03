@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import emailjs from "@emailjs/browser";
+
+const EMAILJS_SERVICE_ID = "service_90bids9";
+const EMAILJS_TEMPLATE_ID = "template_xjk0npe";
+const EMAILJS_PUBLIC_KEY = "jmMjHWm08bK1xNwwI";
 
 const webinars = [
   {
@@ -282,9 +287,18 @@ function RegisterModal({ webinar, onClose }) {
     setStatus("loading");
 
     try {
-      // TODO: EmailJS integration goes here.
-      // For now we just simulate a network delay so the UI flow works.
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          to_name: formData.fullName,
+          to_email: formData.email,
+          webinar_title: webinar.title,
+          webinar_date: webinar.date,
+          webinar_time: webinar.time,
+        },
+        EMAILJS_PUBLIC_KEY
+      );
 
       setStatus("success");
     } catch (err) {
