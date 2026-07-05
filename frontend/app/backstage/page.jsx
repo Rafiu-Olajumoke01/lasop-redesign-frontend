@@ -14,7 +14,7 @@ function getApplicantName(a) {
   if (s.email) return s.email;
   if (a.applicant_name) return a.applicant_name;
   if (a.email) return a.email;
-  return null; // null = don't show
+  return null;
 }
 
 function getApplicantEmail(a) {
@@ -39,16 +39,15 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-// Dark theme: bg #0A0F1E (near-black navy), surface #111827, border #1F2937
-// Accent: electric blue #3B82F6 → indigo #6366F1
-// Text: primary #F1F5F9, secondary #64748B, muted #374151
+function slugify(text) {
+  return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
 
-// ─── Shared UI ────────────────────────────────────────────────────────────────
+// ─── Shared UI (light theme) ────────────────────────────────────────────────
 
 function Card({ children, className = '' }) {
   return (
-    <div className={`bg-[#111827] border border-[#1F2937] rounded-2xl ${className}`}>
+    <div className={`bg-white border border-slate-200 rounded-2xl ${className}`}>
       {children}
     </div>
   );
@@ -56,42 +55,21 @@ function Card({ children, className = '' }) {
 
 function CardHeader({ title, action }) {
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b border-[#1F2937]">
-      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">{title}</h3>
+    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">{title}</h3>
       {action}
-    </div>
-  );
-}
-
-const STAT_GRADIENTS = [
-  { from: '#3B82F6', to: '#6366F1' },
-  { from: '#8B5CF6', to: '#A855F7' },
-  { from: '#F59E0B', to: '#F97316' },
-  { from: '#10B981', to: '#14B8A6' },
-];
-
-function StatCard({ label, value, accentIndex = 0 }) {
-  const g = STAT_GRADIENTS[accentIndex % STAT_GRADIENTS.length];
-  return (
-    <div className="bg-[#111827] border border-[#1F2937] rounded-2xl p-5 relative overflow-hidden">
-      <div
-        className="absolute top-0 left-0 w-full h-[3px]"
-        style={{ background: `linear-gradient(90deg, ${g.from}, ${g.to})` }}
-      />
-      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3">{label}</p>
-      <p className="text-3xl font-black text-slate-100 leading-none">{value}</p>
     </div>
   );
 }
 
 function Pill({ children, color = 'slate' }) {
   const map = {
-    blue:   'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    indigo: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-    amber:  'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    emerald:'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    rose:   'bg-rose-500/10 text-rose-400 border-rose-500/20',
-    slate:  'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    blue:    'bg-blue-50 text-blue-700 border-blue-200',
+    indigo:  'bg-indigo-50 text-indigo-700 border-indigo-200',
+    amber:   'bg-amber-50 text-amber-700 border-amber-200',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    rose:    'bg-rose-50 text-rose-700 border-rose-200',
+    slate:   'bg-slate-100 text-slate-600 border-slate-200',
   };
   return (
     <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border tracking-wide ${map[color] || map.slate}`}>
@@ -106,7 +84,7 @@ function ModePill({ mode }) {
 }
 
 function PaymentPill({ payment }) {
-  if (!payment) return <span className="text-slate-600 text-xs">—</span>;
+  if (!payment) return <span className="text-slate-400 text-xs">—</span>;
   const map = {
     pending: { label: 'Pending', color: 'slate' },
     awaiting_confirmation: { label: 'In review', color: 'amber' },
@@ -121,11 +99,11 @@ function PaymentPill({ payment }) {
 function EmptyState({ title, hint }) {
   return (
     <div className="py-20 text-center">
-      <div className="w-12 h-12 rounded-2xl bg-[#1F2937] mx-auto mb-4 flex items-center justify-center text-xl">
+      <div className="w-12 h-12 rounded-2xl bg-slate-100 mx-auto mb-4 flex items-center justify-center text-xl">
         📭
       </div>
-      <p className="text-slate-300 font-semibold mb-1">{title}</p>
-      {hint && <p className="text-slate-500 text-sm">{hint}</p>}
+      <p className="text-slate-700 font-semibold mb-1">{title}</p>
+      {hint && <p className="text-slate-400 text-sm">{hint}</p>}
     </div>
   );
 }
@@ -133,8 +111,8 @@ function EmptyState({ title, hint }) {
 function Spinner({ text }) {
   return (
     <div className="py-20 text-center">
-      <div className="w-8 h-8 rounded-full border-2 border-[#1F2937] border-t-blue-500 animate-spin mx-auto mb-3" />
-      <p className="text-slate-500 text-sm">{text}</p>
+      <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin mx-auto mb-3" />
+      <p className="text-slate-400 text-sm">{text}</p>
     </div>
   );
 }
@@ -142,7 +120,7 @@ function Spinner({ text }) {
 function ErrorBanner({ message }) {
   if (!message) return null;
   return (
-    <div className="flex items-start gap-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm rounded-xl px-4 py-3 mb-5">
+    <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-3 mb-5">
       <span className="mt-0.5 shrink-0">⚠</span>
       {message}
     </div>
@@ -153,9 +131,8 @@ function PrimaryButton({ children, className = '', ...props }) {
   return (
     <button
       {...props}
-      className={`bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500
-        disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl
-        shadow-lg shadow-blue-900/40 transition-all active:scale-95 ${className}`}
+      className={`bg-blue-700 hover:bg-blue-800 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl
+        shadow-sm transition-all active:scale-95 ${className}`}
     >
       {children}
     </button>
@@ -166,8 +143,8 @@ function SecondaryButton({ children, ...props }) {
   return (
     <button
       {...props}
-      className="bg-[#1F2937] hover:bg-[#374151] text-slate-300 text-sm font-medium px-4 py-2.5
-        rounded-xl border border-[#374151] hover:border-[#4B5563] transition-all active:scale-95"
+      className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium px-4 py-2.5
+        rounded-xl border border-slate-200 transition-all active:scale-95"
     >
       {children}
     </button>
@@ -179,7 +156,7 @@ function LinkButton({ children, danger, ...props }) {
     <button
       {...props}
       className={`text-[13px] font-semibold transition hover:underline underline-offset-2 ${
-        danger ? 'text-rose-400 hover:text-rose-300' : 'text-blue-400 hover:text-blue-300'
+        danger ? 'text-rose-600 hover:text-rose-700' : 'text-blue-700 hover:text-blue-800'
       }`}
     >
       {children}
@@ -188,8 +165,8 @@ function LinkButton({ children, danger, ...props }) {
 }
 
 const inputClass =
-  'w-full bg-[#0A0F1E] border border-[#1F2937] focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 ' +
-  'outline-none rounded-xl px-3.5 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 transition';
+  'w-full bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 ' +
+  'outline-none rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 transition';
 
 function Field({ label, children }) {
   return (
@@ -202,14 +179,14 @@ function Field({ label, children }) {
 
 function Modal({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#111827] border border-[#1F2937] rounded-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[#1F2937]">
-          <h3 className="text-base font-bold text-slate-100">{title}</h3>
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200">
+          <h3 className="text-base font-bold text-slate-900">{title}</h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500
-              hover:text-slate-200 hover:bg-[#1F2937] transition text-sm"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400
+              hover:text-slate-700 hover:bg-slate-100 transition text-sm"
           >
             ✕
           </button>
@@ -234,12 +211,12 @@ function TagChipInput({ label, value = [], onChange, placeholder }) {
       <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-widest">{label}</label>
       <div className="flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
         {value.map((tag) => (
-          <span key={tag} className="flex items-center gap-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[12px] px-2.5 py-1 rounded-full font-medium">
+          <span key={tag} className="flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 text-[12px] px-2.5 py-1 rounded-full font-medium">
             {tag}
-            <button type="button" onClick={() => removeTag(tag)} className="text-blue-500 hover:text-rose-400 transition">✕</button>
+            <button type="button" onClick={() => removeTag(tag)} className="text-blue-500 hover:text-rose-500 transition">✕</button>
           </span>
         ))}
-        {value.length === 0 && <span className="text-slate-600 text-[12px] self-center">None added yet</span>}
+        {value.length === 0 && <span className="text-slate-400 text-[12px] self-center">None added yet</span>}
       </div>
       <div className="flex gap-2">
         <input
@@ -259,10 +236,24 @@ function PageHeader({ title, subtitle, children }) {
   return (
     <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
       <div>
-        <h2 className="text-xl font-black text-slate-100">{title}</h2>
-        {subtitle && <p className="text-slate-500 text-sm mt-0.5">{subtitle}</p>}
+        <h2 className="text-xl font-black text-slate-900">{title}</h2>
+        {subtitle && <p className="text-slate-400 text-sm mt-0.5">{subtitle}</p>}
       </div>
       {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
+    </div>
+  );
+}
+
+function ComingSoon({ title }) {
+  return (
+    <div>
+      <PageHeader title={title} />
+      <Card>
+        <EmptyState
+          title="Coming soon"
+          hint="This section will be wired up once the backend for it is ready."
+        />
+      </Card>
     </div>
   );
 }
@@ -302,9 +293,6 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
     let headers = { Authorization: `Bearer ${token}` };
 
     if (hasFile) {
-      // Multipart so the actual file bytes travel with the request.
-      // Do NOT set Content-Type manually — the browser sets the correct
-      // multipart boundary automatically.
       const formData = new FormData();
       Object.entries(payload).forEach(([key, value]) => {
         if (value === undefined || value === null) return;
@@ -343,23 +331,150 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
   return { items, loading, error, refresh, save, remove };
 }
 
-// ─── Overview ─────────────────────────────────────────────────────────────────
+// ─── Overview icons ─────────────────────────────────────────────────────────
 
-function OverviewTab({ courses, locations, applications }) {
+function PersonIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" />
+    </svg>
+  );
+}
+function BlogIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M4 4h11l5 5v11H4z" />
+      <path d="M15 4v5h5" />
+    </svg>
+  );
+}
+function GroupIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  );
+}
+function GradCapIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M22 10L12 5 2 10l10 5 10-5z" />
+      <path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5" />
+    </svg>
+  );
+}
+function BuildingIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1" />
+    </svg>
+  );
+}
+function CoursesIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+    </svg>
+  );
+}
+function CohortIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <path d="M2 10h20" />
+    </svg>
+  );
+}
+function CheckBadgeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 12l2.5 2.5 5-5" />
+    </svg>
+  );
+}
+function NewApplicantIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx="9" cy="8" r="4" />
+      <path d="M2 21c0-4 3-6 7-6" />
+      <path d="M17 8v6M14 11h6" />
+    </svg>
+  );
+}
+
+function ManagerCard({ title, onClick, icon }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-5 py-5 hover:border-blue-300 hover:shadow-sm transition-all text-left"
+    >
+      <div>
+        <p className="text-slate-900 font-bold text-[15px] mb-1.5">{title}</p>
+        <p className="text-blue-800 font-extrabold text-[15px] leading-tight">
+          Open<br />Manager
+        </p>
+      </div>
+      <div className="w-11 h-11 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 text-indigo-700">
+        {icon}
+      </div>
+    </button>
+  );
+}
+
+function OverviewStatCard({ label, value, icon }) {
+  return (
+    <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-5 py-5 hover:border-blue-300 hover:shadow-sm transition-all">
+      <div>
+        <p className="text-slate-900 font-bold text-[15px] mb-2">{label}</p>
+        <p className="text-blue-900 font-black text-[26px] leading-none">{value}</p>
+      </div>
+      <div className="w-11 h-11 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 text-indigo-700">
+        {icon}
+      </div>
+    </div>
+  );
+}
+
+// ─── Overview tab ─────────────────────────────────────────────────────────────
+
+function OverviewTab({ courses, locations, applications, onNavigate }) {
   const pending = applications.items.filter((a) =>
-    ['pending', 'awaiting_confirmation'].includes(a.payment_status)
+    ['pending', 'awaiting_confirmation'].includes(a.payment?.status)
   ).length;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Courses"            value={courses.items.length}       accentIndex={0} />
-        <StatCard label="Locations"          value={locations.items.length}     accentIndex={1} />
-        <StatCard label="Pending payments"   value={pending}                    accentIndex={2} />
-        <StatCard label="Total applications" value={applications.items.length}  accentIndex={3} />
+    <div>
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+        <h1 className="text-[26px] font-black text-slate-950">Overview</h1>
+        <div className="flex items-center gap-2 border-2 border-slate-900 rounded-xl px-3.5 py-2 bg-slate-100 text-slate-900 font-semibold text-[13px]">
+          June 2026
+        </div>
       </div>
 
-      <Card>
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+        <ManagerCard title="Manage guests" onClick={() => onNavigate('guests')} icon={<PersonIcon />} />
+        <ManagerCard title="Manage blog" onClick={() => onNavigate('blog')} icon={<BlogIcon />} />
+
+        {/* Placeholders below (students/staff/cohorts/graduates) show 0 until backend provides real counts */}
+        <OverviewStatCard label="No of students" value={0} icon={<GroupIcon />} />
+        <OverviewStatCard label="No of staffs" value={0} icon={<GradCapIcon />} />
+
+        <OverviewStatCard label="No of centers" value={locations.items.length} icon={<BuildingIcon />} />
+        <OverviewStatCard label="Courses" value={courses.items.length} icon={<CoursesIcon />} />
+
+        <OverviewStatCard label="Current cohorts" value={0} icon={<CohortIcon />} />
+        <OverviewStatCard label="Completed cohorts" value={0} icon={<CheckBadgeIcon />} />
+
+        <OverviewStatCard label="New applicants" value={pending} icon={<NewApplicantIcon />} />
+        <OverviewStatCard label="Graduates" value={0} icon={<GradCapIcon />} />
+      </div>
+
+      <Card className="mt-6">
         <CardHeader title="Recent applications" />
         <div className="p-2">
           {applications.loading ? (
@@ -369,31 +484,29 @@ function OverviewTab({ courses, locations, applications }) {
           ) : (
             <div>
               {applications.items.slice(0, 5).map((a) => {
-                const name    = getApplicantName(a);
-                const course  = getCourseTitle(a);
-                const date    = formatDate(a.created_at);
-                const mode    = a.mode_of_learning;
+                const name   = getApplicantName(a);
+                const course = getCourseTitle(a);
+                const date   = formatDate(a.created_at);
+                const mode   = a.mode_of_learning;
                 return (
                   <div
                     key={a.id}
-                    className="flex items-center justify-between px-4 py-3 rounded-xl hover:bg-[#1F2937] transition"
+                    className="flex items-center justify-between px-4 py-3 rounded-xl hover:bg-slate-50 transition"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      {/* Only show avatar if we actually have a name */}
                       {name && (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600
-                          flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
                           {name.charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div className="min-w-0">
-                        {name && <p className="text-slate-200 text-sm font-semibold leading-none mb-1 truncate">{name}</p>}
-                        {course && <p className="text-slate-500 text-xs truncate">{course}</p>}
-                        {!name && !course && <p className="text-slate-600 text-xs italic">No details available</p>}
+                        {name && <p className="text-slate-800 text-sm font-semibold leading-none mb-1 truncate">{name}</p>}
+                        {course && <p className="text-slate-400 text-xs truncate">{course}</p>}
+                        {!name && !course && <p className="text-slate-400 text-xs italic">No details available</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0 ml-4">
-                      {date && <span className="text-slate-600 text-xs hidden sm:block">{date}</span>}
+                      {date && <span className="text-slate-400 text-xs hidden sm:block">{date}</span>}
                       {mode && <ModePill mode={mode} />}
                     </div>
                   </div>
@@ -407,7 +520,7 @@ function OverviewTab({ courses, locations, applications }) {
   );
 }
 
-// ─── Courses ──────────────────────────────────────────────────────────────────
+// ─── Courses (Syllabus) tab ────────────────────────────────────────────────────
 
 const emptyCourse = {
   title: '', slug: '', category: 'technology', duration: '', fee: '',
@@ -415,20 +528,16 @@ const emptyCourse = {
   skills: [], outcomes: [], requirements: [], modules: [],
 };
 
-function slugify(text) {
-  return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-
 function CoursesTab({ courses }) {
-  const [modal, setModal]           = useState(null);
-  const [form, setForm]             = useState(emptyCourse);
-  const [saving, setSaving]         = useState(false);
-  const [err, setErr]               = useState('');
+  const [modal, setModal]               = useState(null);
+  const [form, setForm]                 = useState(emptyCourse);
+  const [saving, setSaving]             = useState(false);
+  const [err, setErr]                   = useState('');
   const [imagePreview, setImagePreview] = useState(null);
 
   const openNew  = () => { setForm(emptyCourse); setImagePreview(null); setModal('new'); setErr(''); };
   const openEdit = (c) => {
-    setForm({ ...emptyCourse, ...c, image: null }); // image starts as null = "no change"
+    setForm({ ...emptyCourse, ...c, image: null });
     setImagePreview(c.image ? `${API_BASE}${c.image}` : null);
     setModal(c);
     setErr('');
@@ -446,7 +555,7 @@ function CoursesTab({ courses }) {
     setSaving(true); setErr('');
     try {
       const payload = { ...form, slug: form.slug || slugify(form.title) };
-      if (!payload.image) delete payload.image; // don't overwrite existing image with nothing
+      if (!payload.image) delete payload.image;
       await courses.save(payload, modal === 'new' ? null : modal);
       close();
     }
@@ -456,7 +565,7 @@ function CoursesTab({ courses }) {
 
   return (
     <div>
-      <PageHeader title="Courses" subtitle={`${courses.items.length} course${courses.items.length !== 1 ? 's' : ''}`}>
+      <PageHeader title="Syllabus" subtitle={`${courses.items.length} course${courses.items.length !== 1 ? 's' : ''}`}>
         <PrimaryButton onClick={openNew}>+ Add course</PrimaryButton>
       </PageHeader>
       <ErrorBanner message={courses.error} />
@@ -465,17 +574,17 @@ function CoursesTab({ courses }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {courses.items.map((c) => (
-            <Card key={c.id} className="p-5 hover:border-[#374151] transition-colors">
+            <Card key={c.id} className="p-5 hover:border-slate-300 transition-colors">
               {c.image && (
-                <div className="w-full h-32 rounded-xl overflow-hidden mb-3 bg-[#1F2937]">
+                <div className="w-full h-32 rounded-xl overflow-hidden mb-3 bg-slate-100">
                   <img src={`${API_BASE}${c.image}`} alt={c.title} className="w-full h-full object-cover" />
                 </div>
               )}
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-slate-100 font-bold text-base leading-snug pr-4">{c.title}</h3>
+                <h3 className="text-slate-900 font-bold text-base leading-snug pr-4">{c.title}</h3>
                 <div className="flex items-center gap-2 shrink-0">
                   <LinkButton onClick={() => openEdit(c)}>Edit</LinkButton>
-                  <span className="text-[#374151]">·</span>
+                  <span className="text-slate-300">·</span>
                   <LinkButton danger onClick={() => courses.remove(c)}>Delete</LinkButton>
                 </div>
               </div>
@@ -484,11 +593,11 @@ function CoursesTab({ courses }) {
               )}
               <div className="flex items-center gap-2 mb-3">
                 {c.category && <Pill color="blue">{c.category}</Pill>}
-                {c.duration && <span className="text-slate-500 text-xs">{c.duration}</span>}
+                {c.duration && <span className="text-slate-400 text-xs">{c.duration}</span>}
                 {!c.image && <Pill color="rose">No image</Pill>}
               </div>
-              <div className="pt-3 border-t border-[#1F2937]">
-                <p className="text-slate-100 font-black text-lg">{formatMoney(c.fee)}</p>
+              <div className="pt-3 border-t border-slate-100">
+                <p className="text-slate-900 font-black text-lg">{formatMoney(c.fee)}</p>
               </div>
             </Card>
           ))}
@@ -503,7 +612,7 @@ function CoursesTab({ courses }) {
             <Field label="Course image">
               <div className="flex items-center gap-3">
                 {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-[#1F2937]" />
+                  <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-slate-200" />
                 )}
                 <input type="file" accept="image/*" onChange={handleImageChange} className={inputClass} />
               </div>
@@ -538,7 +647,7 @@ function CoursesTab({ courses }) {
               </Field>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+            <label className="flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" checked={form.featured} onChange={(e) => setForm({ ...form, featured: e.target.checked })} />
               Featured course
             </label>
@@ -558,7 +667,7 @@ function CoursesTab({ courses }) {
   );
 }
 
-// ─── Locations ────────────────────────────────────────────────────────────────
+// ─── Locations (Centers) tab ──────────────────────────────────────────────────
 
 const emptyLocation = { name: '', address: '', amenities: [] };
 
@@ -581,7 +690,7 @@ function LocationsTab({ locations }) {
 
   return (
     <div>
-      <PageHeader title="Locations" subtitle={`${locations.items.length} location${locations.items.length !== 1 ? 's' : ''}`}>
+      <PageHeader title="Centers" subtitle={`${locations.items.length} location${locations.items.length !== 1 ? 's' : ''}`}>
         <PrimaryButton onClick={openNew}>+ Add location</PrimaryButton>
       </PageHeader>
       <ErrorBanner message={locations.error} />
@@ -590,22 +699,22 @@ function LocationsTab({ locations }) {
       ) : (
         <div className="space-y-3">
           {locations.items.map((l) => (
-            <Card key={l.id} className="px-6 py-4 hover:border-[#374151] transition-colors">
+            <Card key={l.id} className="px-6 py-4 hover:border-slate-300 transition-colors">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-slate-100 font-bold mb-1">{l.name}</p>
+                  <p className="text-slate-900 font-bold mb-1">{l.name}</p>
                   {l.address && <p className="text-slate-500 text-sm mb-3">{l.address}</p>}
                   {l.amenities?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {l.amenities.map((t) => (
-                        <span key={t} className="text-[11px] bg-[#1F2937] text-slate-400 px-2 py-0.5 rounded-full">{t}</span>
+                        <span key={t} className="text-[11px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{t}</span>
                       ))}
                     </div>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <LinkButton onClick={() => openEdit(l)}>Edit</LinkButton>
-                  <span className="text-[#374151]">·</span>
+                  <span className="text-slate-300">·</span>
                   <LinkButton danger onClick={() => locations.remove(l)}>Delete</LinkButton>
                 </div>
               </div>
@@ -635,7 +744,7 @@ function LocationsTab({ locations }) {
   );
 }
 
-// ─── Applications ─────────────────────────────────────────────────────────────
+// ─── Applicants tab ─────────────────────────────────────────────────────────────
 
 function ApplicationsTab({ applications, token }) {
   const [filter, setFilter] = useState('all');
@@ -673,7 +782,7 @@ function ApplicationsTab({ applications, token }) {
   return (
     <div>
       <PageHeader
-        title="Applications"
+        title="Applicants"
         subtitle={`${filtered.length} of ${applications.items.length} total`}
       >
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -683,8 +792,8 @@ function ApplicationsTab({ applications, token }) {
               onClick={() => setFilter(f)}
               className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${
                 filter === f
-                  ? 'border-blue-500 bg-blue-600 text-white shadow-lg shadow-blue-900/40'
-                  : 'border-[#1F2937] text-slate-500 hover:border-[#374151] hover:text-slate-300'
+                  ? 'border-blue-600 bg-blue-700 text-white shadow-sm'
+                  : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
               }`}
             >
               {f === 'all' ? 'All' : f.replace(/_/g, ' ')}
@@ -702,7 +811,7 @@ function ApplicationsTab({ applications, token }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[#1F2937] bg-[#0A0F1E]/60 text-left">
+                <tr className="border-b border-slate-200 bg-slate-50 text-left">
                   {['Applicant', 'Course', 'Mode', 'Fee', 'Payment', 'Date', ''].map((h, i) => (
                     <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                       {h}
@@ -719,38 +828,37 @@ function ApplicationsTab({ applications, token }) {
                   const date   = formatDate(a.created_at);
                   const canConfirm = a.payment?.status === 'awaiting_confirmation';
                   return (
-                    <tr key={a.id} className="border-b border-[#1F2937]/50 hover:bg-[#1F2937]/40 transition last:border-0">
+                    <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50 transition last:border-0">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           {name ? (
                             <>
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600
-                                flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-blue-700 flex items-center justify-center text-white text-[11px] font-bold shrink-0">
                                 {name.charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <p className="text-slate-200 font-semibold leading-none mb-0.5">{name}</p>
-                                {email && <p className="text-slate-500 text-[11px]">{email}</p>}
+                                <p className="text-slate-800 font-semibold leading-none mb-0.5">{name}</p>
+                                {email && <p className="text-slate-400 text-[11px]">{email}</p>}
                               </div>
                             </>
                           ) : (
-                            <span className="text-slate-600 text-xs italic">Not available</span>
+                            <span className="text-slate-400 text-xs italic">Not available</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-slate-400 max-w-[180px]">
-                        {course ? <span className="truncate block">{course}</span> : <span className="text-slate-600 italic text-xs">—</span>}
+                      <td className="px-5 py-4 text-slate-500 max-w-[180px]">
+                        {course ? <span className="truncate block">{course}</span> : <span className="text-slate-400 italic text-xs">—</span>}
                       </td>
                       <td className="px-5 py-4">
-                        {mode ? <ModePill mode={mode} /> : <span className="text-slate-600 text-xs">—</span>}
+                        {mode ? <ModePill mode={mode} /> : <span className="text-slate-400 text-xs">—</span>}
                       </td>
-                      <td className="px-5 py-4 text-slate-200 font-bold">
+                      <td className="px-5 py-4 text-slate-800 font-bold">
                         {a.payment ? formatMoney(a.payment.confirmed_amount || a.payment.amount) : formatMoney(getCourseFee(a))}
                       </td>
                       <td className="px-5 py-4">
                         <PaymentPill payment={a.payment} />
                       </td>
-                      <td className="px-5 py-4 text-slate-500 text-xs whitespace-nowrap">
+                      <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">
                         {date || '—'}
                       </td>
                       <td className="px-5 py-4 text-right whitespace-nowrap">
@@ -758,8 +866,8 @@ function ApplicationsTab({ applications, token }) {
                           <button
                             onClick={() => handleMarkPaid(a)}
                             disabled={confirmingId === a.id}
-                            className="text-[12px] font-semibold text-emerald-400 hover:text-emerald-300
-                              border border-emerald-500/30 hover:border-emerald-500/50 bg-emerald-500/10
+                            className="text-[12px] font-semibold text-emerald-700 hover:text-emerald-800
+                              border border-emerald-300 hover:border-emerald-400 bg-emerald-50
                               px-3 py-1.5 rounded-lg transition disabled:opacity-40 mr-3"
                           >
                             {confirmingId === a.id ? 'Confirming…' : 'Mark as paid'}
@@ -779,58 +887,146 @@ function ApplicationsTab({ applications, token }) {
   );
 }
 
-// ─── Nav icons ────────────────────────────────────────────────────────────────
+// ─── Sidebar icons ─────────────────────────────────────────────────────────────
 
-function IconOverview({ active }) {
-  const c = active ? 'white' : '#64748B';
+function NavIcon({ path }) {
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0">
-      <rect x="1" y="1" width="5.5" height="5.5" rx="1.5" fill={c} opacity={active ? 1 : 0.7} />
-      <rect x="8.5" y="1" width="5.5" height="5.5" rx="1.5" fill={c} opacity={active ? 0.7 : 0.5} />
-      <rect x="1" y="8.5" width="5.5" height="5.5" rx="1.5" fill={c} opacity={active ? 0.7 : 0.5} />
-      <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1.5" fill={c} opacity={active ? 0.4 : 0.3} />
-    </svg>
-  );
-}
-
-function IconCourses({ active }) {
-  const c = active ? 'white' : '#64748B';
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0">
-      <rect x="1" y="2" width="13" height="2" rx="1" fill={c} opacity={active ? 1 : 0.7} />
-      <rect x="1" y="6.5" width="9" height="2" rx="1" fill={c} opacity={active ? 0.7 : 0.5} />
-      <rect x="1" y="11" width="6" height="2" rx="1" fill={c} opacity={active ? 0.5 : 0.35} />
-    </svg>
-  );
-}
-
-function IconLocations({ active }) {
-  const c = active ? 'white' : '#64748B';
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0">
-      <path d="M7.5 1C5.01 1 3 3.01 3 5.5c0 3.75 4.5 8.5 4.5 8.5S12 9.25 12 5.5C12 3.01 9.99 1 7.5 1z" stroke={c} strokeWidth="1.4" fill="none" opacity={active ? 0.9 : 0.6} />
-      <circle cx="7.5" cy="5.5" r="1.5" fill={c} opacity={active ? 1 : 0.7} />
-    </svg>
-  );
-}
-
-function IconApplications({ active }) {
-  const c = active ? 'white' : '#64748B';
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0">
-      <rect x="2" y="1" width="11" height="13" rx="2" stroke={c} strokeWidth="1.4" fill="none" opacity={active ? 0.8 : 0.5} />
-      <rect x="4.5" y="4.5" width="6" height="1.5" rx="0.75" fill={c} opacity={active ? 1 : 0.6} />
-      <rect x="4.5" y="7.5" width="4" height="1.5" rx="0.75" fill={c} opacity={active ? 0.7 : 0.4} />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+      {path}
     </svg>
   );
 }
 
 const NAV = [
-  { key: 'overview',     label: 'Overview',     Icon: IconOverview },
-  { key: 'courses',      label: 'Courses',       Icon: IconCourses },
-  { key: 'locations',    label: 'Locations',     Icon: IconLocations },
-  { key: 'applications', label: 'Applications',  Icon: IconApplications },
+  { key: 'overview',   label: 'Overview',   icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" /> },
+  { key: 'cohorts',    label: 'Cohorts',     icon: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M8 2v4M16 2v4M3 10h18" /></> },
+  { key: 'applicants', label: 'Applicants',  icon: <><circle cx="9" cy="8" r="4" /><path d="M2 21c0-4 3-6 7-6" /><path d="M17 8v6M14 11h6" /></> },
+  { key: 'students',   label: 'Students',    icon: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></> },
+  { key: 'staffs',     label: 'Staffs',      icon: <><rect x="2" y="4" width="14" height="10" rx="1" /><path d="M9 19h4M11 14v5" /></> },
+  { key: 'finances',   label: 'Finances',    icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></> },
+  { key: 'syllabus',   label: 'Syllabus',    icon: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></> },
+  { key: 'exam',       label: 'Exam',        icon: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></> },
+  { key: 'results',    label: 'Results',     icon: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M9 8h6M9 12h6M9 16h4" /></> },
+  { key: 'queries',    label: 'Queries',     icon: <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><path d="M12 9v4M12 17h.01" /></> },
+  { key: 'messages',   label: 'Messages',    icon: <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" /> },
+  { key: 'postjob',    label: 'Post Job',    icon: <><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" /></> },
+  { key: 'centers',    label: 'Centers',     icon: <><path d="M3 21h18M5 21V7l7-4 7 4v14" /></> },
 ];
+
+// ─── Sidebar drawer ────────────────────────────────────────────────────────────
+
+function Sidebar({ open, onClose, tab, setTab }) {
+  return (
+    <>
+      {open && (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+        />
+      )}
+      <aside
+        className={`fixed lg:static top-0 left-0 h-full lg:h-screen w-72 z-50 flex flex-col
+          transition-transform duration-200 ease-out
+          ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        style={{ background: 'linear-gradient(180deg, #1E1B8C 0%, #0B0870 100%)' }}
+      >
+        <div className="flex items-center justify-between px-5 pt-6 pb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center overflow-hidden">
+              <span className="text-blue-800 font-black text-[10px]">LASOP</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-white lg:hidden" aria-label="Close menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="px-5 mb-4">
+          <div className="flex items-center gap-2 bg-white/15 rounded-xl px-3.5 py-2.5">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2}>
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.3-4.3" />
+            </svg>
+            <input
+              placeholder="Search..."
+              className="bg-transparent text-white placeholder:text-white/60 text-sm outline-none w-full"
+            />
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3 space-y-1 overflow-y-auto pb-4">
+          {NAV.map((item) => {
+            const active = tab === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => { setTab(item.key); onClose(); }}
+                className={`w-full flex items-center gap-3 text-[14px] px-3.5 py-2.5 rounded-xl transition-all font-semibold ${
+                  active
+                    ? 'bg-white text-blue-800'
+                    : 'text-white/90 hover:bg-white/10'
+                }`}
+              >
+                <NavIcon path={item.icon} />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="px-3 pb-6 pt-2">
+          <div className="h-px bg-white/15 mb-3 mx-2" />
+          <button className="w-full flex items-center gap-3 text-[14px] font-semibold text-white/80 hover:text-white px-3.5 py-2.5 rounded-xl hover:bg-white/10 transition-all">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+              <path d="M16 17l5-5-5-5M21 12H9" />
+            </svg>
+            Log out
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+// ─── Top bar ───────────────────────────────────────────────────────────────────
+
+function TopBar({ onMenuClick, title }) {
+  return (
+    <header className="bg-white border-b border-slate-200 px-4 lg:px-8 py-3.5 flex items-center justify-between sticky top-0 z-20">
+      <div className="flex items-center gap-3">
+        <button onClick={onMenuClick} aria-label="Menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" strokeWidth={2.4} strokeLinecap="round">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
+        <p className="text-slate-900 font-black text-[15px] hidden sm:block">{title}</p>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <button aria-label="Messages" className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
+          </svg>
+        </button>
+        <button aria-label="Notifications" className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 01-3.46 0" />
+          </svg>
+        </button>
+        <button className="flex items-center gap-1.5 text-slate-900 font-bold text-[14px]">
+          Admin
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+      </div>
+    </header>
+  );
+}
 
 // ─── Page shell ────────────────────────────────────────────────────────────────
 
@@ -839,6 +1035,7 @@ export default function BackstagePage() {
   const [token, setToken]             = useState('');
   const [authChecked, setAuthChecked] = useState(false);
   const [tab, setTab]                 = useState('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const t = localStorage.getItem('access');
@@ -876,116 +1073,72 @@ export default function BackstagePage() {
     token
   );
 
-  const handleLogout = () => {
-    localStorage.removeItem('access');
-    localStorage.removeItem('refresh');
-    router.push('/login');
+  const handleOverviewNavigate = (target) => {
+    // "Manage guests" and "Manage blog" don't have pages yet — route them
+    // to placeholder tabs until those are built.
+    if (target === 'guests') setTab('students');
+    if (target === 'blog') setTab('postjob'); // TODO: point this at a real Blog manager once it exists
   };
+
+  const currentLabel = NAV.find((n) => n.key === tab)?.label || 'Overview';
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0A0F1E' }}>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="w-10 h-10 rounded-full border-2 border-[#1F2937] border-t-blue-500 animate-spin mx-auto mb-3" />
-          <p className="text-slate-500 text-sm">Verifying access…</p>
+          <div className="w-10 h-10 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin mx-auto mb-3" />
+          <p className="text-slate-400 text-sm">Verifying access…</p>
         </div>
       </div>
     );
   }
 
   return (
-    // Full-screen dark shell — intentionally no outer layout wrapper
-    <div className="min-h-screen flex" style={{ background: '#0A0F1E' }}>
+    <div className="min-h-screen flex bg-slate-50">
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} />
 
-      {/* ── Sidebar ──────────────────────────────────────────────────── */}
-      <aside
-        className="w-56 shrink-0 flex flex-col border-r"
-        style={{ background: '#080D1A', borderColor: '#1F2937' }}
-      >
-        {/* Logo */}
-        <div className="px-5 pt-6 pb-5">
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-900/50">
-              <span className="text-white text-xs font-black">L</span>
-            </div>
-            <span className="text-slate-100 font-black text-base tracking-tight">LASOP</span>
-          </div>
-          <p className="text-slate-600 text-[10px] font-bold tracking-widest uppercase pl-9">Admin Panel</p>
-        </div>
+      <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
+        <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} />
 
-        <div className="mx-5 h-px mb-3" style={{ background: '#1F2937' }} />
+        <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto pb-24">
+          <div className="max-w-6xl">
+            {tab === 'overview'   && (
+              <OverviewTab
+                courses={courses}
+                locations={locations}
+                applications={applications}
+                onNavigate={handleOverviewNavigate}
+              />
+            )}
+            {tab === 'syllabus'   && <CoursesTab courses={courses} />}
+            {tab === 'centers'    && <LocationsTab locations={locations} />}
+            {tab === 'applicants' && <ApplicationsTab applications={applications} token={token} />}
 
-        {/* Nav items */}
-        <nav className="flex-1 px-3 space-y-0.5">
-          {NAV.map((item) => {
-            const active = tab === item.key;
-            return (
-              <button
-                key={item.key}
-                onClick={() => setTab(item.key)}
-                className={`w-full flex items-center gap-3 text-sm px-3 py-2.5 rounded-xl transition-all ${
-                  active
-                    ? 'text-white font-semibold shadow-lg shadow-blue-900/30'
-                    : 'text-slate-500 hover:text-slate-200 hover:bg-white/5 font-medium'
-                }`}
-                style={active ? { background: 'linear-gradient(135deg, #2563EB, #4F46E5)' } : {}}
-              >
-                <item.Icon active={active} />
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Logout */}
-        <div className="px-3 pb-5 mt-4">
-          <div className="mx-2 h-px mb-3" style={{ background: '#1F2937' }} />
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 text-sm font-medium text-slate-600
-              hover:text-rose-400 hover:bg-white/5 px-3 py-2.5 rounded-xl transition-all text-left"
-          >
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0">
-              <path d="M5.5 2H3a1 1 0 00-1 1v9a1 1 0 001 1h2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <path d="M9.5 10l3-2.5L9.5 5M12.5 7.5H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Log out
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Main ─────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-
-        {/* Topbar */}
-        <header
-          className="shrink-0 px-8 py-4 flex items-center justify-between border-b"
-          style={{ background: '#080D1A', borderColor: '#1F2937' }}
-        >
-          <div>
-            <p className="text-slate-100 font-black text-lg leading-none">
-              {NAV.find((n) => n.key === tab)?.label}
-            </p>
-            <p className="text-slate-600 text-[11px] mt-0.5 font-medium uppercase tracking-wide">LASOP admin</p>
-          </div>
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-            style={{ background: 'linear-gradient(135deg, #2563EB, #4F46E5)' }}
-          >
-            A
-          </div>
-        </header>
-
-        {/* Content */}
-        <div className="flex-1 px-8 py-7 overflow-y-auto">
-          <div className="max-w-5xl">
-            {tab === 'overview'     && <OverviewTab courses={courses} locations={locations} applications={applications} />}
-            {tab === 'courses'      && <CoursesTab courses={courses} />}
-            {tab === 'locations'    && <LocationsTab locations={locations} />}
-            {tab === 'applications' && <ApplicationsTab applications={applications} token={token} />}
+            {tab === 'cohorts'  && <ComingSoon title="Cohorts" />}
+            {tab === 'students' && <ComingSoon title="Students" />}
+            {tab === 'staffs'   && <ComingSoon title="Staffs" />}
+            {tab === 'finances' && <ComingSoon title="Finances" />}
+            {tab === 'exam'     && <ComingSoon title="Exam" />}
+            {tab === 'results'  && <ComingSoon title="Results" />}
+            {tab === 'queries'  && <ComingSoon title="Queries" />}
+            {tab === 'messages' && <ComingSoon title="Messages" />}
+            {tab === 'postjob'  && <ComingSoon title="Post Job" />}
           </div>
         </div>
       </div>
+
+      {/* WhatsApp floating button */}
+      <a
+        href="https://wa.me/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat on WhatsApp"
+        className="fixed bottom-6 right-5 w-14 h-14 rounded-full bg-[#25D366] flex items-center justify-center shadow-lg shadow-black/20 hover:scale-105 transition-transform z-30"
+      >
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
+          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.47 3.47 1.29 4.93L2 22l5.29-1.39a9.9 9.9 0 004.75 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.79 14.02c-.24.68-1.4 1.3-1.93 1.38-.49.08-1.11.11-1.79-.11-.41-.13-.94-.3-1.62-.6-2.84-1.23-4.7-4.1-4.84-4.29-.14-.19-1.16-1.54-1.16-2.94 0-1.4.73-2.08 1-2.37.24-.27.53-.34.71-.34.18 0 .35 0 .5.01.16.01.38-.06.6.46.24.57.81 1.97.88 2.11.07.14.11.3.02.49-.09.19-.14.3-.27.46-.14.16-.29.36-.41.48-.14.14-.28.29-.12.57.16.28.71 1.17 1.52 1.9 1.05.94 1.93 1.23 2.21 1.37.28.14.44.12.6-.07.16-.19.68-.79.87-1.06.18-.27.36-.22.6-.13.24.09 1.55.73 1.82.86.27.13.45.19.51.3.07.13.07.7-.17 1.38z" />
+        </svg>
+      </a>
     </div>
   );
 }
