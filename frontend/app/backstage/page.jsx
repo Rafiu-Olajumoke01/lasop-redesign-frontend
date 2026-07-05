@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -64,7 +65,7 @@ function CardHeader({ title, action }) {
 
 function Pill({ children, color = 'slate' }) {
   const map = {
-    blue:    'bg-blue-50 text-blue-700 border-blue-200',
+    blue:    'bg-blue-50 text-[#0057E7] border-blue-200',
     indigo:  'bg-indigo-50 text-indigo-700 border-indigo-200',
     amber:   'bg-amber-50 text-amber-700 border-amber-200',
     emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -111,7 +112,7 @@ function EmptyState({ title, hint }) {
 function Spinner({ text }) {
   return (
     <div className="py-20 text-center">
-      <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin mx-auto mb-3" />
+      <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-[#0057E7] animate-spin mx-auto mb-3" />
       <p className="text-slate-400 text-sm">{text}</p>
     </div>
   );
@@ -131,7 +132,7 @@ function PrimaryButton({ children, className = '', ...props }) {
   return (
     <button
       {...props}
-      className={`bg-blue-700 hover:bg-blue-800 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl
+      className={`bg-[#0057E7] hover:bg-[#0A66FF] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl
         shadow-sm transition-all active:scale-95 ${className}`}
     >
       {children}
@@ -156,7 +157,7 @@ function LinkButton({ children, danger, ...props }) {
     <button
       {...props}
       className={`text-[13px] font-semibold transition hover:underline underline-offset-2 ${
-        danger ? 'text-rose-600 hover:text-rose-700' : 'text-blue-700 hover:text-blue-800'
+        danger ? 'text-rose-600 hover:text-rose-700' : 'text-[#0057E7] hover:text-[#0A66FF]'
       }`}
     >
       {children}
@@ -415,11 +416,11 @@ function ManagerCard({ title, onClick, icon }) {
     >
       <div>
         <p className="text-slate-900 font-bold text-[15px] mb-1.5">{title}</p>
-        <p className="text-blue-800 font-extrabold text-[15px] leading-tight">
+        <p className="text-[#0057E7] font-extrabold text-[15px] leading-tight">
           Open<br />Manager
         </p>
       </div>
-      <div className="w-11 h-11 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 text-indigo-700">
+      <div className="w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center shrink-0 text-[#0057E7]">
         {icon}
       </div>
     </button>
@@ -433,7 +434,7 @@ function OverviewStatCard({ label, value, icon }) {
         <p className="text-slate-900 font-bold text-[15px] mb-2">{label}</p>
         <p className="text-blue-900 font-black text-[26px] leading-none">{value}</p>
       </div>
-      <div className="w-11 h-11 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 text-indigo-700">
+      <div className="w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center shrink-0 text-[#0057E7]">
         {icon}
       </div>
     </div>
@@ -473,49 +474,6 @@ function OverviewTab({ courses, locations, applications, onNavigate }) {
         <OverviewStatCard label="New applicants" value={pending} icon={<NewApplicantIcon />} />
         <OverviewStatCard label="Graduates" value={0} icon={<GradCapIcon />} />
       </div>
-
-      <Card className="mt-6">
-        <CardHeader title="Recent applications" />
-        <div className="p-2">
-          {applications.loading ? (
-            <Spinner text="Loading…" />
-          ) : applications.items.length === 0 ? (
-            <EmptyState title="No applications yet" />
-          ) : (
-            <div>
-              {applications.items.slice(0, 5).map((a) => {
-                const name   = getApplicantName(a);
-                const course = getCourseTitle(a);
-                const date   = formatDate(a.created_at);
-                const mode   = a.mode_of_learning;
-                return (
-                  <div
-                    key={a.id}
-                    className="flex items-center justify-between px-4 py-3 rounded-xl hover:bg-slate-50 transition"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      {name && (
-                        <div className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                          {name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        {name && <p className="text-slate-800 text-sm font-semibold leading-none mb-1 truncate">{name}</p>}
-                        {course && <p className="text-slate-400 text-xs truncate">{course}</p>}
-                        {!name && !course && <p className="text-slate-400 text-xs italic">No details available</p>}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0 ml-4">
-                      {date && <span className="text-slate-400 text-xs hidden sm:block">{date}</span>}
-                      {mode && <ModePill mode={mode} />}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </Card>
     </div>
   );
 }
@@ -792,7 +750,7 @@ function ApplicationsTab({ applications, token }) {
               onClick={() => setFilter(f)}
               className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${
                 filter === f
-                  ? 'border-blue-600 bg-blue-700 text-white shadow-sm'
+                  ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
                   : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
               }`}
             >
@@ -833,7 +791,7 @@ function ApplicationsTab({ applications, token }) {
                         <div className="flex items-center gap-3">
                           {name ? (
                             <>
-                              <div className="w-7 h-7 rounded-full bg-blue-700 flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
                                 {name.charAt(0).toUpperCase()}
                               </div>
                               <div>
@@ -928,13 +886,12 @@ function Sidebar({ open, onClose, tab, setTab }) {
         className={`fixed lg:static top-0 left-0 h-full lg:h-screen w-72 z-50 flex flex-col
           transition-transform duration-200 ease-out
           ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
-        style={{ background: 'linear-gradient(180deg, #1E1B8C 0%, #0B0870 100%)' }}
+        style={{ background: 'linear-gradient(180deg, #071224 0%, #0A1A38 100%)' }}
       >
         <div className="flex items-center justify-between px-5 pt-6 pb-4">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center overflow-hidden">
-              <span className="text-blue-800 font-black text-[10px]">LASOP</span>
-            </div>
+            <Image src="/logo.webp" alt="LASOP Logo" width={34} height={34} />
+            <span className="text-white font-bold text-lg tracking-wide">LASOP</span>
           </div>
           <button onClick={onClose} className="text-white lg:hidden" aria-label="Close menu">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
@@ -965,7 +922,7 @@ function Sidebar({ open, onClose, tab, setTab }) {
                 onClick={() => { setTab(item.key); onClose(); }}
                 className={`w-full flex items-center gap-3 text-[14px] px-3.5 py-2.5 rounded-xl transition-all font-semibold ${
                   active
-                    ? 'bg-white text-blue-800'
+                    ? 'bg-white text-[#0057E7]'
                     : 'text-white/90 hover:bg-white/10'
                 }`}
               >
@@ -998,7 +955,7 @@ function TopBar({ onMenuClick, title }) {
     <header className="bg-white border-b border-slate-200 px-4 lg:px-8 py-3.5 flex items-center justify-between sticky top-0 z-20">
       <div className="flex items-center gap-3">
         <button onClick={onMenuClick} aria-label="Menu">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" strokeWidth={2.4} strokeLinecap="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0057E7" strokeWidth={2.4} strokeLinecap="round">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
         </button>
@@ -1006,12 +963,12 @@ function TopBar({ onMenuClick, title }) {
       </div>
 
       <div className="flex items-center gap-4">
-        <button aria-label="Messages" className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+        <button aria-label="Messages" className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-[#0057E7]">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
           </svg>
         </button>
-        <button aria-label="Notifications" className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+        <button aria-label="Notifications" className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-[#0057E7]">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 01-3.46 0" />
@@ -1086,7 +1043,7 @@ export default function BackstagePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="w-10 h-10 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin mx-auto mb-3" />
+          <div className="w-10 h-10 rounded-full border-2 border-slate-200 border-t-[#0057E7] animate-spin mx-auto mb-3" />
           <p className="text-slate-400 text-sm">Verifying access…</p>
         </div>
       </div>
