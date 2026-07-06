@@ -883,14 +883,15 @@ function Sidebar({ open, onClose, tab, setTab }) {
         />
       )}
       <aside
-        className={`fixed lg:static top-0 left-0 h-full lg:h-screen w-64 z-50 flex flex-col bg-white border-r border-slate-200
+        className={`fixed lg:static top-0 left-0 h-full lg:h-screen w-64 z-50 flex flex-col border-r border-blue-900/40
           transition-transform duration-200 ease-out
           ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        style={{ background: 'linear-gradient(180deg, #071224 0%, #0B1730 50%, #0A1A38 100%)' }}
       >
-        <div className="flex items-center justify-between px-5 pt-6 pb-5 border-b border-slate-100">
+        <div className="flex items-center justify-between px-5 pt-6 pb-5 border-b border-blue-900/30">
           <div className="flex items-center gap-2">
             <Image src="/logo.webp" alt="LASOP Logo" width={28} height={28} />
-            <span className="text-slate-900 font-bold text-[15px] tracking-wide">LASOP</span>
+            <span className="text-white font-bold text-[15px] tracking-wide">LASOP</span>
           </div>
           <button onClick={onClose} className="text-slate-400 lg:hidden" aria-label="Close menu">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -899,7 +900,10 @@ function Sidebar({ open, onClose, tab, setTab }) {
           </button>
         </div>
 
-        <nav className="flex-1 px-2.5 pt-3 space-y-0.5 overflow-y-auto pb-4">
+        <nav
+          className="sidebar-scroll flex-1 px-2.5 pt-3 space-y-0.5 overflow-y-auto pb-4"
+          style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent' }}
+        >
           {NAV.map((item) => {
             const active = tab === item.key;
             return (
@@ -908,8 +912,8 @@ function Sidebar({ open, onClose, tab, setTab }) {
                 onClick={() => { setTab(item.key); onClose(); }}
                 className={`w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-colors ${
                   active
-                    ? 'bg-slate-100 text-[#0057E7] font-semibold'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 font-medium'
+                    ? 'bg-white text-[#0057E7] font-semibold'
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'
                 }`}
               >
                 <NavIcon path={item.icon} />
@@ -919,8 +923,8 @@ function Sidebar({ open, onClose, tab, setTab }) {
           })}
         </nav>
 
-        <div className="px-2.5 pb-5 pt-2 border-t border-slate-100">
-          <button className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-500 hover:text-slate-700 px-3 py-2 rounded-md hover:bg-slate-50 transition-colors mt-2">
+        <div className="px-2.5 pb-5 pt-2 border-t border-blue-900/30">
+          <button className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/10 transition-colors mt-2">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
               <path d="M16 17l5-5-5-5M21 12H9" />
@@ -928,6 +932,22 @@ function Sidebar({ open, onClose, tab, setTab }) {
             Log out
           </button>
         </div>
+
+        <style jsx>{`
+          .sidebar-scroll::-webkit-scrollbar {
+            width: 4px;
+          }
+          .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 9999px;
+          }
+          .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+          }
+        `}</style>
       </aside>
     </>
   );
