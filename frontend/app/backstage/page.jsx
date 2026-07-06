@@ -412,15 +412,15 @@ function ManagerCard({ title, onClick, icon }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-5 py-5 hover:border-blue-300 hover:shadow-sm transition-all text-left"
+      className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-4 py-4 hover:border-slate-300 transition-colors text-left"
     >
       <div>
-        <p className="text-slate-900 font-bold text-[15px] mb-1.5">{title}</p>
-        <p className="text-[#0057E7] font-extrabold text-[15px] leading-tight">
-          Open<br />Manager
+        <p className="text-slate-800 font-semibold text-[14px] mb-1">{title}</p>
+        <p className="text-[#0057E7] font-semibold text-[13px] leading-tight">
+          Open Manager
         </p>
       </div>
-      <div className="w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center shrink-0 text-[#0057E7]">
+      <div className="text-slate-400 shrink-0">
         {icon}
       </div>
     </button>
@@ -429,12 +429,12 @@ function ManagerCard({ title, onClick, icon }) {
 
 function OverviewStatCard({ label, value, icon }) {
   return (
-    <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-5 py-5 hover:border-blue-300 hover:shadow-sm transition-all">
+    <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-4 py-4">
       <div>
-        <p className="text-slate-900 font-bold text-[15px] mb-2">{label}</p>
-        <p className="text-blue-900 font-black text-[26px] leading-none">{value}</p>
+        <p className="text-slate-500 font-medium text-[13px] mb-1.5">{label}</p>
+        <p className="text-slate-900 font-bold text-[22px] leading-none">{value}</p>
       </div>
-      <div className="w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center shrink-0 text-[#0057E7]">
+      <div className="text-slate-300 shrink-0">
         {icon}
       </div>
     </div>
@@ -450,14 +450,14 @@ function OverviewTab({ courses, locations, applications, onNavigate }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-        <h1 className="text-[26px] font-black text-slate-950">Overview</h1>
-        <div className="flex items-center gap-2 border-2 border-slate-900 rounded-xl px-3.5 py-2 bg-slate-100 text-slate-900 font-semibold text-[13px]">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+        <h1 className="text-[19px] font-bold text-slate-900">Overview</h1>
+        <div className="flex items-center gap-1.5 border border-slate-200 rounded-md px-3 py-1.5 text-slate-500 font-medium text-[12px]">
           June 2026
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         <ManagerCard title="Manage guests" onClick={() => onNavigate('guests')} icon={<PersonIcon />} />
         <ManagerCard title="Manage blog" onClick={() => onNavigate('blog')} icon={<BlogIcon />} />
 
@@ -879,51 +879,37 @@ function Sidebar({ open, onClose, tab, setTab }) {
       {open && (
         <div
           onClick={onClose}
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/30 z-40 lg:hidden"
         />
       )}
       <aside
-        className={`fixed lg:static top-0 left-0 h-full lg:h-screen w-72 z-50 flex flex-col
+        className={`fixed lg:static top-0 left-0 h-full lg:h-screen w-64 z-50 flex flex-col bg-white border-r border-slate-200
           transition-transform duration-200 ease-out
           ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
-        style={{ background: 'linear-gradient(180deg, #071224 0%, #0A1A38 100%)' }}
       >
-        <div className="flex items-center justify-between px-5 pt-6 pb-4">
+        <div className="flex items-center justify-between px-5 pt-6 pb-5 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <Image src="/logo.webp" alt="LASOP Logo" width={34} height={34} />
-            <span className="text-white font-bold text-lg tracking-wide">LASOP</span>
+            <Image src="/logo.webp" alt="LASOP Logo" width={28} height={28} />
+            <span className="text-slate-900 font-bold text-[15px] tracking-wide">LASOP</span>
           </div>
-          <button onClick={onClose} className="text-white lg:hidden" aria-label="Close menu">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
+          <button onClick={onClose} className="text-slate-400 lg:hidden" aria-label="Close menu">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <div className="px-5 mb-4">
-          <div className="flex items-center gap-2 bg-white/15 rounded-xl px-3.5 py-2.5">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2}>
-              <circle cx="11" cy="11" r="7" />
-              <path d="M21 21l-4.3-4.3" />
-            </svg>
-            <input
-              placeholder="Search..."
-              className="bg-transparent text-white placeholder:text-white/60 text-sm outline-none w-full"
-            />
-          </div>
-        </div>
-
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto pb-4">
+        <nav className="flex-1 px-2.5 pt-3 space-y-0.5 overflow-y-auto pb-4">
           {NAV.map((item) => {
             const active = tab === item.key;
             return (
               <button
                 key={item.key}
                 onClick={() => { setTab(item.key); onClose(); }}
-                className={`w-full flex items-center gap-3 text-[14px] px-3.5 py-2.5 rounded-xl transition-all font-semibold ${
+                className={`w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-colors ${
                   active
-                    ? 'bg-white text-[#0057E7]'
-                    : 'text-white/90 hover:bg-white/10'
+                    ? 'bg-slate-100 text-[#0057E7] font-semibold'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 font-medium'
                 }`}
               >
                 <NavIcon path={item.icon} />
@@ -933,10 +919,9 @@ function Sidebar({ open, onClose, tab, setTab }) {
           })}
         </nav>
 
-        <div className="px-3 pb-6 pt-2">
-          <div className="h-px bg-white/15 mb-3 mx-2" />
-          <button className="w-full flex items-center gap-3 text-[14px] font-semibold text-white/80 hover:text-white px-3.5 py-2.5 rounded-xl hover:bg-white/10 transition-all">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <div className="px-2.5 pb-5 pt-2 border-t border-slate-100">
+          <button className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-500 hover:text-slate-700 px-3 py-2 rounded-md hover:bg-slate-50 transition-colors mt-2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
               <path d="M16 17l5-5-5-5M21 12H9" />
             </svg>
@@ -952,31 +937,31 @@ function Sidebar({ open, onClose, tab, setTab }) {
 
 function TopBar({ onMenuClick, title }) {
   return (
-    <header className="bg-white border-b border-slate-200 px-4 lg:px-8 py-3.5 flex items-center justify-between sticky top-0 z-20">
+    <header className="bg-white border-b border-slate-200 px-4 lg:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
       <div className="flex items-center gap-3">
-        <button onClick={onMenuClick} aria-label="Menu">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0057E7" strokeWidth={2.4} strokeLinecap="round">
+        <button onClick={onMenuClick} aria-label="Menu" className="text-slate-500">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
         </button>
-        <p className="text-slate-900 font-black text-[15px] hidden sm:block">{title}</p>
+        <p className="text-slate-800 font-semibold text-[14px] hidden sm:block">{title}</p>
       </div>
 
       <div className="flex items-center gap-4">
-        <button aria-label="Messages" className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-[#0057E7]">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <button aria-label="Messages" className="text-slate-400 hover:text-slate-600">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
           </svg>
         </button>
-        <button aria-label="Notifications" className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-[#0057E7]">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <button aria-label="Notifications" className="text-slate-400 hover:text-slate-600">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 01-3.46 0" />
           </svg>
         </button>
-        <button className="flex items-center gap-1.5 text-slate-900 font-bold text-[14px]">
+        <button className="flex items-center gap-1.5 text-slate-700 font-medium text-[13px]">
           Admin
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0F172A" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9l6 6 6-6" />
           </svg>
         </button>
@@ -1090,7 +1075,7 @@ export default function BackstagePage() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat on WhatsApp"
-        className="fixed bottom-6 right-5 w-14 h-14 rounded-full bg-[#25D366] flex items-center justify-center shadow-lg shadow-black/20 hover:scale-105 transition-transform z-30"
+        className="fixed bottom-5 right-5 w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center shadow-md hover:opacity-90 transition-opacity z-30"
       >
         <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
           <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.47 3.47 1.29 4.93L2 22l5.29-1.39a9.9 9.9 0 004.75 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.79 14.02c-.24.68-1.4 1.3-1.93 1.38-.49.08-1.11.11-1.79-.11-.41-.13-.94-.3-1.62-.6-2.84-1.23-4.7-4.1-4.84-4.29-.14-.19-1.16-1.54-1.16-2.94 0-1.4.73-2.08 1-2.37.24-.27.53-.34.71-.34.18 0 .35 0 .5.01.16.01.38-.06.6.46.24.57.81 1.97.88 2.11.07.14.11.3.02.49-.09.19-.14.3-.27.46-.14.16-.29.36-.41.48-.14.14-.28.29-.12.57.16.28.71 1.17 1.52 1.9 1.05.94 1.93 1.23 2.21 1.37.28.14.44.12.6-.07.16-.19.68-.79.87-1.06.18-.27.36-.22.6-.13.24.09 1.55.73 1.82.86.27.13.45.19.51.3.07.13.07.7-.17 1.38z" />
