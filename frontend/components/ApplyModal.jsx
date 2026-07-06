@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createPortal } from 'react-dom';
 
 export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
@@ -11,9 +12,9 @@ export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
     first_name: '',
     last_name: '',
     email: '',
-    password: '',
     phone_number: '',
     gender: '',
+    password: '',
     course: preselectedCourse?.id || '',
     mode_of_learning: 'online',
   });
@@ -111,6 +112,9 @@ export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
     }
   };
 
+  const inputClass =
+    'bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 text-sm';
+
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
       {/* Overlay */}
@@ -118,26 +122,30 @@ export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
 
       {/* Modal */}
       <div className="relative z-10 w-full max-w-md bg-[#071224] border border-white/10 rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white">Apply Now</h2>
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <h2 className="text-xl font-bold text-white">Apply Now</h2>
+            <p className="text-slate-400 text-xs mt-0.5">Create your account to start your application</p>
+          </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl leading-none">
             &times;
           </button>
         </div>
 
         {preselectedCourse && (
-          <p className="text-sm text-blue-300 mb-4">
+          <p className="text-sm text-blue-300 mt-3 mb-1">
             Applying for: <span className="font-semibold">{preselectedCourse.title}</span>
           </p>
         )}
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-xl px-3 py-2 mb-3">
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-xl px-3 py-2 mt-3 mb-1">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-3 mt-4">
+          {/* Row 1: First / Last name — matches signup */}
           <div className="grid grid-cols-2 gap-3">
             <input
               type="text"
@@ -146,7 +154,7 @@ export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
               onChange={handleChange}
               required
               placeholder="First name"
-              className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+              className={inputClass}
             />
             <input
               type="text"
@@ -155,10 +163,11 @@ export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
               onChange={handleChange}
               required
               placeholder="Last name"
-              className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+              className={inputClass}
             />
           </div>
 
+          {/* Row 2: Email — matches signup */}
           <input
             type="email"
             name="email"
@@ -166,48 +175,52 @@ export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
             onChange={handleChange}
             required
             placeholder="Email address"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+            className={`w-full ${inputClass}`}
           />
 
+          {/* Row 3: Phone + Gender side by side — matches signup */}
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="tel"
+              name="phone_number"
+              value={formData.phone_number}
+              onChange={handleChange}
+              required
+              placeholder="Phone number"
+              className={inputClass}
+            />
+            <select
+              name="gender"
+              value={formData.gender}
+              onChange={handleChange}
+              required
+              className={inputClass}
+            >
+              <option value="" className="bg-[#071224]">Gender</option>
+              <option value="male" className="bg-[#071224]">Male</option>
+              <option value="female" className="bg-[#071224]">Female</option>
+            </select>
+          </div>
+
+          {/* Row 4: Password — matches signup */}
           <input
             type="password"
             name="password"
             value={formData.password}
             onChange={handleChange}
             required
-            placeholder="Create a password"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 text-sm"
+            placeholder="Password"
+            className={`w-full ${inputClass}`}
           />
 
-          <input
-            type="tel"
-            name="phone_number"
-            value={formData.phone_number}
-            onChange={handleChange}
-            required
-            placeholder="Phone number"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500 text-sm"
-          />
-
-          <select
-            name="gender"
-            value={formData.gender}
-            onChange={handleChange}
-            required
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500 text-sm"
-          >
-            <option value="" className="bg-[#071224]">Select gender</option>
-            <option value="male" className="bg-[#071224]">Male</option>
-            <option value="female" className="bg-[#071224]">Female</option>
-          </select>
-
+          {/* Apply-specific fields — course + learning mode */}
           {!preselectedCourse && (
             <select
               name="course"
               value={formData.course}
               onChange={handleChange}
               required
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500 text-sm"
+              className={`w-full ${inputClass}`}
             >
               <option value="" className="bg-[#071224]">Select a course</option>
               {courses.map((c) => (
@@ -223,7 +236,7 @@ export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
             value={formData.mode_of_learning}
             onChange={handleChange}
             required
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500 text-sm"
+            className={`w-full ${inputClass}`}
           >
             <option value="online" className="bg-[#071224]">Online</option>
             <option value="physical" className="bg-[#071224]">Physical (in-person)</option>
@@ -234,8 +247,16 @@ export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
             disabled={loading}
             className="w-full bg-[#0057E7] hover:bg-[#0A66FF] text-white py-2.5 rounded-xl font-semibold text-sm transition disabled:opacity-50"
           >
-            {loading ? 'Submitting...' : 'Submit Application'}
+            {loading ? 'Submitting...' : 'Create Account & Apply'}
           </button>
+
+          {/* Login link — matches signup pattern */}
+          <p className="text-center text-slate-400 text-xs pt-1">
+            Already have an account?{' '}
+            <Link href="/login" onClick={onClose} className="text-blue-400 hover:underline font-medium">
+              Log in
+            </Link>
+          </p>
         </form>
       </div>
     </div>,
