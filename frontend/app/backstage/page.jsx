@@ -259,7 +259,7 @@ function ComingSoon({ title }) {
   );
 }
 
-// ─── Data hook ────────────────────────────────────────────────────────────────
+// ─── Data hooks ───────────────────────────────────────────────────────────────
 
 function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }, token) {
   const [items, setItems] = useState([]);
@@ -330,6 +330,32 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
   };
 
   return { items, loading, error, refresh, save, remove };
+}
+
+function useDashboardStats(token) {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/dashboard-stats/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load dashboard stats.');
+      const data = await res.json();
+      setStats(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  return { stats, loading, error, refresh };
 }
 
 // ─── Overview icons ─────────────────────────────────────────────────────────
@@ -443,10 +469,13 @@ function OverviewStatCard({ label, value, icon }) {
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
-function OverviewTab({ courses, locations, applications, onNavigate }) {
+function OverviewTab({ courses, locations, applications, dashboardStats, onNavigate }) {
   const pending = applications.items.filter((a) =>
     ['pending', 'awaiting_confirmation'].includes(a.payment?.status)
   ).length;
+
+  const currentCohorts   = dashboardStats.stats?.cohorts?.current ?? 0;
+  const completedCohorts = dashboardStats.stats?.cohorts?.completed ?? 0;
 
   return (
     <div>
@@ -457,19 +486,21 @@ function OverviewTab({ courses, locations, applications, onNavigate }) {
         </div>
       </div>
 
+      <ErrorBanner message={dashboardStats.error} />
+
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         <ManagerCard title="Manage guests" onClick={() => onNavigate('guests')} icon={<PersonIcon />} />
         <ManagerCard title="Manage blog" onClick={() => onNavigate('blog')} icon={<BlogIcon />} />
 
-        {/* Placeholders below (students/staff/cohorts/graduates) show 0 until backend provides real counts */}
+        {/* Placeholders below (students/staff/graduates) show 0 until backend provides real counts */}
         <OverviewStatCard label="No of students" value={0} icon={<GroupIcon />} />
         <OverviewStatCard label="No of staffs" value={0} icon={<GradCapIcon />} />
 
         <OverviewStatCard label="No of centers" value={locations.items.length} icon={<BuildingIcon />} />
         <OverviewStatCard label="Courses" value={courses.items.length} icon={<CoursesIcon />} />
 
-        <OverviewStatCard label="Current cohorts" value={0} icon={<CohortIcon />} />
-        <OverviewStatCard label="Completed cohorts" value={0} icon={<CheckBadgeIcon />} />
+        <OverviewStatCard label="Current cohorts" value={dashboardStats.loading ? '—' : currentCohorts} icon={<CohortIcon />} />
+        <OverviewStatCard label="Completed cohorts" value={dashboardStats.loading ? '—' : completedCohorts} icon={<CheckBadgeIcon />} />
 
         <OverviewStatCard label="New applicants" value={pending} icon={<NewApplicantIcon />} />
         <OverviewStatCard label="Graduates" value={0} icon={<GradCapIcon />} />
@@ -845,6 +876,309 @@ function ApplicationsTab({ applications, token }) {
   );
 }
 
+// ─── Exams tab ────────────────────────────────────────────────────────────────
+
+const emptyExam = {
+  title: '', cohort: '', course: '', exam_type: 'project',
+  start_date: '', due_date: '', total_marks: 100, pass_mark: 50, instructions: '',
+};
+
+function ExamsTab({ exams, cohorts, courses }) {
+  const [modal, setModal]   = useState(null);
+  const [form, setForm]     = useState(emptyExam);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr]       = useState('');
+
+  const openNew  = () => { setForm(emptyExam); setModal('new'); setErr(''); };
+  const openEdit = (e) => {
+    setForm({
+      ...emptyExam,
+      ...e,
+      cohort: e.cohort_detail?.id ?? e.cohort ?? '',
+      course: e.course_detail?.id ?? e.course ?? '',
+    });
+    setModal(e);
+    setErr('');
+  };
+  const close = () => setModal(null);
+
+  const handleSave = async () => {
+    setSaving(true); setErr('');
+    try {
+      await exams.save(form, modal === 'new' ? null : modal);
+      close();
+    } catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const getCohortName = (e) => e.cohort_detail?.name || cohorts.items.find((c) => c.id === e.cohort)?.name || '—';
+  const getCourseName = (e) => e.course_detail?.title || courses.items.find((c) => c.id === e.course)?.title || '—';
+
+  return (
+    <div>
+      <PageHeader title="Exams" subtitle={`${exams.items.length} exam${exams.items.length !== 1 ? 's' : ''}`}>
+        <PrimaryButton onClick={openNew}>+ Add exam</PrimaryButton>
+      </PageHeader>
+      <ErrorBanner message={exams.error} />
+      {exams.loading ? <Spinner text="Loading exams…" /> : exams.items.length === 0 ? (
+        <Card><EmptyState title="No exams yet" hint="Create an exam for a cohort to get started." /></Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                  {['Title', 'Course', 'Cohort', 'Type', 'Start', 'Due', 'Status', ''].map((h, i) => (
+                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {exams.items.map((e) => (
+                  <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition last:border-0">
+                    <td className="px-5 py-4 text-slate-800 font-semibold">{e.title}</td>
+                    <td className="px-5 py-4 text-slate-500">{getCourseName(e)}</td>
+                    <td className="px-5 py-4 text-slate-500">{getCohortName(e)}</td>
+                    <td className="px-5 py-4"><Pill color="indigo">{e.exam_type}</Pill></td>
+                    <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDate(e.start_date)}</td>
+                    <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDate(e.due_date)}</td>
+                    <td className="px-5 py-4">
+                      <Pill color={e.is_open ? 'emerald' : 'slate'}>{e.is_open ? 'Open' : 'Closed'}</Pill>
+                    </td>
+                    <td className="px-5 py-4 text-right whitespace-nowrap">
+                      <LinkButton onClick={() => openEdit(e)}>Edit</LinkButton>
+                      <span className="text-slate-300 mx-2">·</span>
+                      <LinkButton danger onClick={() => exams.remove(e)}>Delete</LinkButton>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {modal && (
+        <Modal title={modal === 'new' ? 'Add new exam' : 'Edit exam'} onClose={close}>
+          <div className="space-y-4">
+            {err && <ErrorBanner message={err} />}
+            <Field label="Title">
+              <input className={inputClass} value={form.title} onChange={(ev) => setForm({ ...form, title: ev.target.value })} placeholder="e.g. Final Project — Build a Portfolio Site" />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Cohort">
+                <select className={inputClass} value={form.cohort} onChange={(ev) => setForm({ ...form, cohort: ev.target.value })}>
+                  <option value="">Select cohort</option>
+                  {cohorts.items.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </Field>
+              <Field label="Course">
+                <select className={inputClass} value={form.course} onChange={(ev) => setForm({ ...form, course: ev.target.value })}>
+                  <option value="">Select course</option>
+                  {courses.items.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+                </select>
+              </Field>
+            </div>
+            <Field label="Exam type">
+              <select className={inputClass} value={form.exam_type} onChange={(ev) => setForm({ ...form, exam_type: ev.target.value })}>
+                <option value="quiz">Quiz</option>
+                <option value="midterm">Midterm</option>
+                <option value="final">Final Assessment</option>
+                <option value="project">Project Assessment</option>
+              </select>
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Start date">
+                <input type="date" className={inputClass} value={form.start_date} onChange={(ev) => setForm({ ...form, start_date: ev.target.value })} />
+              </Field>
+              <Field label="Due date">
+                <input type="date" className={inputClass} value={form.due_date} onChange={(ev) => setForm({ ...form, due_date: ev.target.value })} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Total marks">
+                <input type="number" className={inputClass} value={form.total_marks} onChange={(ev) => setForm({ ...form, total_marks: ev.target.value })} />
+              </Field>
+              <Field label="Pass mark">
+                <input type="number" className={inputClass} value={form.pass_mark} onChange={(ev) => setForm({ ...form, pass_mark: ev.target.value })} />
+              </Field>
+            </div>
+            <Field label="Instructions">
+              <textarea className={inputClass} rows={4} value={form.instructions} onChange={(ev) => setForm({ ...form, instructions: ev.target.value })} placeholder="Project brief / requirements shown to students" />
+            </Field>
+            <PrimaryButton className="w-full justify-center" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : 'Save exam'}
+            </PrimaryButton>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── Results tab ──────────────────────────────────────────────────────────────
+
+const emptyResult = { exam: '', student: '', score: '', status: 'pending', submitted_at: '', feedback: '' };
+
+function ResultsTab({ results, exams, applications }) {
+  const [modal, setModal]   = useState(null);
+  const [form, setForm]     = useState(emptyResult);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr]       = useState('');
+  const [filter, setFilter] = useState('all');
+
+  // No dedicated "list students" endpoint exists yet, so we derive the
+  // student picker from applications data (deduped by student id).
+  const students = useMemo(() => {
+    const map = new Map();
+    applications.items.forEach((a) => {
+      const s = a.student_detail || a.student || a.user_detail || a.user;
+      if (s && s.id) {
+        const name = `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.email || `Student #${s.id}`;
+        map.set(s.id, { id: s.id, name });
+      }
+    });
+    return Array.from(map.values());
+  }, [applications.items]);
+
+  const openNew  = () => { setForm(emptyResult); setModal('new'); setErr(''); };
+  const openEdit = (r) => {
+    setForm({
+      ...emptyResult,
+      ...r,
+      exam: r.exam_detail?.id ?? r.exam ?? '',
+      student: r.student_detail?.id ?? r.student ?? '',
+      score: r.score ?? '',
+      submitted_at: r.submitted_at ? r.submitted_at.slice(0, 10) : '',
+    });
+    setModal(r);
+    setErr('');
+  };
+  const close = () => setModal(null);
+
+  const handleSave = async () => {
+    setSaving(true); setErr('');
+    try {
+      const payload = { ...form };
+      if (payload.score === '') delete payload.score;
+      if (!payload.submitted_at) delete payload.submitted_at;
+      await results.save(payload, modal === 'new' ? null : modal);
+      close();
+    } catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const filtered = filter === 'all' ? results.items : results.items.filter((r) => r.status === filter);
+
+  const getExamTitle = (r) => r.exam_detail?.title || exams.items.find((e) => e.id === r.exam)?.title || '—';
+  const getStudentName = (r) => {
+    const s = r.student_detail;
+    if (s) return `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.email;
+    return students.find((s) => s.id === r.student)?.name || '—';
+  };
+
+  const statusColor = { pending: 'slate', passed: 'emerald', failed: 'rose' };
+  const filters = ['all', 'pending', 'passed', 'failed'];
+
+  return (
+    <div>
+      <PageHeader title="Results" subtitle={`${filtered.length} of ${results.items.length} total`}>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {filters.map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${
+                filter === f
+                  ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                  : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+              }`}
+            >
+              {f === 'all' ? 'All' : f}
+            </button>
+          ))}
+        </div>
+        <PrimaryButton onClick={openNew}>+ Add result</PrimaryButton>
+      </PageHeader>
+      <ErrorBanner message={results.error} />
+      {results.loading ? <Spinner text="Loading results…" /> : filtered.length === 0 ? (
+        <Card><EmptyState title="No results yet" hint="Nothing matches this filter yet." /></Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                  {['Student', 'Exam', 'Score', 'Status', 'Submitted', ''].map((h, i) => (
+                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r) => (
+                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition last:border-0">
+                    <td className="px-5 py-4 text-slate-800 font-semibold">{getStudentName(r)}</td>
+                    <td className="px-5 py-4 text-slate-500">{getExamTitle(r)}</td>
+                    <td className="px-5 py-4 text-slate-800 font-bold">{r.score ?? '—'}</td>
+                    <td className="px-5 py-4"><Pill color={statusColor[r.status] || 'slate'}>{r.status}</Pill></td>
+                    <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDate(r.submitted_at) || '—'}</td>
+                    <td className="px-5 py-4 text-right whitespace-nowrap">
+                      <LinkButton onClick={() => openEdit(r)}>Edit</LinkButton>
+                      <span className="text-slate-300 mx-2">·</span>
+                      <LinkButton danger onClick={() => results.remove(r)}>Delete</LinkButton>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {modal && (
+        <Modal title={modal === 'new' ? 'Add new result' : 'Edit result'} onClose={close}>
+          <div className="space-y-4">
+            {err && <ErrorBanner message={err} />}
+            <Field label="Exam">
+              <select className={inputClass} value={form.exam} onChange={(ev) => setForm({ ...form, exam: ev.target.value })}>
+                <option value="">Select exam</option>
+                {exams.items.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
+              </select>
+            </Field>
+            <Field label="Student">
+              <select className={inputClass} value={form.student} onChange={(ev) => setForm({ ...form, student: ev.target.value })}>
+                <option value="">Select student</option>
+                {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Score">
+                <input type="number" className={inputClass} value={form.score} onChange={(ev) => setForm({ ...form, score: ev.target.value })} placeholder="Out of total marks" />
+              </Field>
+              <Field label="Status">
+                <select className={inputClass} value={form.status} onChange={(ev) => setForm({ ...form, status: ev.target.value })}>
+                  <option value="pending">Pending</option>
+                  <option value="passed">Passed</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </Field>
+            </div>
+            <Field label="Submitted date">
+              <input type="date" className={inputClass} value={form.submitted_at} onChange={(ev) => setForm({ ...form, submitted_at: ev.target.value })} />
+            </Field>
+            <Field label="Feedback">
+              <textarea className={inputClass} rows={3} value={form.feedback} onChange={(ev) => setForm({ ...form, feedback: ev.target.value })} placeholder="Optional feedback for the student" />
+            </Field>
+            <PrimaryButton className="w-full justify-center" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : 'Save result'}
+            </PrimaryButton>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 // ─── Sidebar icons ─────────────────────────────────────────────────────────────
 
 function NavIcon({ path }) {
@@ -1034,6 +1368,19 @@ export default function BackstagePage() {
     { label: 'applications', basePath: '/api/applications/', detailPath: (a) => `/api/applications/${a.id}/`, supportsUpdate: false },
     token
   );
+  const cohorts = useAdminResource(
+    { label: 'cohorts', basePath: '/api/cohorts/', detailPath: (c) => `/api/cohorts/${c.id}/` },
+    token
+  );
+  const exams = useAdminResource(
+    { label: 'exams', basePath: '/api/exams/', detailPath: (e) => `/api/exams/${e.id}/` },
+    token
+  );
+  const results = useAdminResource(
+    { label: 'results', basePath: '/api/results/', detailPath: (r) => `/api/results/${r.id}/` },
+    token
+  );
+  const dashboardStats = useDashboardStats(token);
 
   const handleOverviewNavigate = (target) => {
     // "Manage guests" and "Manage blog" don't have pages yet — route them
@@ -1069,19 +1416,20 @@ export default function BackstagePage() {
                 courses={courses}
                 locations={locations}
                 applications={applications}
+                dashboardStats={dashboardStats}
                 onNavigate={handleOverviewNavigate}
               />
             )}
             {tab === 'syllabus'   && <CoursesTab courses={courses} />}
             {tab === 'centers'    && <LocationsTab locations={locations} />}
             {tab === 'applicants' && <ApplicationsTab applications={applications} token={token} />}
+            {tab === 'exam'       && <ExamsTab exams={exams} cohorts={cohorts} courses={courses} />}
+            {tab === 'results'    && <ResultsTab results={results} exams={exams} applications={applications} />}
 
             {tab === 'cohorts'  && <ComingSoon title="Cohorts" />}
             {tab === 'students' && <ComingSoon title="Students" />}
             {tab === 'staffs'   && <ComingSoon title="Staffs" />}
             {tab === 'finances' && <ComingSoon title="Finances" />}
-            {tab === 'exam'     && <ComingSoon title="Exam" />}
-            {tab === 'results'  && <ComingSoon title="Results" />}
             {tab === 'queries'  && <ComingSoon title="Queries" />}
             {tab === 'messages' && <ComingSoon title="Messages" />}
             {tab === 'postjob'  && <ComingSoon title="Post Job" />}
