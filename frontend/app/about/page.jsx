@@ -121,7 +121,7 @@ export default function About() {
                 expert mentorship, and training built around what the industry actually needs.
               </p>
 
-              <div className="grid sm:grid-cols-3 gap-6">
+              {/* <div className="grid sm:grid-cols-3 gap-6">
                 {[
                   { label: "Skill", desc: "Hands-on training in in-demand tech disciplines" },
                   { label: "Confidence", desc: "Real projects and portfolios, not just certificates" },
@@ -137,7 +137,7 @@ export default function About() {
                     <p className="text-slate-300 text-sm leading-relaxed">{pillar.desc}</p>
                   </div>
                 ))}
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
