@@ -510,7 +510,7 @@ export default function DashboardPage() {
     : `₦${totalFees.toLocaleString()}`;
 
   return (
-    <main className="min-h-screen bg-[#0A0C10]">
+    <main className="min-h-screen bg-[#0A0C10] pt-20">
       {/* Top bar */}
       <div className="border-b border-[#1C2330] bg-[#0A0C10]">
         <div className="max-w-5xl mx-auto px-5 md:px-8 py-4 flex items-center justify-between">
