@@ -65,12 +65,12 @@ function CardHeader({ title, action }) {
 
 function Pill({ children, color = 'slate' }) {
   const map = {
-    blue:    'bg-blue-50 text-[#0057E7] border-blue-200',
-    indigo:  'bg-indigo-50 text-indigo-700 border-indigo-200',
-    amber:   'bg-amber-50 text-amber-700 border-amber-200',
+    blue: 'bg-blue-50 text-[#0057E7] border-blue-200',
+    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200',
     emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    rose:    'bg-rose-50 text-rose-700 border-rose-200',
-    slate:   'bg-slate-100 text-slate-600 border-slate-200',
+    rose: 'bg-rose-50 text-rose-700 border-rose-200',
+    slate: 'bg-slate-100 text-slate-600 border-slate-200',
   };
   return (
     <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border tracking-wide ${map[color] || map.slate}`}>
@@ -156,9 +156,8 @@ function LinkButton({ children, danger, ...props }) {
   return (
     <button
       {...props}
-      className={`text-[13px] font-semibold transition hover:underline underline-offset-2 ${
-        danger ? 'text-rose-600 hover:text-rose-700' : 'text-[#0057E7] hover:text-[#0A66FF]'
-      }`}
+      className={`text-[13px] font-semibold transition hover:underline underline-offset-2 ${danger ? 'text-rose-600 hover:text-rose-700' : 'text-[#0057E7] hover:text-[#0A66FF]'
+        }`}
     >
       {children}
     </button>
@@ -474,7 +473,7 @@ function OverviewTab({ courses, locations, applications, dashboardStats, onNavig
     ['pending', 'awaiting_confirmation'].includes(a.payment?.status)
   ).length;
 
-  const currentCohorts   = dashboardStats.stats?.cohorts?.current ?? 0;
+  const currentCohorts = dashboardStats.stats?.cohorts?.current ?? 0;
   const completedCohorts = dashboardStats.stats?.cohorts?.completed ?? 0;
 
   return (
@@ -518,13 +517,13 @@ const emptyCourse = {
 };
 
 function CoursesTab({ courses }) {
-  const [modal, setModal]               = useState(null);
-  const [form, setForm]                 = useState(emptyCourse);
-  const [saving, setSaving]             = useState(false);
-  const [err, setErr]                   = useState('');
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState(emptyCourse);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
   const [imagePreview, setImagePreview] = useState(null);
 
-  const openNew  = () => { setForm(emptyCourse); setImagePreview(null); setModal('new'); setErr(''); };
+  const openNew = () => { setForm(emptyCourse); setImagePreview(null); setModal('new'); setErr(''); };
   const openEdit = (c) => {
     setForm({ ...emptyCourse, ...c, image: null });
     setImagePreview(c.image ? `${API_BASE}${c.image}` : null);
@@ -661,14 +660,14 @@ function CoursesTab({ courses }) {
 const emptyLocation = { name: '', address: '', amenities: [] };
 
 function LocationsTab({ locations }) {
-  const [modal, setModal]   = useState(null);
-  const [form, setForm]     = useState(emptyLocation);
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState(emptyLocation);
   const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState('');
+  const [err, setErr] = useState('');
 
-  const openNew  = () => { setForm(emptyLocation); setModal('new'); setErr(''); };
+  const openNew = () => { setForm(emptyLocation); setModal('new'); setErr(''); };
   const openEdit = (l) => { setForm({ ...emptyLocation, ...l }); setModal(l); setErr(''); };
-  const close    = () => setModal(null);
+  const close = () => setModal(null);
 
   const handleSave = async () => {
     setSaving(true); setErr('');
@@ -739,13 +738,13 @@ function LocationsTab({ locations }) {
 const emptyCohort = { name: '', start_date: '', end_date: '', status: 'upcoming' };
 
 function CohortsTab({ cohorts }) {
-  const [modal, setModal]   = useState(null);
-  const [form, setForm]     = useState(emptyCohort);
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState(emptyCohort);
   const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState('');
+  const [err, setErr] = useState('');
   const [filter, setFilter] = useState('all');
 
-  const openNew  = () => { setForm(emptyCohort); setModal('new'); setErr(''); };
+  const openNew = () => { setForm(emptyCohort); setModal('new'); setErr(''); };
   const openEdit = (c) => {
     setForm({
       name: c.name,
@@ -782,11 +781,10 @@ function CohortsTab({ cohorts }) {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${
-                filter === f
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
                   ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
                   : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
-              }`}
+                }`}
             >
               {f === 'all' ? 'All' : f}
             </button>
@@ -943,11 +941,10 @@ function ApplicationsTab({ applications, token }) {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${
-                filter === f
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
                   ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
                   : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
-              }`}
+                }`}
             >
               {f === 'all' ? 'All' : f.replace(/_/g, ' ')}
             </button>
@@ -974,11 +971,11 @@ function ApplicationsTab({ applications, token }) {
               </thead>
               <tbody>
                 {filtered.map((a) => {
-                  const name   = getApplicantName(a);
-                  const email  = getApplicantEmail(a);
+                  const name = getApplicantName(a);
+                  const email = getApplicantEmail(a);
                   const course = getCourseTitle(a);
-                  const mode   = a.mode_of_learning;
-                  const date   = formatDate(a.created_at);
+                  const mode = a.mode_of_learning;
+                  const date = formatDate(a.created_at);
                   const canConfirm = a.payment?.status === 'awaiting_confirmation';
                   return (
                     <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50 transition last:border-0">
@@ -1048,12 +1045,12 @@ const emptyExam = {
 };
 
 function ExamsTab({ exams, cohorts, courses }) {
-  const [modal, setModal]   = useState(null);
-  const [form, setForm]     = useState(emptyExam);
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState(emptyExam);
   const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState('');
+  const [err, setErr] = useState('');
 
-  const openNew  = () => { setForm(emptyExam); setModal('new'); setErr(''); };
+  const openNew = () => { setForm(emptyExam); setModal('new'); setErr(''); };
   const openEdit = (e) => {
     setForm({
       ...emptyExam,
@@ -1185,10 +1182,10 @@ function ExamsTab({ exams, cohorts, courses }) {
 const emptyResult = { exam: '', student: '', score: '', status: 'pending', submitted_at: '', feedback: '' };
 
 function ResultsTab({ results, exams, applications }) {
-  const [modal, setModal]   = useState(null);
-  const [form, setForm]     = useState(emptyResult);
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState(emptyResult);
   const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState('');
+  const [err, setErr] = useState('');
   const [filter, setFilter] = useState('all');
 
   // No dedicated "list students" endpoint exists yet, so we derive the
@@ -1205,7 +1202,7 @@ function ResultsTab({ results, exams, applications }) {
     return Array.from(map.values());
   }, [applications.items]);
 
-  const openNew  = () => { setForm(emptyResult); setModal('new'); setErr(''); };
+  const openNew = () => { setForm(emptyResult); setModal('new'); setErr(''); };
   const openEdit = (r) => {
     setForm({
       ...emptyResult,
@@ -1252,11 +1249,10 @@ function ResultsTab({ results, exams, applications }) {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${
-                filter === f
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
                   ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
                   : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
-              }`}
+                }`}
             >
               {f === 'all' ? 'All' : f}
             </button>
@@ -1354,19 +1350,19 @@ function NavIcon({ path }) {
 }
 
 const NAV = [
-  { key: 'overview',   label: 'Overview',   icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" /> },
-  { key: 'cohorts',    label: 'Cohorts',     icon: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M8 2v4M16 2v4M3 10h18" /></> },
-  { key: 'applicants', label: 'Applicants',  icon: <><circle cx="9" cy="8" r="4" /><path d="M2 21c0-4 3-6 7-6" /><path d="M17 8v6M14 11h6" /></> },
-  { key: 'students',   label: 'Students',    icon: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></> },
-  { key: 'staffs',     label: 'Staffs',      icon: <><rect x="2" y="4" width="14" height="10" rx="1" /><path d="M9 19h4M11 14v5" /></> },
-  { key: 'finances',   label: 'Finances',    icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></> },
-  { key: 'syllabus',   label: 'Syllabus',    icon: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></> },
-  { key: 'exam',       label: 'Exam',        icon: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></> },
-  { key: 'results',    label: 'Results',     icon: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M9 8h6M9 12h6M9 16h4" /></> },
-  { key: 'queries',    label: 'Queries',     icon: <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><path d="M12 9v4M12 17h.01" /></> },
-  { key: 'messages',   label: 'Messages',    icon: <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" /> },
-  { key: 'postjob',    label: 'Post Job',    icon: <><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" /></> },
-  { key: 'centers',    label: 'Centers',     icon: <><path d="M3 21h18M5 21V7l7-4 7 4v14" /></> },
+  { key: 'overview', label: 'Overview', icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" /> },
+  { key: 'cohorts', label: 'Cohorts', icon: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M8 2v4M16 2v4M3 10h18" /></> },
+  { key: 'applicants', label: 'Applicants', icon: <><circle cx="9" cy="8" r="4" /><path d="M2 21c0-4 3-6 7-6" /><path d="M17 8v6M14 11h6" /></> },
+  { key: 'students', label: 'Students', icon: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></> },
+  { key: 'staffs', label: 'Staffs', icon: <><rect x="2" y="4" width="14" height="10" rx="1" /><path d="M9 19h4M11 14v5" /></> },
+  { key: 'finances', label: 'Finances', icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></> },
+  { key: 'syllabus', label: 'Syllabus', icon: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></> },
+  { key: 'exam', label: 'Exam', icon: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></> },
+  { key: 'results', label: 'Results', icon: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M9 8h6M9 12h6M9 16h4" /></> },
+  { key: 'queries', label: 'Queries', icon: <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><path d="M12 9v4M12 17h.01" /></> },
+  { key: 'messages', label: 'Messages', icon: <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" /> },
+  { key: 'postjob', label: 'Post Job', icon: <><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" /></> },
+  { key: 'centers', label: 'Centers', icon: <><path d="M3 21h18M5 21V7l7-4 7 4v14" /></> },
 ];
 
 // ─── Sidebar drawer ────────────────────────────────────────────────────────────
@@ -1381,7 +1377,7 @@ function Sidebar({ open, onClose, tab, setTab }) {
         />
       )}
       <aside
-        className={`fixed lg:static top-0 left-0 h-full lg:h-screen w-64 z-50 flex flex-col border-r border-blue-900/40
+        className={`fixed lg:static top-20 lg:top-0 left-0 h-[calc(100vh-5rem)] lg:h-screen w-64 z-50 flex flex-col border-r border-blue-900/40
           transition-transform duration-200 ease-out
           ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{ background: '#152035' }}
@@ -1408,11 +1404,10 @@ function Sidebar({ open, onClose, tab, setTab }) {
               <button
                 key={item.key}
                 onClick={() => { setTab(item.key); onClose(); }}
-                className={`w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-colors ${
-                  active
+                className={`w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-colors ${active
                     ? 'bg-white text-[#0057E7] font-semibold'
                     : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'
-                }`}
+                  }`}
               >
                 <NavIcon path={item.icon} />
                 {item.label}
@@ -1492,9 +1487,9 @@ function TopBar({ onMenuClick, title }) {
 
 export default function BackstagePage() {
   const router = useRouter();
-  const [token, setToken]             = useState('');
+  const [token, setToken] = useState('');
   const [authChecked, setAuthChecked] = useState(false);
-  const [tab, setTab]                 = useState('overview');
+  const [tab, setTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -1567,7 +1562,7 @@ export default function BackstagePage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-slate-50 pt-20">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} />
 
       <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
@@ -1575,7 +1570,7 @@ export default function BackstagePage() {
 
         <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto pb-24">
           <div className="max-w-6xl">
-            {tab === 'overview'   && (
+            {tab === 'overview' && (
               <OverviewTab
                 courses={courses}
                 locations={locations}
@@ -1584,19 +1579,19 @@ export default function BackstagePage() {
                 onNavigate={handleOverviewNavigate}
               />
             )}
-            {tab === 'syllabus'   && <CoursesTab courses={courses} />}
-            {tab === 'centers'    && <LocationsTab locations={locations} />}
+            {tab === 'syllabus' && <CoursesTab courses={courses} />}
+            {tab === 'centers' && <LocationsTab locations={locations} />}
             {tab === 'applicants' && <ApplicationsTab applications={applications} token={token} />}
-            {tab === 'exam'       && <ExamsTab exams={exams} cohorts={cohorts} courses={courses} />}
-            {tab === 'results'    && <ResultsTab results={results} exams={exams} applications={applications} />}
+            {tab === 'exam' && <ExamsTab exams={exams} cohorts={cohorts} courses={courses} />}
+            {tab === 'results' && <ResultsTab results={results} exams={exams} applications={applications} />}
 
-            {tab === 'cohorts'  && <CohortsTab cohorts={cohorts} />}
+            {tab === 'cohorts' && <CohortsTab cohorts={cohorts} />}
             {tab === 'students' && <ComingSoon title="Students" />}
-            {tab === 'staffs'   && <ComingSoon title="Staffs" />}
+            {tab === 'staffs' && <ComingSoon title="Staffs" />}
             {tab === 'finances' && <ComingSoon title="Finances" />}
-            {tab === 'queries'  && <ComingSoon title="Queries" />}
+            {tab === 'queries' && <ComingSoon title="Queries" />}
             {tab === 'messages' && <ComingSoon title="Messages" />}
-            {tab === 'postjob'  && <ComingSoon title="Post Job" />}
+            {tab === 'postjob' && <ComingSoon title="Post Job" />}
           </div>
         </div>
       </div>
