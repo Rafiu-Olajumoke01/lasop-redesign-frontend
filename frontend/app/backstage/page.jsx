@@ -782,8 +782,8 @@ function CohortsTab({ cohorts }) {
               key={f}
               onClick={() => setFilter(f)}
               className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
-                  ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
-                  : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
                 }`}
             >
               {f === 'all' ? 'All' : f}
@@ -942,8 +942,8 @@ function ApplicationsTab({ applications, token }) {
               key={f}
               onClick={() => setFilter(f)}
               className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
-                  ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
-                  : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
                 }`}
             >
               {f === 'all' ? 'All' : f.replace(/_/g, ' ')}
@@ -1250,8 +1250,8 @@ function ResultsTab({ results, exams, applications }) {
               key={f}
               onClick={() => setFilter(f)}
               className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
-                  ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
-                  : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
                 }`}
             >
               {f === 'all' ? 'All' : f}
@@ -1339,6 +1339,122 @@ function ResultsTab({ results, exams, applications }) {
   );
 }
 
+
+// ─── Finances tab ─────────────────────────────────────────────────────────────
+
+function FinancesTab({ applications }) {
+  const [filter, setFilter] = useState('all');
+
+  const paymentsList = useMemo(
+    () => applications.items.filter((a) => a.payment),
+    [applications.items]
+  );
+
+  const totals = useMemo(() => {
+    let confirmed = 0, pending = 0, awaiting = 0, expiredOrFailed = 0;
+    paymentsList.forEach((a) => {
+      const p = a.payment;
+      const amt = Number(p.confirmed_amount || p.amount || 0);
+      if (p.status === 'paid') confirmed += amt;
+      else if (p.status === 'pending') pending += amt;
+      else if (p.status === 'awaiting_confirmation') awaiting += amt;
+      else if (p.status === 'expired' || p.status === 'failed') expiredOrFailed += amt;
+    });
+    return { confirmed, pending, awaiting, expiredOrFailed };
+  }, [paymentsList]);
+
+  const filters = ['all', 'paid', 'pending', 'awaiting_confirmation', 'expired', 'failed'];
+  const filtered = filter === 'all'
+    ? paymentsList
+    : paymentsList.filter((a) => a.payment.status === filter);
+
+  const methodLabel = { paystack: 'Paystack', manual: 'Bank Transfer' };
+
+  return (
+    <div>
+      <PageHeader title="Finances" subtitle={`${paymentsList.length} payment record${paymentsList.length !== 1 ? 's' : ''}`} />
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="bg-white border border-slate-200 rounded-lg px-4 py-4">
+          <p className="text-slate-500 font-medium text-[13px] mb-1.5">Confirmed revenue</p>
+          <p className="text-emerald-600 font-bold text-[20px] leading-none">{formatMoney(totals.confirmed)}</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-lg px-4 py-4">
+          <p className="text-slate-500 font-medium text-[13px] mb-1.5">Awaiting confirmation</p>
+          <p className="text-amber-600 font-bold text-[20px] leading-none">{formatMoney(totals.awaiting)}</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-lg px-4 py-4">
+          <p className="text-slate-500 font-medium text-[13px] mb-1.5">Pending</p>
+          <p className="text-slate-700 font-bold text-[20px] leading-none">{formatMoney(totals.pending)}</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-lg px-4 py-4">
+          <p className="text-slate-500 font-medium text-[13px] mb-1.5">Expired / Failed</p>
+          <p className="text-rose-600 font-bold text-[20px] leading-none">{formatMoney(totals.expiredOrFailed)}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1.5 flex-wrap mb-4">
+        {filters.map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+              }`}
+          >
+            {f === 'all' ? 'All' : f.replace(/_/g, ' ')}
+          </button>
+        ))}
+      </div>
+
+      {applications.loading ? <Spinner text="Loading payments…" /> : filtered.length === 0 ? (
+        <Card><EmptyState title="No payments" hint="Nothing matches this filter yet." /></Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                  {['Applicant', 'Reference', 'Method', 'Amount', 'Confirmed', 'Status', 'Date'].map((h, i) => (
+                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((a) => {
+                  const p = a.payment;
+                  const name = getApplicantName(a);
+                  return (
+                    <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition last:border-0">
+                      <td className="px-5 py-4 text-slate-800 font-semibold">{name || '—'}</td>
+                      <td className="px-5 py-4 text-slate-500 text-xs font-mono">{p.tx_ref}</td>
+                      <td className="px-5 py-4">
+                        <Pill color={p.method === 'manual' ? 'indigo' : 'blue'}>
+                          {methodLabel[p.method] || p.method}
+                        </Pill>
+                      </td>
+                      <td className="px-5 py-4 text-slate-800 font-bold">{formatMoney(p.amount)}</td>
+                      <td className="px-5 py-4 text-slate-600">
+                        {p.confirmed_amount ? formatMoney(p.confirmed_amount) : '—'}
+                      </td>
+                      <td className="px-5 py-4"><PaymentPill payment={p} /></td>
+                      <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">
+                        {formatDate(p.paid_at || p.created_at) || '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
 // ─── Sidebar icons ─────────────────────────────────────────────────────────────
 
 function NavIcon({ path }) {
@@ -1405,8 +1521,8 @@ function Sidebar({ open, onClose, tab, setTab }) {
                 key={item.key}
                 onClick={() => { setTab(item.key); onClose(); }}
                 className={`w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-colors ${active
-                    ? 'bg-white text-[#0057E7] font-semibold'
-                    : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'
+                  ? 'bg-white text-[#0057E7] font-semibold'
+                  : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'
                   }`}
               >
                 <NavIcon path={item.icon} />
@@ -1588,7 +1704,7 @@ export default function BackstagePage() {
             {tab === 'cohorts' && <CohortsTab cohorts={cohorts} />}
             {tab === 'students' && <ComingSoon title="Students" />}
             {tab === 'staffs' && <ComingSoon title="Staffs" />}
-            {tab === 'finances' && <ComingSoon title="Finances" />}
+            {tab === 'finances' && <FinancesTab applications={applications} />}
             {tab === 'queries' && <ComingSoon title="Queries" />}
             {tab === 'messages' && <ComingSoon title="Messages" />}
             {tab === 'postjob' && <ComingSoon title="Post Job" />}
