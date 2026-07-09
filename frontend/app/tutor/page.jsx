@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -86,38 +86,6 @@ const DUMMY_QUERIES = [
       { from: 'admin', text: 'Attendance wasn\u2019t submitted for June 26th, please confirm.', date: '2026-06-28' },
       { from: 'tutor', text: 'Apologies, network issue on my end that day. Submitted now, all students were present.', date: '2026-06-28' },
       { from: 'admin', text: 'Noted, thanks for the quick fix. Marked resolved.', date: '2026-06-29' },
-    ],
-  },
-];
-
-const DUMMY_CONVERSATIONS = [
-  {
-    id: 1,
-    name: 'Tobi Fashola',
-    role: 'Student · January 2026 Set',
-    unread: 2,
-    messages: [
-      { from: 'them', text: 'Good evening ma, please can I get an extension on the assignment?', date: '10:14 AM' },
-      { from: 'them', text: 'My laptop crashed last night, I lost some progress', date: '10:15 AM' },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Ngozi Umeh',
-    role: 'Student · January 2026 Set',
-    unread: 0,
-    messages: [
-      { from: 'me', text: 'Well done on the capstone submission, very clean code.', date: 'Yesterday' },
-      { from: 'them', text: 'Thank you ma! I learnt a lot from your feedback', date: 'Yesterday' },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Kemi Johnson',
-    role: 'Admin',
-    unread: 0,
-    messages: [
-      { from: 'them', text: 'Please remember to submit June attendance by Friday.', date: 'Mon' },
     ],
   },
 ];
@@ -264,7 +232,6 @@ const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" /> },
   { key: 'cohorts', label: 'Cohorts', icon: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M8 2v4M16 2v4M3 10h18" /></> },
   { key: 'queries', label: 'Queries', icon: <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><path d="M12 9v4M12 17h.01" /></> },
-  { key: 'messages', label: 'Messages', icon: <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" /> },
   { key: 'settings', label: 'Settings', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></> },
   { key: 'profile', label: 'Profile', icon: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" /></> },
 ];
@@ -445,8 +412,6 @@ function CohortsTab({ cohorts, setCohorts }) {
                       </button>
                     </td>
                     <td className="px-5 py-4 text-right whitespace-nowrap">
-                      <LinkButton onClick={() => showToast(`Chat with ${s.name} opened — head to Messages`)}>Chat</LinkButton>
-                      <span className="text-slate-300 mx-2">·</span>
                       <LinkButton danger onClick={() => setActionModal({ type: 'query', student: s })}>Query</LinkButton>
                     </td>
                   </tr>
@@ -582,112 +547,6 @@ function QueriesTab({ queries, setQueries }) {
           </div>
         </Modal>
       )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Messages tab
-// ═══════════════════════════════════════════════════════════════════════════
-
-function MessagesTab({ conversations, setConversations }) {
-  const [activeId, setActiveId] = useState(conversations[0]?.id ?? null);
-  const [search, setSearch] = useState('');
-  const [draft, setDraft] = useState('');
-  const fileRef = useRef(null);
-
-  const filtered = conversations.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
-  const active = conversations.find((c) => c.id === activeId);
-
-  const send = () => {
-    if (!draft.trim()) return;
-    setConversations((prev) =>
-      prev.map((c) => (c.id === activeId ? { ...c, messages: [...c.messages, { from: 'me', text: draft, date: 'Just now' }] } : c))
-    );
-    setDraft('');
-  };
-
-  return (
-    <div>
-      <PageHeader title="Messages" subtitle="Chat with students and admin" />
-      <Card className="overflow-hidden">
-        <div className="flex h-[560px]">
-          {/* Conversation list */}
-          <div className="w-72 border-r border-slate-200 flex flex-col shrink-0">
-            <div className="p-3 border-b border-slate-200">
-              <input
-                className={inputClass}
-                placeholder="Search by name..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {filtered.length === 0 ? (
-                <p className="text-slate-400 text-sm text-center py-8">No results</p>
-              ) : (
-                filtered.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setActiveId(c.id)}
-                    className={`w-full text-left px-4 py-3 border-b border-slate-100 transition ${activeId === c.id ? 'bg-blue-50' : 'hover:bg-slate-50'}`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-slate-800 font-semibold text-sm truncate">{c.name}</p>
-                      {c.unread > 0 && (
-                        <span className="w-5 h-5 rounded-full bg-[#0057E7] text-white text-[10px] font-bold flex items-center justify-center shrink-0">{c.unread}</span>
-                      )}
-                    </div>
-                    <p className="text-slate-400 text-[11px] truncate">{c.role}</p>
-                    <p className="text-slate-500 text-xs truncate mt-1">{c.messages[c.messages.length - 1]?.text}</p>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Chat window */}
-          <div className="flex-1 flex flex-col">
-            {!active ? (
-              <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">Select a conversation</div>
-            ) : (
-              <>
-                <div className="px-5 py-3.5 border-b border-slate-200 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-xs font-bold">{active.name.charAt(0)}</div>
-                  <div>
-                    <p className="text-slate-800 font-semibold text-sm leading-none">{active.name}</p>
-                    <p className="text-slate-400 text-[11px] mt-0.5">{active.role}</p>
-                  </div>
-                </div>
-                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-                  {active.messages.map((m, i) => (
-                    <div key={i} className={`flex ${m.from === 'me' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 text-sm ${m.from === 'me' ? 'bg-[#0057E7] text-white' : 'bg-slate-100 text-slate-800'}`}>
-                        <p>{m.text}</p>
-                        <p className={`text-[10px] mt-1 ${m.from === 'me' ? 'text-blue-100' : 'text-slate-400'}`}>{m.date}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="p-3.5 border-t border-slate-200 flex items-center gap-2">
-                  <button onClick={() => fileRef.current?.click()} className="text-slate-400 hover:text-slate-600 p-2 shrink-0" aria-label="Attach file">
-                    <Icon path={<><path d="M21.44 11.05l-9.19 9.19a5.5 5.5 0 01-7.78-7.78l9.19-9.19a3.5 3.5 0 014.95 4.95l-9.2 9.19a1.5 1.5 0 01-2.12-2.12l8.49-8.48" /></>} size={18} />
-                  </button>
-                  <input ref={fileRef} type="file" className="hidden" />
-                  <input
-                    className={inputClass}
-                    placeholder="Type a message..."
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && send()}
-                  />
-                  <PrimaryButton onClick={send} disabled={!draft.trim()}>Send</PrimaryButton>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </Card>
     </div>
   );
 }
@@ -887,7 +746,6 @@ export default function TutorPortalPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cohorts, setCohorts] = useState(DUMMY_COHORTS);
   const [queries, setQueries] = useState(DUMMY_QUERIES);
-  const [conversations, setConversations] = useState(DUMMY_CONVERSATIONS);
 
   // TODO: connect — replace the auth check below with the same
   // verifyStaff-style pattern used in BackstagePage, but checking
@@ -906,7 +764,6 @@ export default function TutorPortalPage() {
             {tab === 'dashboard' && <DashboardTab tutor={DUMMY_TUTOR} stats={DUMMY_STATS} cohorts={cohorts} setTab={setTab} />}
             {tab === 'cohorts' && <CohortsTab cohorts={cohorts} setCohorts={setCohorts} />}
             {tab === 'queries' && <QueriesTab queries={queries} setQueries={setQueries} />}
-            {tab === 'messages' && <MessagesTab conversations={conversations} setConversations={setConversations} />}
             {tab === 'settings' && <SettingsTab tutor={DUMMY_TUTOR} />}
             {tab === 'profile' && <ProfileTab tutor={DUMMY_TUTOR} />}
           </div>
