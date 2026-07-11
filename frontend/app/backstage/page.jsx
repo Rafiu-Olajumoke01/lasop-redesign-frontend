@@ -44,11 +44,15 @@ function slugify(text) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
-// ─── Shared UI (light theme) ────────────────────────────────────────────────
+// ─── Shared UI (light theme, sharpened) ────────────────────────────────────
 
-function Card({ children, className = '' }) {
+function Card({ children, className = '', interactive = false }) {
   return (
-    <div className={`bg-white border border-slate-200 rounded-2xl ${className}`}>
+    <div
+      className={`bg-white border border-slate-200/80 rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)]
+        ${interactive ? 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)] hover:border-slate-300 hover:-translate-y-[1px] transition-all duration-200' : ''}
+        ${className}`}
+    >
       {children}
     </div>
   );
@@ -56,8 +60,8 @@ function Card({ children, className = '' }) {
 
 function CardHeader({ title, action }) {
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">{title}</h3>
+    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80">
+      <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.12em]">{title}</h3>
       {action}
     </div>
   );
@@ -65,15 +69,15 @@ function CardHeader({ title, action }) {
 
 function Pill({ children, color = 'slate' }) {
   const map = {
-    blue: 'bg-blue-50 text-[#0057E7] border-blue-200',
-    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    amber: 'bg-amber-50 text-amber-700 border-amber-200',
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    rose: 'bg-rose-50 text-rose-700 border-rose-200',
-    slate: 'bg-slate-100 text-slate-600 border-slate-200',
+    blue: 'bg-blue-50 text-[#0057E7] border-blue-200/80',
+    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200/80',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+    rose: 'bg-rose-50 text-rose-700 border-rose-200/80',
+    slate: 'bg-slate-100 text-slate-600 border-slate-200/80',
   };
   return (
-    <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border tracking-wide ${map[color] || map.slate}`}>
+    <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border tracking-wide leading-none ${map[color] || map.slate}`}>
       {children}
     </span>
   );
@@ -100,7 +104,7 @@ function PaymentPill({ payment }) {
 function EmptyState({ title, hint }) {
   return (
     <div className="py-20 text-center">
-      <div className="w-12 h-12 rounded-2xl bg-slate-100 mx-auto mb-4 flex items-center justify-center text-xl">
+      <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 mx-auto mb-4 flex items-center justify-center text-xl">
         📭
       </div>
       <p className="text-slate-700 font-semibold mb-1">{title}</p>
@@ -132,8 +136,8 @@ function PrimaryButton({ children, className = '', ...props }) {
   return (
     <button
       {...props}
-      className={`bg-[#0057E7] hover:bg-[#0A66FF] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl
-        shadow-sm transition-all active:scale-95 ${className}`}
+      className={`bg-[#0057E7] hover:bg-[#0A66FF] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-lg
+        shadow-sm hover:shadow-md transition-all duration-150 active:scale-[0.97] ${className}`}
     >
       {children}
     </button>
@@ -144,8 +148,8 @@ function SecondaryButton({ children, ...props }) {
   return (
     <button
       {...props}
-      className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium px-4 py-2.5
-        rounded-xl border border-slate-200 transition-all active:scale-95"
+      className="bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-medium px-4 py-2.5
+        rounded-lg border border-slate-200 transition-all duration-150 active:scale-[0.97]"
     >
       {children}
     </button>
@@ -165,13 +169,13 @@ function LinkButton({ children, danger, ...props }) {
 }
 
 const inputClass =
-  'w-full bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 ' +
-  'outline-none rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 transition';
+  'w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 ' +
+  'outline-none rounded-lg px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 transition';
 
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-widest">{label}</label>
+      <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-[0.1em]">{label}</label>
       {children}
     </div>
   );
@@ -179,10 +183,10 @@ function Field({ label, children }) {
 
 function Modal({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200">
-          <h3 className="text-base font-bold text-slate-900">{title}</h3>
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-2xl ring-1 ring-black/5">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200/80">
+          <h3 className="text-base font-bold text-slate-900 tracking-tight">{title}</h3>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400
@@ -208,10 +212,10 @@ function TagChipInput({ label, value = [], onChange, placeholder }) {
   const removeTag = (tag) => onChange(value.filter((t) => t !== tag));
   return (
     <div>
-      <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-widest">{label}</label>
+      <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-[0.1em]">{label}</label>
       <div className="flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
         {value.map((tag) => (
-          <span key={tag} className="flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 text-[12px] px-2.5 py-1 rounded-full font-medium">
+          <span key={tag} className="flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200/80 text-[12px] px-2.5 py-1 rounded-full font-medium">
             {tag}
             <button type="button" onClick={() => removeTag(tag)} className="text-blue-500 hover:text-rose-500 transition">✕</button>
           </span>
@@ -236,7 +240,7 @@ function PageHeader({ title, subtitle, children }) {
   return (
     <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
       <div>
-        <h2 className="text-xl font-black text-slate-900">{title}</h2>
+        <h2 className="text-xl font-black text-slate-900 tracking-tight">{title}</h2>
         {subtitle && <p className="text-slate-400 text-sm mt-0.5">{subtitle}</p>}
       </div>
       {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
@@ -432,12 +436,23 @@ function NewApplicantIcon() {
     </svg>
   );
 }
+function TutorIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M22 10L12 5 2 10l10 5 10-5z" />
+      <path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5" />
+      <path d="M22 10v6" />
+    </svg>
+  );
+}
 
 function ManagerCard({ title, onClick, icon }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-4 py-4 hover:border-slate-300 transition-colors text-left"
+      className="group flex items-center justify-between bg-white border border-slate-200/80 rounded-xl px-4 py-4
+        shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]
+        hover:border-slate-300 hover:-translate-y-[1px] transition-all duration-200 text-left"
     >
       <div>
         <p className="text-slate-800 font-semibold text-[14px] mb-1">{title}</p>
@@ -445,7 +460,7 @@ function ManagerCard({ title, onClick, icon }) {
           Open Manager
         </p>
       </div>
-      <div className="text-slate-400 shrink-0">
+      <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-400 group-hover:text-[#0057E7] group-hover:border-blue-200 group-hover:bg-blue-50 transition-colors shrink-0">
         {icon}
       </div>
     </button>
@@ -454,12 +469,13 @@ function ManagerCard({ title, onClick, icon }) {
 
 function OverviewStatCard({ label, value, icon }) {
   return (
-    <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-4 py-4">
+    <div className="flex items-center justify-between bg-white border border-slate-200/80 rounded-xl px-4 py-4
+      shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)] hover:border-slate-300 transition-all duration-200">
       <div>
         <p className="text-slate-500 font-medium text-[13px] mb-1.5">{label}</p>
-        <p className="text-slate-900 font-bold text-[22px] leading-none">{value}</p>
+        <p className="text-slate-900 font-bold text-[22px] leading-none tracking-tight">{value}</p>
       </div>
-      <div className="text-slate-300 shrink-0">
+      <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-300 shrink-0">
         {icon}
       </div>
     </div>
@@ -468,7 +484,7 @@ function OverviewStatCard({ label, value, icon }) {
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
-function OverviewTab({ courses, locations, applications, dashboardStats, onNavigate }) {
+function OverviewTab({ courses, locations, applications, dashboardStats, tutors, onNavigate }) {
   const pending = applications.items.filter((a) =>
     ['pending', 'awaiting_confirmation'].includes(a.payment?.status)
   ).length;
@@ -479,8 +495,8 @@ function OverviewTab({ courses, locations, applications, dashboardStats, onNavig
   return (
     <div>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
-        <h1 className="text-[19px] font-bold text-slate-900">Overview</h1>
-        <div className="flex items-center gap-1.5 border border-slate-200 rounded-md px-3 py-1.5 text-slate-500 font-medium text-[12px]">
+        <h1 className="text-[19px] font-bold text-slate-900 tracking-tight">Overview</h1>
+        <div className="flex items-center gap-1.5 border border-slate-200 rounded-lg px-3 py-1.5 text-slate-500 font-medium text-[12px] bg-white shadow-sm">
           June 2026
         </div>
       </div>
@@ -493,7 +509,7 @@ function OverviewTab({ courses, locations, applications, dashboardStats, onNavig
 
         {/* Placeholders below (students/staff/graduates) show 0 until backend provides real counts */}
         <OverviewStatCard label="No of students" value={0} icon={<GroupIcon />} />
-        <OverviewStatCard label="No of staffs" value={0} icon={<GradCapIcon />} />
+        <OverviewStatCard label="No of tutors" value={tutors.loading ? '—' : tutors.items.length} icon={<TutorIcon />} />
 
         <OverviewStatCard label="No of centers" value={locations.items.length} icon={<BuildingIcon />} />
         <OverviewStatCard label="Courses" value={courses.items.length} icon={<CoursesIcon />} />
@@ -562,14 +578,14 @@ function CoursesTab({ courses }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {courses.items.map((c) => (
-            <Card key={c.id} className="p-5 hover:border-slate-300 transition-colors">
+            <Card key={c.id} interactive className="p-5">
               {c.image && (
-                <div className="w-full h-32 rounded-xl overflow-hidden mb-3 bg-slate-100">
+                <div className="w-full h-32 rounded-lg overflow-hidden mb-3 bg-slate-100">
                   <img src={`${API_BASE}${c.image}`} alt={c.title} className="w-full h-full object-cover" />
                 </div>
               )}
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-slate-900 font-bold text-base leading-snug pr-4">{c.title}</h3>
+                <h3 className="text-slate-900 font-bold text-base leading-snug pr-4 tracking-tight">{c.title}</h3>
                 <div className="flex items-center gap-2 shrink-0">
                   <LinkButton onClick={() => openEdit(c)}>Edit</LinkButton>
                   <span className="text-slate-300">·</span>
@@ -585,7 +601,7 @@ function CoursesTab({ courses }) {
                 {!c.image && <Pill color="rose">No image</Pill>}
               </div>
               <div className="pt-3 border-t border-slate-100">
-                <p className="text-slate-900 font-black text-lg">{formatMoney(c.fee)}</p>
+                <p className="text-slate-900 font-black text-lg tracking-tight">{formatMoney(c.fee)}</p>
               </div>
             </Card>
           ))}
@@ -600,7 +616,7 @@ function CoursesTab({ courses }) {
             <Field label="Course image">
               <div className="flex items-center gap-3">
                 {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-slate-200" />
+                  <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-lg object-cover border border-slate-200" />
                 )}
                 <input type="file" accept="image/*" onChange={handleImageChange} className={inputClass} />
               </div>
@@ -687,10 +703,10 @@ function LocationsTab({ locations }) {
       ) : (
         <div className="space-y-3">
           {locations.items.map((l) => (
-            <Card key={l.id} className="px-6 py-4 hover:border-slate-300 transition-colors">
+            <Card key={l.id} interactive className="px-6 py-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-slate-900 font-bold mb-1">{l.name}</p>
+                  <p className="text-slate-900 font-bold mb-1 tracking-tight">{l.name}</p>
                   {l.address && <p className="text-slate-500 text-sm mb-3">{l.address}</p>}
                   {l.amenities?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
@@ -731,7 +747,6 @@ function LocationsTab({ locations }) {
     </div>
   );
 }
-
 
 // ─── Cohorts tab ──────────────────────────────────────────────────────────────
 
@@ -800,9 +815,9 @@ function CohortsTab({ cohorts }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtered.map((c) => (
-            <Card key={c.id} className="p-5 hover:border-slate-300 transition-colors">
+            <Card key={c.id} interactive className="p-5">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-slate-900 font-bold text-base leading-snug pr-4">{c.name}</h3>
+                <h3 className="text-slate-900 font-bold text-base leading-snug pr-4 tracking-tight">{c.name}</h3>
                 <div className="flex items-center gap-2 shrink-0">
                   <LinkButton onClick={() => openEdit(c)}>Edit</LinkButton>
                   <span className="text-slate-300">·</span>
@@ -895,6 +910,241 @@ function CohortsTab({ cohorts }) {
   );
 }
 
+// ─── Tutors tab ───────────────────────────────────────────────────────────────
+
+const emptyTutorCreate = {
+  first_name: '', last_name: '', email: '', phone_number: '', password: '',
+  bio: '', courses_of_instruction: [], date_of_employment: '',
+  profile_picture: null, cohorts: [],
+};
+
+const emptyTutorEdit = {
+  bio: '', courses_of_instruction: [], date_of_employment: '',
+  performance_rating: 0, profile_picture: null, cohorts: [],
+};
+
+function TutorsTab({ tutors, cohorts }) {
+  const [modal, setModal] = useState(null); // 'new' | tutor object | null
+  const [form, setForm] = useState(emptyTutorCreate);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const [imagePreview, setImagePreview] = useState(null);
+
+  const isNew = modal === 'new';
+
+  const openNew = () => {
+    setForm(emptyTutorCreate);
+    setImagePreview(null);
+    setModal('new');
+    setErr('');
+  };
+
+  const openEdit = (t) => {
+    setForm({
+      ...emptyTutorEdit,
+      bio: t.bio || '',
+      courses_of_instruction: t.courses_of_instruction || [],
+      date_of_employment: t.date_of_employment || '',
+      performance_rating: t.performance_rating || 0,
+      cohorts: t.cohorts || [],
+      profile_picture: null,
+    });
+    setImagePreview(t.profile_picture ? `${API_BASE}${t.profile_picture}` : null);
+    setModal(t);
+    setErr('');
+  };
+
+  const close = () => setModal(null);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setForm({ ...form, profile_picture: file });
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const toggleCohort = (cohortId) => {
+    setForm((f) => {
+      const has = f.cohorts.includes(cohortId);
+      return { ...f, cohorts: has ? f.cohorts.filter((id) => id !== cohortId) : [...f.cohorts, cohortId] };
+    });
+  };
+
+  const handleSave = async () => {
+    setSaving(true); setErr('');
+    try {
+      const payload = { ...form };
+      if (!payload.profile_picture) delete payload.profile_picture;
+      if (!payload.date_of_employment) delete payload.date_of_employment;
+      await tutors.save(payload, isNew ? null : modal);
+      close();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getTutorName = (t) => {
+    const u = t.user_detail;
+    if (!u) return 'Unnamed tutor';
+    return `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
+  };
+
+  return (
+    <div>
+      <PageHeader title="Tutors" subtitle={`${tutors.items.length} tutor${tutors.items.length !== 1 ? 's' : ''}`}>
+        <PrimaryButton onClick={openNew}>+ Add tutor</PrimaryButton>
+      </PageHeader>
+
+      <ErrorBanner message={tutors.error} />
+
+      {tutors.loading ? <Spinner text="Loading tutors…" /> : tutors.items.length === 0 ? (
+        <Card><EmptyState title="No tutors yet" hint="Add your first tutor to get started." /></Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {tutors.items.map((t) => (
+            <Card key={t.id} interactive className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  {t.profile_picture ? (
+                    <img src={`${API_BASE}${t.profile_picture}`} alt={getTutorName(t)} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-sm font-bold">
+                      {getTutorName(t).charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-slate-900 font-bold text-[15px] leading-tight tracking-tight">{getTutorName(t)}</h3>
+                    {t.user_detail?.email && <p className="text-slate-400 text-xs">{t.user_detail.email}</p>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <LinkButton onClick={() => openEdit(t)}>Edit</LinkButton>
+                  <span className="text-slate-300">·</span>
+                  <LinkButton danger onClick={() => tutors.remove(t)}>Remove</LinkButton>
+                </div>
+              </div>
+
+              {t.bio && <p className="text-slate-500 text-sm leading-relaxed mb-3 line-clamp-2">{t.bio}</p>}
+
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                {(t.courses_of_instruction || []).map((c) => (
+                  <Pill key={c} color="blue">{c}</Pill>
+                ))}
+                {(!t.courses_of_instruction || t.courses_of_instruction.length === 0) && (
+                  <span className="text-slate-400 text-xs italic">No courses assigned</span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 text-sm pt-3 border-t border-slate-100">
+                <div>
+                  <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Cohorts</p>
+                  <p className="text-slate-700 font-medium">{t.cohorts?.length || 0}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Rating</p>
+                  <p className="text-slate-700 font-medium">{t.performance_rating || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Employed</p>
+                  <p className="text-slate-700 font-medium">{formatDate(t.date_of_employment) || '—'}</p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {modal && (
+        <Modal title={isNew ? 'Add new tutor' : `Edit ${getTutorName(modal)}`} onClose={close}>
+          <div className="space-y-4">
+            {err && <ErrorBanner message={err} />}
+
+            <Field label="Profile picture">
+              <div className="flex items-center gap-3">
+                {imagePreview && (
+                  <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-full object-cover border border-slate-200" />
+                )}
+                <input type="file" accept="image/*" onChange={handleImageChange} className={inputClass} />
+              </div>
+            </Field>
+
+            {isNew && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="First name">
+                    <input className={inputClass} value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} placeholder="e.g. Ade" />
+                  </Field>
+                  <Field label="Last name">
+                    <input className={inputClass} value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} placeholder="e.g. Bello" />
+                  </Field>
+                </div>
+                <Field label="Email">
+                  <input type="email" className={inputClass} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="tutor@example.com" />
+                </Field>
+                <Field label="Phone number">
+                  <input className={inputClass} value={form.phone_number} onChange={(e) => setForm({ ...form, phone_number: e.target.value })} placeholder="080..." />
+                </Field>
+                <Field label="Initial password">
+                  <input type="text" className={inputClass} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Set a password to share with the tutor" />
+                </Field>
+              </>
+            )}
+
+            <Field label="Bio">
+              <textarea className={inputClass} rows={3} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} placeholder="Short bio shown on their profile" />
+            </Field>
+
+            <TagChipInput
+              label="Courses of instruction"
+              value={form.courses_of_instruction}
+              onChange={(courses_of_instruction) => setForm({ ...form, courses_of_instruction })}
+              placeholder="e.g. Full-Stack Web Development"
+            />
+
+            <Field label="Date of employment">
+              <input type="date" className={inputClass} value={form.date_of_employment} onChange={(e) => setForm({ ...form, date_of_employment: e.target.value })} />
+            </Field>
+
+            {!isNew && (
+              <Field label="Performance rating">
+                <input type="number" step="0.01" min="0" max="5" className={inputClass} value={form.performance_rating} onChange={(e) => setForm({ ...form, performance_rating: e.target.value })} />
+              </Field>
+            )}
+
+            <Field label="Assigned cohorts">
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-2.5">
+                {cohorts.items.length === 0 && <span className="text-slate-400 text-xs">No cohorts exist yet</span>}
+                {cohorts.items.map((c) => {
+                  const checked = form.cohorts.includes(c.id);
+                  return (
+                    <button
+                      type="button"
+                      key={c.id}
+                      onClick={() => toggleCohort(c.id)}
+                      className={`text-[12px] font-medium px-2.5 py-1 rounded-full border transition ${checked
+                        ? 'border-[#0057E7] bg-[#0057E7] text-white'
+                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                        }`}
+                    >
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+
+            <PrimaryButton className="w-full justify-center" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : isNew ? 'Create tutor account' : 'Save changes'}
+            </PrimaryButton>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 // ─── Applicants tab ─────────────────────────────────────────────────────────────
 
 function ApplicationsTab({ applications, token }) {
@@ -961,7 +1211,7 @@ function ApplicationsTab({ applications, token }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
                   {['Applicant', 'Course', 'Mode', 'Fee', 'Payment', 'Date', ''].map((h, i) => (
                     <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                       {h}
@@ -978,7 +1228,7 @@ function ApplicationsTab({ applications, token }) {
                   const date = formatDate(a.created_at);
                   const canConfirm = a.payment?.status === 'awaiting_confirmation';
                   return (
-                    <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50 transition last:border-0">
+                    <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           {name ? (
@@ -1088,7 +1338,7 @@ function ExamsTab({ exams, cohorts, courses }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
                   {['Title', 'Course', 'Cohort', 'Type', 'Start', 'Due', 'Status', ''].map((h, i) => (
                     <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
                   ))}
@@ -1096,7 +1346,7 @@ function ExamsTab({ exams, cohorts, courses }) {
               </thead>
               <tbody>
                 {exams.items.map((e) => (
-                  <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 transition last:border-0">
+                  <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
                     <td className="px-5 py-4 text-slate-800 font-semibold">{e.title}</td>
                     <td className="px-5 py-4 text-slate-500">{getCourseName(e)}</td>
                     <td className="px-5 py-4 text-slate-500">{getCohortName(e)}</td>
@@ -1268,7 +1518,7 @@ function ResultsTab({ results, exams, applications }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
                   {['Student', 'Exam', 'Score', 'Status', 'Submitted', ''].map((h, i) => (
                     <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
                   ))}
@@ -1276,7 +1526,7 @@ function ResultsTab({ results, exams, applications }) {
               </thead>
               <tbody>
                 {filtered.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition last:border-0">
+                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
                     <td className="px-5 py-4 text-slate-800 font-semibold">{getStudentName(r)}</td>
                     <td className="px-5 py-4 text-slate-500">{getExamTitle(r)}</td>
                     <td className="px-5 py-4 text-slate-800 font-bold">{r.score ?? '—'}</td>
@@ -1339,7 +1589,6 @@ function ResultsTab({ results, exams, applications }) {
   );
 }
 
-
 // ─── Finances tab ─────────────────────────────────────────────────────────────
 
 function FinancesTab({ applications }) {
@@ -1375,21 +1624,21 @@ function FinancesTab({ applications }) {
       <PageHeader title="Finances" subtitle={`${paymentsList.length} payment record${paymentsList.length !== 1 ? 's' : ''}`} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <div className="bg-white border border-slate-200 rounded-lg px-4 py-4">
+        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Confirmed revenue</p>
-          <p className="text-emerald-600 font-bold text-[20px] leading-none">{formatMoney(totals.confirmed)}</p>
+          <p className="text-emerald-600 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.confirmed)}</p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg px-4 py-4">
+        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Awaiting confirmation</p>
-          <p className="text-amber-600 font-bold text-[20px] leading-none">{formatMoney(totals.awaiting)}</p>
+          <p className="text-amber-600 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.awaiting)}</p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg px-4 py-4">
+        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Pending</p>
-          <p className="text-slate-700 font-bold text-[20px] leading-none">{formatMoney(totals.pending)}</p>
+          <p className="text-slate-700 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.pending)}</p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg px-4 py-4">
+        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Expired / Failed</p>
-          <p className="text-rose-600 font-bold text-[20px] leading-none">{formatMoney(totals.expiredOrFailed)}</p>
+          <p className="text-rose-600 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.expiredOrFailed)}</p>
         </div>
       </div>
 
@@ -1415,7 +1664,7 @@ function FinancesTab({ applications }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
                   {['Applicant', 'Reference', 'Method', 'Amount', 'Confirmed', 'Status', 'Date'].map((h, i) => (
                     <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                       {h}
@@ -1428,7 +1677,7 @@ function FinancesTab({ applications }) {
                   const p = a.payment;
                   const name = getApplicantName(a);
                   return (
-                    <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition last:border-0">
+                    <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
                       <td className="px-5 py-4 text-slate-800 font-semibold">{name || '—'}</td>
                       <td className="px-5 py-4 text-slate-500 text-xs font-mono">{p.tx_ref}</td>
                       <td className="px-5 py-4">
@@ -1469,6 +1718,7 @@ const NAV = [
   { key: 'overview', label: 'Overview', icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" /> },
   { key: 'cohorts', label: 'Cohorts', icon: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M8 2v4M16 2v4M3 10h18" /></> },
   { key: 'applicants', label: 'Applicants', icon: <><circle cx="9" cy="8" r="4" /><path d="M2 21c0-4 3-6 7-6" /><path d="M17 8v6M14 11h6" /></> },
+  { key: 'tutors', label: 'Tutors', icon: <><path d="M22 10L12 5 2 10l10 5 10-5z" /><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5" /><path d="M22 10v6" /></> },
   { key: 'students', label: 'Students', icon: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></> },
   { key: 'staffs', label: 'Staffs', icon: <><rect x="2" y="4" width="14" height="10" rx="1" /><path d="M9 19h4M11 14v5" /></> },
   { key: 'finances', label: 'Finances', icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></> },
@@ -1520,11 +1770,12 @@ function Sidebar({ open, onClose, tab, setTab }) {
               <button
                 key={item.key}
                 onClick={() => { setTab(item.key); onClose(); }}
-                className={`w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-colors ${active
-                  ? 'bg-white text-[#0057E7] font-semibold'
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'
+                className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-lg transition-all duration-150 ${active
+                  ? 'bg-white text-[#0057E7] font-semibold shadow-sm'
+                  : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
                   }`}
               >
+                {active && <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[#0057E7]" />}
                 <NavIcon path={item.icon} />
                 {item.label}
               </button>
@@ -1533,7 +1784,7 @@ function Sidebar({ open, onClose, tab, setTab }) {
         </nav>
 
         <div className="px-2.5 pb-5 pt-2 border-t border-blue-900/30">
-          <button className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/10 transition-colors mt-2">
+          <button className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-400 hover:text-white px-3 py-2 rounded-lg hover:bg-white/[0.08] transition-colors mt-2">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
               <path d="M16 17l5-5-5-5M21 12H9" />
@@ -1566,23 +1817,23 @@ function Sidebar({ open, onClose, tab, setTab }) {
 
 function TopBar({ onMenuClick, title }) {
   return (
-    <header className="bg-white border-b border-slate-200 px-4 lg:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
+    <header className="bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70 border-b border-slate-200 px-4 lg:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
       <div className="flex items-center gap-3">
-        <button onClick={onMenuClick} aria-label="Menu" className="text-slate-500">
+        <button onClick={onMenuClick} aria-label="Menu" className="text-slate-500 hover:text-slate-700 transition-colors">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
         </button>
-        <p className="text-slate-800 font-semibold text-[14px] hidden sm:block">{title}</p>
+        <p className="text-slate-800 font-semibold text-[14px] hidden sm:block tracking-tight">{title}</p>
       </div>
 
       <div className="flex items-center gap-4">
-        <button aria-label="Messages" className="text-slate-400 hover:text-slate-600">
+        <button aria-label="Messages" className="text-slate-400 hover:text-slate-600 transition-colors">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
           </svg>
         </button>
-        <button aria-label="Notifications" className="text-slate-400 hover:text-slate-600">
+        <button aria-label="Notifications" className="text-slate-400 hover:text-slate-600 transition-colors">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 01-3.46 0" />
@@ -1655,6 +1906,10 @@ export default function BackstagePage() {
     { label: 'results', basePath: '/api/results/', detailPath: (r) => `/api/results/${r.id}/` },
     token
   );
+  const tutors = useAdminResource(
+    { label: 'tutors', basePath: '/api/tutors/', detailPath: (t) => `/api/tutors/${t.id}/` },
+    token
+  );
   const dashboardStats = useDashboardStats(token);
 
   const handleOverviewNavigate = (target) => {
@@ -1692,6 +1947,7 @@ export default function BackstagePage() {
                 locations={locations}
                 applications={applications}
                 dashboardStats={dashboardStats}
+                tutors={tutors}
                 onNavigate={handleOverviewNavigate}
               />
             )}
@@ -1702,6 +1958,7 @@ export default function BackstagePage() {
             {tab === 'results' && <ResultsTab results={results} exams={exams} applications={applications} />}
 
             {tab === 'cohorts' && <CohortsTab cohorts={cohorts} />}
+            {tab === 'tutors' && <TutorsTab tutors={tutors} cohorts={cohorts} />}
             {tab === 'students' && <ComingSoon title="Students" />}
             {tab === 'staffs' && <ComingSoon title="Staffs" />}
             {tab === 'finances' && <FinancesTab applications={applications} />}
@@ -1718,7 +1975,7 @@ export default function BackstagePage() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat on WhatsApp"
-        className="fixed bottom-5 right-5 w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center shadow-md hover:opacity-90 transition-opacity z-30"
+        className="fixed bottom-5 right-5 w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 z-30"
       >
         <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
           <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.47 3.47 1.29 4.93L2 22l5.29-1.39a9.9 9.9 0 004.75 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.79 14.02c-.24.68-1.4 1.3-1.93 1.38-.49.08-1.11.11-1.79-.11-.41-.13-.94-.3-1.62-.6-2.84-1.23-4.7-4.1-4.84-4.29-.14-.19-1.16-1.54-1.16-2.94 0-1.4.73-2.08 1-2.37.24-.27.53-.34.71-.34.18 0 .35 0 .5.01.16.01.38-.06.6.46.24.57.81 1.97.88 2.11.07.14.11.3.02.49-.09.19-.14.3-.27.46-.14.16-.29.36-.41.48-.14.14-.28.29-.12.57.16.28.71 1.17 1.52 1.9 1.05.94 1.93 1.23 2.21 1.37.28.14.44.12.6-.07.16-.19.68-.79.87-1.06.18-.27.36-.22.6-.13.24.09 1.55.73 1.82.86.27.13.45.19.51.3.07.13.07.7-.17 1.38z" />

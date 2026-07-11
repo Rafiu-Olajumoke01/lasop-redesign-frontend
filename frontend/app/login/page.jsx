@@ -39,14 +39,22 @@ export default function LoginPage() {
       localStorage.setItem('access', data.access);
       localStorage.setItem('refresh', data.refresh);
 
-      // Check if this user is staff/admin, redirect accordingly
+      // Check the account type and redirect accordingly:
+      // admin -> Backstage, tutor -> Tutor Portal, everyone else -> student dashboard
       const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile/`, {
         headers: { Authorization: `Bearer ${data.access}` },
       });
 
       if (profileRes.ok) {
         const profile = await profileRes.json();
-        router.push(profile.is_staff ? '/backstage' : '/dashboard');
+
+        if (profile.is_staff) {
+          router.push('/backstage');
+        } else if (profile.is_tutor) {
+          router.push('/tutor');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
         router.push('/dashboard');
       }
