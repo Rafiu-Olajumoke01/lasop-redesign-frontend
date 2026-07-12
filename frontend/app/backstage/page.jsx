@@ -287,7 +287,7 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
 
   useEffect(() => { if (token) refresh(); }, [token, refresh]);
 
-  const save = async (payload, existingItem) => {
+const save = async (payload, existingItem) => {
     if (existingItem && !supportsUpdate) throw new Error(`Updating ${label} isn't supported yet.`);
     const url = existingItem ? `${API_BASE}${detailPath(existingItem)}` : `${API_BASE}${basePath}`;
 
@@ -319,7 +319,21 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
       headers,
       body,
     });
-    if (!res.ok) throw new Error('Save failed. Check the fields and try again.');
+
+    if (!res.ok) {
+      let details = '';
+      try {
+        const errorData = await res.json();
+        console.error(`${label} save failed:`, errorData); // <-- full error visible in browser console
+        details = Object.entries(errorData)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(' | ');
+      } catch {
+        details = `HTTP ${res.status}`;
+      }
+      throw new Error(details || 'Save failed. Check the fields and try again.');
+    }
+
     await refresh();
   };
 
