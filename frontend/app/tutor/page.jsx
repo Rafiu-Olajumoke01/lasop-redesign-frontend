@@ -1,98 +1,129 @@
 'use client';
 
-import { useState } from 'react';
-import Image from 'next/image';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DUMMY DATA — replace with real API calls once backend endpoints exist.
-// Look for "TODO: connect" comments to find every spot that needs wiring up.
+// Data hooks — real API calls
 // ═══════════════════════════════════════════════════════════════════════════
 
-const DUMMY_TUTOR = {
-  first_name: 'Amaka',
-  last_name: 'Eze',
-  email: 'amaka.eze@lasop.net',
-  phone_number: '+234 803 555 1122',
-  bio: 'Backend-leaning full-stack tutor with 5 years teaching experience, passionate about helping beginners build real production habits from day one.',
-  courses_of_instruction: ['Full-Stack Web Development', 'Backend with Django'],
-  date_of_employment: '2024-03-11',
-  performance_rating: 4.6,
-};
+function useTutorProfile(token) {
+  const [tutor, setTutor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-const DUMMY_STATS = {
-  courses: 2,
-  cohorts_total: 5,
-  cohorts_completed: 3,
-  cohorts_ongoing: 2,
-  total_hours: 214,
-  days_absent: 2,
-  queries_pending: 1,
-};
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/tutors/me/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load your profile.');
+      const data = await res.json();
+      // Flatten user_detail into the top level so components can just use tutor.first_name etc.
+      setTutor({
+        ...data,
+        first_name: data.user_detail?.first_name || '',
+        last_name: data.user_detail?.last_name || '',
+        email: data.user_detail?.email || '',
+        phone_number: data.user_detail?.phone_number || '',
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
-const DUMMY_COHORTS = [
-  {
-    id: 1,
-    name: 'January 2026 Set',
-    status: 'ongoing',
-    stage: 'Afternoon Class',
-    students: [
-      { id: 1, name: 'Tobi Fashola', email: 'tobi.f@example.com', present: true },
-      { id: 2, name: 'Ngozi Umeh', email: 'ngozi.u@example.com', present: true },
-      { id: 3, name: 'Chuka Obi', email: 'chuka.o@example.com', present: false },
-      { id: 4, name: 'Halima Bello', email: 'halima.b@example.com', present: true },
-    ],
-  },
-  {
-    id: 2,
-    name: 'March 2026 Set',
-    status: 'ongoing',
-    stage: 'Morning Class',
-    students: [
-      { id: 5, name: 'Femi Adekunle', email: 'femi.a@example.com', present: true },
-      { id: 6, name: 'Blessing Okon', email: 'blessing.o@example.com', present: true },
-      { id: 7, name: 'David Nwachukwu', email: 'david.n@example.com', present: true },
-    ],
-  },
-  {
-    id: 3,
-    name: 'October 2025 Set',
-    status: 'completed',
-    stage: 'Completed',
-    students: [
-      { id: 8, name: 'Ijeoma Kalu', email: 'ijeoma.k@example.com', present: true },
-      { id: 9, name: 'Yusuf Aliyu', email: 'yusuf.a@example.com', present: true },
-    ],
-  },
-];
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
 
-const DUMMY_QUERIES = [
-  {
-    id: 1,
-    subject: 'Late class start — March 3rd',
-    status: 'pending',
-    date: '2026-07-05',
-    from: 'Admin — Kemi Johnson',
-    thread: [
-      { from: 'admin', text: 'We noticed your March 3rd afternoon class started 40 minutes late. Please explain.', date: '2026-07-05' },
-    ],
-  },
-  {
-    id: 2,
-    subject: 'Missed attendance submission',
-    status: 'resolved',
-    date: '2026-06-28',
-    from: 'Admin — Kemi Johnson',
-    thread: [
-      { from: 'admin', text: 'Attendance wasn\u2019t submitted for June 26th, please confirm.', date: '2026-06-28' },
-      { from: 'tutor', text: 'Apologies, network issue on my end that day. Submitted now, all students were present.', date: '2026-06-28' },
-      { from: 'admin', text: 'Noted, thanks for the quick fix. Marked resolved.', date: '2026-06-29' },
-    ],
-  },
-];
+  const updateProfile = async (payload) => {
+    const hasFile = payload.profile_picture instanceof File;
+    let body, headers = { Authorization: `Bearer ${token}` };
+
+    if (hasFile) {
+      const formData = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        if (value instanceof File) formData.append(key, value);
+        else if (Array.isArray(value)) formData.append(key, JSON.stringify(value));
+        else formData.append(key, value);
+      });
+      body = formData;
+    } else {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(payload);
+    }
+
+    const res = await fetch(`${API_BASE}/api/tutors/me/`, { method: 'PATCH', headers, body });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Profile update failed:', text);
+      throw new Error('Could not save changes.');
+    }
+    await refresh();
+  };
+
+  return { tutor, loading, error, refresh, updateProfile };
+}
+
+function useTutorStats(token) {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      setLoading(true); setError('');
+      try {
+        const res = await fetch(`${API_BASE}/api/tutors/me/stats/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Could not load your stats.');
+        setStats(await res.json());
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  return { stats, loading, error };
+}
+
+function useTutorCohorts(token) {
+  const [cohorts, setCohorts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      setLoading(true); setError('');
+      try {
+        const res = await fetch(`${API_BASE}/api/tutors/me/cohorts/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Could not load your cohorts.');
+        const data = await res.json();
+        setCohorts(Array.isArray(data) ? data : data.results || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  return { cohorts, loading, error };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Shared UI — mirrors the component set already used in Backstage, so this
-// page reads as part of the same product rather than a new visual identity.
+// Shared UI — mirrors Backstage's component set
 // ═══════════════════════════════════════════════════════════════════════════
 
 function Card({ children, className = '' }) {
@@ -125,6 +156,25 @@ function EmptyState({ title, hint }) {
   );
 }
 
+function Spinner({ text }) {
+  return (
+    <div className="py-16 text-center">
+      <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-[#0057E7] animate-spin mx-auto mb-3" />
+      <p className="text-slate-400 text-sm">{text}</p>
+    </div>
+  );
+}
+
+function ErrorBanner({ message }) {
+  if (!message) return null;
+  return (
+    <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-3 mb-5">
+      <span className="mt-0.5 shrink-0">⚠</span>
+      {message}
+    </div>
+  );
+}
+
 function PrimaryButton({ children, className = '', ...props }) {
   return (
     <button
@@ -147,17 +197,6 @@ function SecondaryButton({ children, className = '', ...props }) {
   );
 }
 
-function LinkButton({ children, danger, ...props }) {
-  return (
-    <button
-      {...props}
-      className={`text-[13px] font-semibold transition hover:underline underline-offset-2 ${danger ? 'text-rose-600 hover:text-rose-700' : 'text-[#0057E7] hover:text-[#0A66FF]'}`}
-    >
-      {children}
-    </button>
-  );
-}
-
 const inputClass =
   'w-full bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 transition';
 
@@ -166,20 +205,6 @@ function Field({ label, children }) {
     <div>
       <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-widest">{label}</label>
       {children}
-    </div>
-  );
-}
-
-function Modal({ title, onClose, children, wide }) {
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className={`bg-white border border-slate-200 rounded-2xl w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} max-h-[88vh] overflow-y-auto shadow-2xl`}>
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200">
-          <h3 className="text-base font-bold text-slate-900">{title}</h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition text-sm">✕</button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
     </div>
   );
 }
@@ -204,6 +229,15 @@ function StatCard({ label, value, icon, accent = 'text-slate-900' }) {
         <p className={`font-bold text-[22px] leading-none ${accent}`}>{value}</p>
       </div>
       <div className="text-slate-300 shrink-0">{icon}</div>
+    </div>
+  );
+}
+
+function ComingSoon({ title, hint }) {
+  return (
+    <div>
+      <PageHeader title={title} />
+      <Card><EmptyState title="Coming soon" hint={hint || "This section will be wired up once the backend for it is ready."} /></Card>
     </div>
   );
 }
@@ -240,8 +274,14 @@ const NAV = [
 // Dashboard tab
 // ═══════════════════════════════════════════════════════════════════════════
 
-function DashboardTab({ tutor, stats, cohorts, setTab }) {
-  const ongoing = cohorts.filter((c) => c.status === 'ongoing');
+function DashboardTab({ tutor, statsData, cohortsData, setTab }) {
+  const { stats, loading: statsLoading, error: statsError } = statsData;
+  const { cohorts, loading: cohortsLoading, error: cohortsError } = cohortsData;
+
+  // "Ongoing" = anything not yet completed, based on the real current_stage_label
+  // the Cohort model already calculates (see cohorts/models.py current_stage).
+  const ongoing = cohorts.filter((c) => c.current_stage_label && c.current_stage_label !== 'Completed');
+
   return (
     <div>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
@@ -251,23 +291,33 @@ function DashboardTab({ tutor, stats, cohorts, setTab }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-        <StatCard label="Courses teaching" value={stats.courses} icon={<Icon path={ICONS.courses} />} />
-        <StatCard label="Cohorts total" value={stats.cohorts_total} icon={<Icon path={ICONS.cohort} />} />
-        <StatCard label="Cohorts completed" value={stats.cohorts_completed} icon={<Icon path={ICONS.check} />} accent="text-emerald-600" />
-        <StatCard label="Cohorts ongoing" value={stats.cohorts_ongoing} icon={<Icon path={ICONS.ongoing} />} accent="text-[#0057E7]" />
-        <StatCard label="Total hours taught" value={stats.total_hours} icon={<Icon path={ICONS.clock} />} />
-        <StatCard label="Days absent" value={stats.days_absent} icon={<Icon path={ICONS.absent} />} accent={stats.days_absent > 0 ? 'text-amber-600' : 'text-slate-900'} />
-        <StatCard label="Pending queries" value={stats.queries_pending} icon={<Icon path={ICONS.query} />} accent={stats.queries_pending > 0 ? 'text-rose-600' : 'text-slate-900'} />
-      </div>
+      <ErrorBanner message={statsError} />
+
+      {statsLoading || !stats ? (
+        <div className="mb-8"><Spinner text="Loading your stats…" /></div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+          <StatCard label="Courses teaching" value={stats.courses} icon={<Icon path={ICONS.courses} />} />
+          <StatCard label="Cohorts total" value={stats.cohorts_total} icon={<Icon path={ICONS.cohort} />} />
+          <StatCard label="Cohorts completed" value={stats.cohorts_completed} icon={<Icon path={ICONS.check} />} accent="text-emerald-600" />
+          <StatCard label="Cohorts ongoing" value={stats.cohorts_ongoing} icon={<Icon path={ICONS.ongoing} />} accent="text-[#0057E7]" />
+          <StatCard label="Total hours taught" value={stats.total_hours} icon={<Icon path={ICONS.clock} />} />
+          <StatCard label="Days absent" value={stats.days_absent} icon={<Icon path={ICONS.absent} />} accent={stats.days_absent > 0 ? 'text-amber-600' : 'text-slate-900'} />
+          <StatCard label="Pending queries" value={stats.queries_pending} icon={<Icon path={ICONS.query} />} accent={stats.queries_pending > 0 ? 'text-rose-600' : 'text-slate-900'} />
+        </div>
+      )}
 
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-slate-900 font-bold text-base">Today's classes</h2>
-        <LinkButton onClick={() => setTab('cohorts')}>View all cohorts</LinkButton>
+        <h2 className="text-slate-900 font-bold text-base">Your cohorts</h2>
+        <button onClick={() => setTab('cohorts')} className="text-[#0057E7] text-[13px] font-semibold hover:underline">View all cohorts</button>
       </div>
 
-      {ongoing.length === 0 ? (
-        <Card><EmptyState title="No ongoing classes" hint="Your ongoing cohorts will show up here." /></Card>
+      <ErrorBanner message={cohortsError} />
+
+      {cohortsLoading ? (
+        <Spinner text="Loading your cohorts…" />
+      ) : ongoing.length === 0 ? (
+        <Card><EmptyState title="No ongoing cohorts" hint="Your ongoing cohorts will show up here." /></Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {ongoing.map((c) => (
@@ -275,7 +325,7 @@ function DashboardTab({ tutor, stats, cohorts, setTab }) {
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-slate-900 font-bold text-[15px]">{c.name}</p>
-                  <p className="text-slate-400 text-xs mt-0.5">{c.stage} · {c.students.length} students</p>
+                  <p className="text-slate-400 text-xs mt-0.5">{c.current_stage_label} · {c.student_count ?? 0} students</p>
                 </div>
                 <Pill color="blue">{c.status}</Pill>
               </div>
@@ -289,332 +339,128 @@ function DashboardTab({ tutor, stats, cohorts, setTab }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Cohorts tab — list, then a student roster with tutor actions
+// Cohorts tab — real cohort data; roster/attendance not built yet, so kept
+// as a clear "coming soon" instead of fake interactive controls.
 // ═══════════════════════════════════════════════════════════════════════════
 
-function StudentActionModal({ type, student, onClose, onConfirm }) {
-  const [text, setText] = useState('');
-  const [dueDate, setDueDate] = useState('');
-
-  const titles = {
-    query: `Query ${student?.name || 'student'}`,
-    classwork: `Assign class work — ${student ? student.name : 'whole class'}`,
-    month_project: "Assign this month's project",
-    capstone: 'Assign capstone project',
-  };
-
-  return (
-    <Modal title={titles[type]} onClose={onClose}>
-      <div className="space-y-4">
-        <Field label={type === 'query' ? 'Message to student' : 'Instructions'}>
-          <textarea
-            className={inputClass}
-            rows={5}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={type === 'query' ? 'Explain the issue clearly...' : 'What should students submit and by when?'}
-          />
-        </Field>
-        {type !== 'query' && (
-          <Field label="Due date">
-            <input type="date" className={inputClass} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-          </Field>
-        )}
-        <Field label="Attachment (optional)">
-          <input type="file" className={inputClass} />
-        </Field>
-        <PrimaryButton className="w-full justify-center" onClick={() => { onConfirm(text); onClose(); }} disabled={!text.trim()}>
-          {type === 'query' ? 'Send query' : 'Assign'}
-        </PrimaryButton>
-      </div>
-    </Modal>
-  );
-}
-
-function CohortsTab({ cohorts, setCohorts }) {
+function CohortsTab({ cohorts, loading, error }) {
   const [openCohortId, setOpenCohortId] = useState(null);
-  const [classLive, setClassLive] = useState({});
-  const [actionModal, setActionModal] = useState(null); // { type, student }
-  const [toast, setToast] = useState('');
-
   const cohort = cohorts.find((c) => c.id === openCohortId);
 
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2200); };
-
-  const toggleAttendance = (studentId) => {
-    setCohorts((prev) =>
-      prev.map((c) =>
-        c.id !== openCohortId ? c : { ...c, students: c.students.map((s) => (s.id === studentId ? { ...s, present: !s.present } : s)) }
-      )
-    );
-  };
-
-  const toggleClass = () => {
-    const live = !classLive[openCohortId];
-    setClassLive((prev) => ({ ...prev, [openCohortId]: live }));
-    showToast(live ? 'Class started — students have been notified' : 'Class ended');
-  };
-
   if (cohort) {
-    const isLive = !!classLive[cohort.id];
     return (
       <div>
         <button onClick={() => setOpenCohortId(null)} className="text-[#0057E7] text-sm font-semibold mb-4 flex items-center gap-1.5 hover:underline">
           <Icon path={<path d="M15 18l-6-6 6-6" />} size={16} /> Back to cohorts
         </button>
-
-        <PageHeader title={cohort.name} subtitle={`${cohort.stage} · ${cohort.students.length} students`}>
-          <SecondaryButton onClick={() => setActionModal({ type: 'classwork' })}>Assign class work</SecondaryButton>
-          <SecondaryButton onClick={() => setActionModal({ type: 'month_project' })}>Assign month's project</SecondaryButton>
-          <SecondaryButton onClick={() => setActionModal({ type: 'capstone' })}>Assign capstone</SecondaryButton>
-          <PrimaryButton onClick={toggleClass} className={isLive ? '!bg-rose-600 hover:!bg-rose-700' : ''}>
-            {isLive ? 'Stop class' : 'Start class'}
-          </PrimaryButton>
-        </PageHeader>
-
-        {isLive && (
-          <div className="mb-5 flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-semibold rounded-xl px-4 py-3">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Class is live — students can see this in real time
-          </div>
-        )}
-
-        {toast && (
-          <div className="mb-5 bg-slate-900 text-white text-sm rounded-xl px-4 py-3">{toast}</div>
-        )}
-
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left">
-                  {['Student', 'Attendance', ''].map((h, i) => (
-                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {cohort.students.map((s) => (
-                  <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50 transition last:border-0">
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
-                          {s.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-slate-800 font-semibold leading-none mb-0.5">{s.name}</p>
-                          <p className="text-slate-400 text-[11px]">{s.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <button onClick={() => toggleAttendance(s.id)}>
-                        <Pill color={s.present ? 'emerald' : 'rose'}>{s.present ? 'Present' : 'Absent'}</Pill>
-                      </button>
-                    </td>
-                    <td className="px-5 py-4 text-right whitespace-nowrap">
-                      <LinkButton danger onClick={() => setActionModal({ type: 'query', student: s })}>Query</LinkButton>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {actionModal && (
-          <StudentActionModal
-            type={actionModal.type}
-            student={actionModal.student}
-            onClose={() => setActionModal(null)}
-            onConfirm={() =>
-              showToast(
-                actionModal.type === 'query'
-                  ? `Query sent to ${actionModal.student.name}`
-                  : 'Assignment sent — students have been notified'
-              )
-            }
+        <PageHeader title={cohort.name} subtitle={`${cohort.current_stage_label} · ${cohort.student_count ?? 0} students`} />
+        <Card>
+          <EmptyState
+            title="Student roster & attendance coming soon"
+            hint="This will show once attendance and class-session tracking are built on the backend."
           />
-        )}
+        </Card>
       </div>
     );
   }
 
-  const statusColor = { ongoing: 'blue', completed: 'slate', upcoming: 'amber' };
-
   return (
     <div>
       <PageHeader title="Cohorts" subtitle={`${cohorts.length} cohort${cohorts.length !== 1 ? 's' : ''} assigned to you`} />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {cohorts.map((c) => (
-          <Card key={c.id} className="p-5 hover:border-slate-300 transition-colors">
-            <div className="flex items-start justify-between mb-3">
-              <h3 className="text-slate-900 font-bold text-base leading-snug pr-4">{c.name}</h3>
-              <Pill color={statusColor[c.status] || 'slate'}>{c.status}</Pill>
-            </div>
-            <p className="text-slate-400 text-xs mb-4">{c.stage} · {c.students.length} students</p>
-            <SecondaryButton onClick={() => setOpenCohortId(c.id)} className="w-full justify-center">View cohort</SecondaryButton>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Queries tab
-// ═══════════════════════════════════════════════════════════════════════════
-
-function QueriesTab({ queries, setQueries }) {
-  const [filter, setFilter] = useState('all');
-  const [openId, setOpenId] = useState(null);
-  const [reply, setReply] = useState('');
-
-  const counts = {
-    all: queries.length,
-    pending: queries.filter((q) => q.status === 'pending').length,
-    resolved: queries.filter((q) => q.status === 'resolved').length,
-  };
-
-  const filtered = filter === 'all' ? queries : queries.filter((q) => q.status === filter);
-  const open = queries.find((q) => q.id === openId);
-
-  const sendReply = () => {
-    if (!reply.trim()) return;
-    setQueries((prev) =>
-      prev.map((q) => (q.id === openId ? { ...q, thread: [...q.thread, { from: 'tutor', text: reply, date: 'Just now' }] } : q))
-    );
-    setReply('');
-  };
-
-  return (
-    <div>
-      <PageHeader title="Queries" subtitle={`${counts.pending} pending · ${counts.resolved} resolved`}>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {[['all', `Total (${counts.all})`], ['pending', `Pending (${counts.pending})`], ['resolved', `Resolved (${counts.resolved})`]].map(([f, label]) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm' : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </PageHeader>
-
-      {filtered.length === 0 ? (
-        <Card><EmptyState title="No queries here" hint="Nothing matches this filter yet." /></Card>
+      <ErrorBanner message={error} />
+      {loading ? (
+        <Spinner text="Loading your cohorts…" />
+      ) : cohorts.length === 0 ? (
+        <Card><EmptyState title="No cohorts assigned yet" hint="Cohorts assigned to you by admin will show up here." /></Card>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((q) => (
-            <button key={q.id} onClick={() => setOpenId(q.id)} className="w-full text-left">
-              <Card className="px-6 py-4 hover:border-slate-300 transition-colors">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-slate-900 font-bold mb-1">{q.subject}</p>
-                    <p className="text-slate-400 text-xs">{q.from} · {q.date}</p>
-                  </div>
-                  <Pill color={q.status === 'pending' ? 'amber' : 'emerald'}>{q.status}</Pill>
-                </div>
-              </Card>
-            </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {cohorts.map((c) => (
+            <Card key={c.id} className="p-5 hover:border-slate-300 transition-colors">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-slate-900 font-bold text-base leading-snug pr-4">{c.name}</h3>
+                <Pill color="blue">{c.status}</Pill>
+              </div>
+              <p className="text-slate-400 text-xs mb-4">{c.current_stage_label} · {c.student_count ?? 0} students</p>
+              <SecondaryButton onClick={() => setOpenCohortId(c.id)} className="w-full justify-center">View cohort</SecondaryButton>
+            </Card>
           ))}
         </div>
-      )}
-
-      {open && (
-        <Modal title={open.subject} onClose={() => setOpenId(null)} wide>
-          <div className="space-y-4">
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-              {open.thread.map((m, i) => (
-                <div key={i} className={`flex ${m.from === 'tutor' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${m.from === 'tutor' ? 'bg-[#0057E7] text-white' : 'bg-slate-100 text-slate-800'}`}>
-                    <p>{m.text}</p>
-                    <p className={`text-[10px] mt-1 ${m.from === 'tutor' ? 'text-blue-100' : 'text-slate-400'}`}>{m.date}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {open.status === 'pending' && (
-              <div className="pt-3 border-t border-slate-200 space-y-3">
-                <textarea className={inputClass} rows={3} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Type your response..." />
-                <div className="flex items-center gap-2">
-                  <input type="file" className={inputClass} />
-                  <PrimaryButton onClick={sendReply} disabled={!reply.trim()}>Reply</PrimaryButton>
-                </div>
-              </div>
-            )}
-          </div>
-        </Modal>
       )}
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Settings tab
+// Settings tab — only bio / profile picture are real; email & password
+// have no backend endpoint yet, so they're marked coming soon.
 // ═══════════════════════════════════════════════════════════════════════════
 
-function SettingsTab({ tutor }) {
-  const [email, setEmail] = useState(tutor.email);
+function SettingsTab({ tutor, updateProfile }) {
+  const [bio, setBio] = useState(tutor.bio || '');
+  const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState('');
-  const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
+  const [err, setErr] = useState('');
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
-    if (file) setAvatarPreview(URL.createObjectURL(file));
+    if (file) { setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file)); }
   };
 
   const flashSaved = (label) => { setSaved(label); setTimeout(() => setSaved(''), 2200); };
+
+  const saveBio = async () => {
+    setSaving(true); setErr('');
+    try { await updateProfile({ bio }); flashSaved('Bio updated'); }
+    catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const savePicture = async () => {
+    setSaving(true); setErr('');
+    try { await updateProfile({ profile_picture: avatarFile }); flashSaved('Profile picture updated'); setAvatarFile(null); }
+    catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
+  };
 
   return (
     <div className="space-y-6 max-w-xl">
       <PageHeader title="Settings" />
 
       {saved && <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">{saved}</div>}
+      <ErrorBanner message={err} />
 
       <Card className="p-6">
         <h3 className="text-slate-900 font-bold text-sm mb-4">Profile picture</h3>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-slate-400 font-bold text-xl shrink-0">
-            {avatarPreview ? <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" /> : tutor.first_name.charAt(0)}
+            {avatarPreview ? (
+              <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
+            ) : tutor.profile_picture ? (
+              <img src={`${API_BASE}${tutor.profile_picture}`} alt="Current" className="w-full h-full object-cover" />
+            ) : (
+              tutor.first_name.charAt(0)
+            )}
           </div>
           <div className="flex-1">
             <input type="file" accept="image/*" onChange={handleAvatarChange} className={inputClass} />
           </div>
         </div>
-        {avatarPreview && <PrimaryButton className="mt-4" onClick={() => flashSaved('Profile picture updated')}>Save picture</PrimaryButton>}
+        {avatarFile && <PrimaryButton className="mt-4" onClick={savePicture} disabled={saving}>{saving ? 'Saving…' : 'Save picture'}</PrimaryButton>}
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-slate-900 font-bold text-sm mb-4">Login email</h3>
-        <Field label="Email address">
-          <input className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} />
+        <h3 className="text-slate-900 font-bold text-sm mb-4">Bio</h3>
+        <Field label="About you">
+          <textarea className={inputClass} rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />
         </Field>
-        <PrimaryButton className="mt-4" onClick={() => flashSaved('Email updated')}>Save email</PrimaryButton>
+        <PrimaryButton className="mt-4" onClick={saveBio} disabled={saving}>{saving ? 'Saving…' : 'Save bio'}</PrimaryButton>
       </Card>
 
-      <Card className="p-6">
-        <h3 className="text-slate-900 font-bold text-sm mb-4">Password</h3>
-        <div className="space-y-3">
-          <Field label="Current password">
-            <input type="password" className={inputClass} value={passwords.current} onChange={(e) => setPasswords({ ...passwords, current: e.target.value })} />
-          </Field>
-          <Field label="New password">
-            <input type="password" className={inputClass} value={passwords.next} onChange={(e) => setPasswords({ ...passwords, next: e.target.value })} />
-          </Field>
-          <Field label="Confirm new password">
-            <input type="password" className={inputClass} value={passwords.confirm} onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })} />
-          </Field>
-        </div>
-        <PrimaryButton
-          className="mt-4"
-          disabled={!passwords.current || !passwords.next || passwords.next !== passwords.confirm}
-          onClick={() => { flashSaved('Password updated'); setPasswords({ current: '', next: '', confirm: '' }); }}
-        >
-          Save password
-        </PrimaryButton>
+      <Card className="p-6 opacity-60">
+        <h3 className="text-slate-900 font-bold text-sm mb-2">Login email & password</h3>
+        <p className="text-slate-400 text-sm">Coming soon. For now, contact admin to update your login email or password.</p>
       </Card>
     </div>
   );
@@ -625,14 +471,18 @@ function SettingsTab({ tutor }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function ProfileTab({ tutor }) {
-  const stars = Math.round(tutor.performance_rating);
+  const stars = Math.round(tutor.performance_rating || 0);
   return (
     <div>
       <PageHeader title="Profile" />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-6 md:col-span-1 text-center">
-          <div className="w-20 h-20 rounded-full bg-[#0057E7] text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-            {tutor.first_name.charAt(0)}{tutor.last_name.charAt(0)}
+          <div className="w-20 h-20 rounded-full bg-[#0057E7] text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4 overflow-hidden">
+            {tutor.profile_picture ? (
+              <img src={`${API_BASE}${tutor.profile_picture}`} alt={tutor.first_name} className="w-full h-full object-cover" />
+            ) : (
+              <>{tutor.first_name.charAt(0)}{tutor.last_name.charAt(0)}</>
+            )}
           </div>
           <p className="text-slate-900 font-bold text-lg">{tutor.first_name} {tutor.last_name}</p>
           <p className="text-slate-400 text-sm mt-1">{tutor.email}</p>
@@ -643,7 +493,7 @@ function ProfileTab({ tutor }) {
               {[1, 2, 3, 4, 5].map((n) => (
                 <span key={n} className={n <= stars ? 'text-amber-400' : 'text-slate-200'}>★</span>
               ))}
-              <span className="text-slate-500 text-sm ml-1.5 font-semibold">{tutor.performance_rating}</span>
+              <span className="text-slate-500 text-sm ml-1.5 font-semibold">{tutor.performance_rating || 0}</span>
             </div>
           </div>
         </Card>
@@ -651,18 +501,24 @@ function ProfileTab({ tutor }) {
         <Card className="p-6 md:col-span-2 space-y-5">
           <div>
             <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1.5">Bio</p>
-            <p className="text-slate-700 text-sm leading-relaxed">{tutor.bio}</p>
+            <p className="text-slate-700 text-sm leading-relaxed">{tutor.bio || 'No bio added yet.'}</p>
           </div>
           <div>
             <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-2">Courses of instruction</p>
             <div className="flex flex-wrap gap-1.5">
-              {tutor.courses_of_instruction.map((c) => <Pill key={c} color="blue">{c}</Pill>)}
+              {(tutor.courses_of_instruction || []).length === 0 ? (
+                <span className="text-slate-400 text-xs italic">None assigned</span>
+              ) : (
+                tutor.courses_of_instruction.map((c) => <Pill key={c} color="blue">{c}</Pill>)
+              )}
             </div>
           </div>
           <div>
             <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1.5">Date of employment</p>
             <p className="text-slate-700 text-sm font-medium">
-              {new Date(tutor.date_of_employment).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              {tutor.date_of_employment
+                ? new Date(tutor.date_of_employment).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                : '—'}
             </p>
           </div>
         </Card>
@@ -710,7 +566,14 @@ function Sidebar({ open, onClose, tab, setTab }) {
         </nav>
 
         <div className="px-2.5 pb-5 pt-2 border-t border-blue-900/30">
-          <button className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/10 transition-colors">
+          <button
+            onClick={() => {
+              localStorage.removeItem('access');
+              localStorage.removeItem('refresh');
+              window.location.href = '/login';
+            }}
+            className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/10 transition-colors"
+          >
             <Icon path={<><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></>} size={15} />
             Log out
           </button>
@@ -720,7 +583,8 @@ function Sidebar({ open, onClose, tab, setTab }) {
   );
 }
 
-function TopBar({ onMenuClick, title }) {
+function TopBar({ onMenuClick, title, tutor }) {
+  const initial = tutor?.first_name?.charAt(0) || '?';
   return (
     <header className="bg-white border-b border-slate-200 px-4 lg:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
       <div className="flex items-center gap-3">
@@ -730,8 +594,14 @@ function TopBar({ onMenuClick, title }) {
         <p className="text-slate-800 font-semibold text-[14px]">{title}</p>
       </div>
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-xs font-bold">A</div>
-        <span className="text-slate-700 font-medium text-[13px] hidden sm:inline">Amaka Eze</span>
+        <div className="w-8 h-8 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+          {tutor?.profile_picture ? (
+            <img src={`${API_BASE}${tutor.profile_picture}`} alt="" className="w-full h-full object-cover" />
+          ) : initial}
+        </div>
+        <span className="text-slate-700 font-medium text-[13px] hidden sm:inline">
+          {tutor ? `${tutor.first_name} ${tutor.last_name}` : ''}
+        </span>
       </div>
     </header>
   );
@@ -742,30 +612,87 @@ function TopBar({ onMenuClick, title }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function TutorPortalPage() {
+  const router = useRouter();
+  const [token, setToken] = useState('');
+  const [authChecked, setAuthChecked] = useState(false);
   const [tab, setTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [cohorts, setCohorts] = useState(DUMMY_COHORTS);
-  const [queries, setQueries] = useState(DUMMY_QUERIES);
 
-  // TODO: connect — replace the auth check below with the same
-  // verifyStaff-style pattern used in BackstagePage, but checking
-  // `profile.is_tutor` (or similar) instead of `profile.is_staff`,
-  // and redirecting to /login if there's no token.
+  useEffect(() => {
+    const t = localStorage.getItem('access');
+    if (!t) { router.push('/login'); return; }
+    const verifyTutor = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/users/profile/`, {
+          headers: { Authorization: `Bearer ${t}` },
+        });
+        if (res.status === 401) {
+          localStorage.removeItem('access');
+          localStorage.removeItem('refresh');
+          router.push('/login');
+          return;
+        }
+        const profile = await res.json();
+        if (profile.is_staff) { router.push('/backstage'); return; }
+        if (!profile.is_tutor) { router.push('/dashboard'); return; }
+        setToken(t);
+        setAuthChecked(true);
+      } catch {
+        router.push('/login');
+      }
+    };
+    verifyTutor();
+  }, []);
+
+  const profileData = useTutorProfile(token);
+  const statsData = useTutorStats(token);
+  const cohortsData = useTutorCohorts(token);
 
   const currentLabel = NAV.find((n) => n.key === tab)?.label || 'Dashboard';
+
+  if (!authChecked || profileData.loading || !profileData.tutor) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="w-10 h-10 rounded-full border-2 border-slate-200 border-t-[#0057E7] animate-spin mx-auto mb-3" />
+          <p className="text-slate-400 text-sm">{!authChecked ? 'Verifying access…' : 'Loading your profile…'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (profileData.error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <Card className="p-6 max-w-sm text-center">
+          <p className="text-rose-600 font-semibold mb-2">Couldn't load your profile</p>
+          <p className="text-slate-500 text-sm mb-4">{profileData.error}</p>
+          <PrimaryButton onClick={profileData.refresh}>Try again</PrimaryButton>
+        </Card>
+      </div>
+    );
+  }
+
+  const tutor = profileData.tutor;
 
   return (
     <div className="min-h-screen flex bg-slate-50">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} />
       <div className="flex-1 flex flex-col min-h-screen">
-        <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} />
+        <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} tutor={tutor} />
         <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto pb-24">
           <div className="max-w-6xl">
-            {tab === 'dashboard' && <DashboardTab tutor={DUMMY_TUTOR} stats={DUMMY_STATS} cohorts={cohorts} setTab={setTab} />}
-            {tab === 'cohorts' && <CohortsTab cohorts={cohorts} setCohorts={setCohorts} />}
-            {tab === 'queries' && <QueriesTab queries={queries} setQueries={setQueries} />}
-            {tab === 'settings' && <SettingsTab tutor={DUMMY_TUTOR} />}
-            {tab === 'profile' && <ProfileTab tutor={DUMMY_TUTOR} />}
+            {tab === 'dashboard' && (
+              <DashboardTab tutor={tutor} statsData={statsData} cohortsData={cohortsData} setTab={setTab} />
+            )}
+            {tab === 'cohorts' && (
+              <CohortsTab cohorts={cohortsData.cohorts} loading={cohortsData.loading} error={cohortsData.error} />
+            )}
+            {tab === 'queries' && (
+              <ComingSoon title="Queries" hint="This will be wired up once the Query model is built on the backend." />
+            )}
+            {tab === 'settings' && <SettingsTab tutor={tutor} updateProfile={profileData.updateProfile} />}
+            {tab === 'profile' && <ProfileTab tutor={tutor} />}
           </div>
         </div>
       </div>
