@@ -44,13 +44,49 @@ function slugify(text) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
+// ─── Global type system ─────────────────────────────────────────────────────
+// Plus Jakarta Sans carries headings/brand moments (geometric, confident),
+// Inter runs the UI body copy, and a mono face gives money/data columns that
+// tabular, precise "admin console" feel.
+
+function GlobalType() {
+  return (
+    <style jsx global>{`
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
+
+      :root {
+        --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+        --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+        --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+        --brand: #0057e7;
+        --brand-dark: #0043b3;
+      }
+
+      body {
+        font-family: var(--font-body);
+      }
+
+      .font-display {
+        font-family: var(--font-display);
+      }
+
+      .font-num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.01em;
+      }
+    `}</style>
+  );
+}
+
 // ─── Shared UI (light theme, sharpened) ────────────────────────────────────
 
 function Card({ children, className = '', interactive = false }) {
   return (
     <div
-      className={`bg-white border border-slate-200/80 rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)]
-        ${interactive ? 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)] hover:border-slate-300 hover:-translate-y-[1px] transition-all duration-200' : ''}
+      className={`relative bg-white border border-slate-200/70 rounded-[14px] shadow-[0_1px_2px_rgba(15,23,42,0.04)]
+        before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-px before:rounded-t-[14px] before:bg-gradient-to-r before:from-transparent before:via-white before:to-transparent
+        ${interactive ? 'hover:shadow-[0_10px_28px_-8px_rgba(15,23,42,0.14)] hover:border-[#0057E7]/25 hover:-translate-y-[2px] transition-all duration-200 ease-out' : ''}
         ${className}`}
     >
       {children}
@@ -60,24 +96,25 @@ function Card({ children, className = '', interactive = false }) {
 
 function CardHeader({ title, action }) {
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80">
-      <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.12em]">{title}</h3>
+    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/70">
+      <h3 className="font-display text-[11px] font-bold text-slate-500 uppercase tracking-[0.14em]">{title}</h3>
       {action}
     </div>
   );
 }
 
-function Pill({ children, color = 'slate' }) {
+function Pill({ children, color = 'slate', dot = true }) {
   const map = {
-    blue: 'bg-blue-50 text-[#0057E7] border-blue-200/80',
-    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
-    amber: 'bg-amber-50 text-amber-700 border-amber-200/80',
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
-    rose: 'bg-rose-50 text-rose-700 border-rose-200/80',
-    slate: 'bg-slate-100 text-slate-600 border-slate-200/80',
+    blue: 'bg-blue-50/80 text-[#0057E7] border-blue-200/70 [--dot:#0057E7]',
+    indigo: 'bg-indigo-50/80 text-indigo-700 border-indigo-200/70 [--dot:#4f46e5]',
+    amber: 'bg-amber-50/80 text-amber-700 border-amber-200/70 [--dot:#d97706]',
+    emerald: 'bg-emerald-50/80 text-emerald-700 border-emerald-200/70 [--dot:#059669]',
+    rose: 'bg-rose-50/80 text-rose-700 border-rose-200/70 [--dot:#e11d48]',
+    slate: 'bg-slate-100/80 text-slate-600 border-slate-200/70 [--dot:#64748b]',
   };
   return (
-    <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border tracking-wide leading-none ${map[color] || map.slate}`}>
+    <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border tracking-wide leading-none ${map[color] || map.slate}`}>
+      {dot && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--dot)' }} />}
       {children}
     </span>
   );
@@ -107,7 +144,7 @@ function EmptyState({ title, hint }) {
       <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 mx-auto mb-4 flex items-center justify-center text-xl">
         📭
       </div>
-      <p className="text-slate-700 font-semibold mb-1">{title}</p>
+      <p className="font-display text-slate-700 font-bold mb-1">{title}</p>
       {hint && <p className="text-slate-400 text-sm">{hint}</p>}
     </div>
   );
@@ -136,8 +173,10 @@ function PrimaryButton({ children, className = '', ...props }) {
   return (
     <button
       {...props}
-      className={`bg-[#0057E7] hover:bg-[#0A66FF] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-lg
-        shadow-sm hover:shadow-md transition-all duration-150 active:scale-[0.97] ${className}`}
+      className={`bg-gradient-to-b from-[#0A66FF] to-[#0049C6] hover:from-[#1372FF] hover:to-[#0057E7] disabled:opacity-40 disabled:pointer-events-none
+        text-white text-sm font-semibold px-4 py-2.5 rounded-[10px] tracking-tight
+        shadow-[0_1px_1px_rgba(0,0,0,0.05),0_6px_16px_-6px_rgba(0,87,231,0.55)] hover:shadow-[0_1px_1px_rgba(0,0,0,0.05),0_10px_22px_-6px_rgba(0,87,231,0.6)]
+        transition-all duration-150 active:scale-[0.97] ${className}`}
     >
       {children}
     </button>
@@ -148,8 +187,8 @@ function SecondaryButton({ children, ...props }) {
   return (
     <button
       {...props}
-      className="bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-medium px-4 py-2.5
-        rounded-lg border border-slate-200 transition-all duration-150 active:scale-[0.97]"
+      className="bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium px-4 py-2.5
+        rounded-[10px] border border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-150 active:scale-[0.97]"
     >
       {children}
     </button>
@@ -169,13 +208,13 @@ function LinkButton({ children, danger, ...props }) {
 }
 
 const inputClass =
-  'w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 ' +
-  'outline-none rounded-lg px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 transition';
+  'w-full bg-white border border-slate-200 focus:border-[#0057E7] focus:ring-4 focus:ring-[#0057E7]/10 ' +
+  'outline-none rounded-[10px] px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 transition-all duration-150 shadow-[0_1px_2px_rgba(15,23,42,0.03)]';
 
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-[0.1em]">{label}</label>
+      <label className="font-display block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-[0.12em]">{label}</label>
       {children}
     </div>
   );
@@ -183,10 +222,10 @@ function Field({ label, children }) {
 
 function Modal({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-2xl ring-1 ring-black/5">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200/80">
-          <h3 className="text-base font-bold text-slate-900 tracking-tight">{title}</h3>
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 animate-[fadeIn_0.15s_ease-out]">
+      <div className="bg-white border border-slate-200/70 rounded-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-[0_24px_60px_-12px_rgba(15,23,42,0.35)] ring-1 ring-black/5 animate-[modalIn_0.18s_cubic-bezier(0.16,1,0.3,1)]">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200/70">
+          <h3 className="font-display text-base font-bold text-slate-900 tracking-tight">{title}</h3>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400
@@ -197,6 +236,10 @@ function Modal({ title, onClose, children }) {
         </div>
         <div className="p-6">{children}</div>
       </div>
+      <style jsx>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      `}</style>
     </div>
   );
 }
@@ -240,7 +283,7 @@ function PageHeader({ title, subtitle, children }) {
   return (
     <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
       <div>
-        <h2 className="text-xl font-black text-slate-900 tracking-tight">{title}</h2>
+        <h2 className="font-display text-xl font-extrabold text-slate-900 tracking-tight">{title}</h2>
         {subtitle && <p className="text-slate-400 text-sm mt-0.5">{subtitle}</p>}
       </div>
       {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
@@ -469,32 +512,44 @@ function ManagerCard({ title, onClick, icon }) {
   return (
     <button
       onClick={onClick}
-      className="group flex items-center justify-between bg-white border border-slate-200/80 rounded-xl px-4 py-4
-        shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]
-        hover:border-slate-300 hover:-translate-y-[1px] transition-all duration-200 text-left"
+      className="group relative flex items-center justify-between bg-white border border-slate-200/70 rounded-[14px] px-4 py-4 overflow-hidden
+        shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_10px_28px_-8px_rgba(15,23,42,0.14)]
+        hover:border-[#0057E7]/25 hover:-translate-y-[2px] transition-all duration-200 ease-out text-left"
     >
-      <div>
-        <p className="text-slate-800 font-semibold text-[14px] mb-1">{title}</p>
-        <p className="text-[#0057E7] font-semibold text-[13px] leading-tight">
-          Open Manager
+      <div className="absolute -right-6 -top-6 w-20 h-20 rounded-full bg-blue-50/0 group-hover:bg-blue-50/70 transition-colors duration-300" />
+      <div className="relative">
+        <p className="font-display text-slate-800 font-bold text-[14px] mb-1 tracking-tight">{title}</p>
+        <p className="text-[#0057E7] font-semibold text-[12.5px] leading-tight inline-flex items-center gap-1">
+          Open manager
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="translate-x-0 group-hover:translate-x-0.5 transition-transform">
+            <path d="M5 12h14M13 5l7 7-7 7" />
+          </svg>
         </p>
       </div>
-      <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-400 group-hover:text-[#0057E7] group-hover:border-blue-200 group-hover:bg-blue-50 transition-colors shrink-0">
+      <div className="relative w-9 h-9 rounded-[10px] bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-400 group-hover:text-[#0057E7] group-hover:border-blue-200 group-hover:bg-white group-hover:shadow-sm transition-all shrink-0">
         {icon}
       </div>
     </button>
   );
 }
 
-function OverviewStatCard({ label, value, icon }) {
+function OverviewStatCard({ label, value, icon, tint = 'slate' }) {
+  const tints = {
+    slate: 'bg-slate-50 border-slate-200/70 text-slate-400',
+    blue: 'bg-blue-50 border-blue-200/60 text-[#0057E7]',
+    indigo: 'bg-indigo-50 border-indigo-200/60 text-indigo-600',
+    emerald: 'bg-emerald-50 border-emerald-200/60 text-emerald-600',
+    amber: 'bg-amber-50 border-amber-200/60 text-amber-600',
+    rose: 'bg-rose-50 border-rose-200/60 text-rose-500',
+  };
   return (
-    <div className="flex items-center justify-between bg-white border border-slate-200/80 rounded-xl px-4 py-4
-      shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)] hover:border-slate-300 transition-all duration-200">
+    <div className="flex items-center justify-between bg-white border border-slate-200/70 rounded-[14px] px-4 py-4
+      shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_20px_-8px_rgba(15,23,42,0.12)] hover:border-slate-300 hover:-translate-y-[1px] transition-all duration-200 ease-out">
       <div>
-        <p className="text-slate-500 font-medium text-[13px] mb-1.5">{label}</p>
-        <p className="text-slate-900 font-bold text-[22px] leading-none tracking-tight">{value}</p>
+        <p className="text-slate-500 font-medium text-[12.5px] mb-1.5 tracking-tight">{label}</p>
+        <p className="font-num text-slate-900 font-semibold text-[22px] leading-none">{value}</p>
       </div>
-      <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-300 shrink-0">
+      <div className={`w-9 h-9 rounded-[10px] border flex items-center justify-center shrink-0 ${tints[tint] || tints.slate}`}>
         {icon}
       </div>
     </div>
@@ -514,8 +569,9 @@ function OverviewTab({ courses, locations, applications, dashboardStats, tutors,
   return (
     <div>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
-        <h1 className="text-[19px] font-bold text-slate-900 tracking-tight">Overview</h1>
-        <div className="flex items-center gap-1.5 border border-slate-200 rounded-lg px-3 py-1.5 text-slate-500 font-medium text-[12px] bg-white shadow-sm">
+        <h1 className="font-display text-[19px] font-extrabold text-slate-900 tracking-tight">Overview</h1>
+        <div className="flex items-center gap-1.5 border border-slate-200 rounded-full px-3.5 py-1.5 text-slate-500 font-semibold text-[12px] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#0057E7]" />
           June 2026
         </div>
       </div>
@@ -527,17 +583,17 @@ function OverviewTab({ courses, locations, applications, dashboardStats, tutors,
         <ManagerCard title="Manage blog" onClick={() => onNavigate('blog')} icon={<BlogIcon />} />
 
         {/* Placeholders below (students/staff/graduates) show 0 until backend provides real counts */}
-        <OverviewStatCard label="No of students" value={0} icon={<GroupIcon />} />
-        <OverviewStatCard label="No of tutors" value={tutors.loading ? '—' : tutors.items.length} icon={<TutorIcon />} />
+        <OverviewStatCard label="No of students" value={0} icon={<GroupIcon />} tint="indigo" />
+        <OverviewStatCard label="No of tutors" value={tutors.loading ? '—' : tutors.items.length} icon={<TutorIcon />} tint="blue" />
 
-        <OverviewStatCard label="No of centers" value={locations.items.length} icon={<BuildingIcon />} />
-        <OverviewStatCard label="Courses" value={courses.items.length} icon={<CoursesIcon />} />
+        <OverviewStatCard label="No of centers" value={locations.items.length} icon={<BuildingIcon />} tint="slate" />
+        <OverviewStatCard label="Courses" value={courses.items.length} icon={<CoursesIcon />} tint="blue" />
 
-        <OverviewStatCard label="Current cohorts" value={dashboardStats.loading ? '—' : currentCohorts} icon={<CohortIcon />} />
-        <OverviewStatCard label="Completed cohorts" value={dashboardStats.loading ? '—' : completedCohorts} icon={<CheckBadgeIcon />} />
+        <OverviewStatCard label="Current cohorts" value={dashboardStats.loading ? '—' : currentCohorts} icon={<CohortIcon />} tint="emerald" />
+        <OverviewStatCard label="Completed cohorts" value={dashboardStats.loading ? '—' : completedCohorts} icon={<CheckBadgeIcon />} tint="slate" />
 
-        <OverviewStatCard label="New applicants" value={pending} icon={<NewApplicantIcon />} />
-        <OverviewStatCard label="Graduates" value={0} icon={<GradCapIcon />} />
+        <OverviewStatCard label="New applicants" value={pending} icon={<NewApplicantIcon />} tint="amber" />
+        <OverviewStatCard label="Graduates" value={0} icon={<GradCapIcon />} tint="indigo" />
       </div>
     </div>
   );
@@ -620,7 +676,7 @@ function CoursesTab({ courses }) {
                 {!c.image && <Pill color="rose">No image</Pill>}
               </div>
               <div className="pt-3 border-t border-slate-100">
-                <p className="text-slate-900 font-black text-lg tracking-tight">{formatMoney(c.fee)}</p>
+                <p className="font-num text-slate-900 font-bold text-lg">{formatMoney(c.fee)}</p>
               </div>
             </Card>
           ))}
@@ -815,8 +871,8 @@ function CohortsTab({ cohorts }) {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
-                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition-all duration-150 ${filter === f
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-[0_4px_10px_-2px_rgba(0,87,231,0.45)]'
                 : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
                 }`}
             >
@@ -1210,8 +1266,8 @@ function ApplicationsTab({ applications, token }) {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
-                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition-all duration-150 ${filter === f
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-[0_4px_10px_-2px_rgba(0,87,231,0.45)]'
                 : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
                 }`}
             >
@@ -1230,9 +1286,9 @@ function ApplicationsTab({ applications, token }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
+                <tr className="border-b border-slate-200/80 bg-slate-50/60 text-left">
                   {['Applicant', 'Course', 'Mode', 'Fee', 'Payment', 'Date', ''].map((h, i) => (
-                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
+                    <th key={i} className="px-5 py-3.5 font-display text-[10.5px] font-bold text-slate-500 uppercase tracking-[0.1em] whitespace-nowrap">
                       {h}
                     </th>
                   ))}
@@ -1247,7 +1303,7 @@ function ApplicationsTab({ applications, token }) {
                   const date = formatDate(a.created_at);
                   const canConfirm = a.payment?.status === 'awaiting_confirmation';
                   return (
-                    <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
+                    <tr key={a.id} className="border-b border-slate-100/80 hover:bg-blue-50/25 transition-colors last:border-0">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           {name ? (
@@ -1271,7 +1327,7 @@ function ApplicationsTab({ applications, token }) {
                       <td className="px-5 py-4">
                         {mode ? <ModePill mode={mode} /> : <span className="text-slate-400 text-xs">—</span>}
                       </td>
-                      <td className="px-5 py-4 text-slate-800 font-bold">
+                      <td className="px-5 py-4 font-num text-slate-800 font-semibold">
                         {a.payment ? formatMoney(a.payment.confirmed_amount || a.payment.amount) : formatMoney(getCourseFee(a))}
                       </td>
                       <td className="px-5 py-4">
@@ -1357,15 +1413,15 @@ function ExamsTab({ exams, cohorts, courses }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
+                <tr className="border-b border-slate-200/80 bg-slate-50/60 text-left">
                   {['Title', 'Course', 'Cohort', 'Type', 'Start', 'Due', 'Status', ''].map((h, i) => (
-                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                    <th key={i} className="px-5 py-3.5 font-display text-[10.5px] font-bold text-slate-500 uppercase tracking-[0.1em] whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {exams.items.map((e) => (
-                  <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
+                  <tr key={e.id} className="border-b border-slate-100/80 hover:bg-blue-50/25 transition-colors last:border-0">
                     <td className="px-5 py-4 text-slate-800 font-semibold">{e.title}</td>
                     <td className="px-5 py-4 text-slate-500">{getCourseName(e)}</td>
                     <td className="px-5 py-4 text-slate-500">{getCohortName(e)}</td>
@@ -1518,8 +1574,8 @@ function ResultsTab({ results, exams, applications }) {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
-                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition-all duration-150 ${filter === f
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-[0_4px_10px_-2px_rgba(0,87,231,0.45)]'
                 : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
                 }`}
             >
@@ -1537,18 +1593,18 @@ function ResultsTab({ results, exams, applications }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
+                <tr className="border-b border-slate-200/80 bg-slate-50/60 text-left">
                   {['Student', 'Exam', 'Score', 'Status', 'Submitted', ''].map((h, i) => (
-                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                    <th key={i} className="px-5 py-3.5 font-display text-[10.5px] font-bold text-slate-500 uppercase tracking-[0.1em] whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
+                  <tr key={r.id} className="border-b border-slate-100/80 hover:bg-blue-50/25 transition-colors last:border-0">
                     <td className="px-5 py-4 text-slate-800 font-semibold">{getStudentName(r)}</td>
                     <td className="px-5 py-4 text-slate-500">{getExamTitle(r)}</td>
-                    <td className="px-5 py-4 text-slate-800 font-bold">{r.score ?? '—'}</td>
+                    <td className="px-5 py-4 font-num text-slate-800 font-semibold">{r.score ?? '—'}</td>
                     <td className="px-5 py-4"><Pill color={statusColor[r.status] || 'slate'}>{r.status}</Pill></td>
                     <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDate(r.submitted_at) || '—'}</td>
                     <td className="px-5 py-4 text-right whitespace-nowrap">
@@ -1643,21 +1699,21 @@ function FinancesTab({ applications }) {
       <PageHeader title="Finances" subtitle={`${paymentsList.length} payment record${paymentsList.length !== 1 ? 's' : ''}`} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="bg-white border border-slate-200/70 rounded-[14px] px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_20px_-8px_rgba(15,23,42,0.12)] hover:-translate-y-[1px] transition-all duration-200">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Confirmed revenue</p>
-          <p className="text-emerald-600 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.confirmed)}</p>
+          <p className="font-num text-emerald-600 font-bold text-[20px] leading-none">{formatMoney(totals.confirmed)}</p>
         </div>
-        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="bg-white border border-slate-200/70 rounded-[14px] px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_20px_-8px_rgba(15,23,42,0.12)] hover:-translate-y-[1px] transition-all duration-200">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Awaiting confirmation</p>
-          <p className="text-amber-600 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.awaiting)}</p>
+          <p className="font-num text-amber-600 font-bold text-[20px] leading-none">{formatMoney(totals.awaiting)}</p>
         </div>
-        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="bg-white border border-slate-200/70 rounded-[14px] px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_20px_-8px_rgba(15,23,42,0.12)] hover:-translate-y-[1px] transition-all duration-200">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Pending</p>
-          <p className="text-slate-700 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.pending)}</p>
+          <p className="font-num text-slate-700 font-bold text-[20px] leading-none">{formatMoney(totals.pending)}</p>
         </div>
-        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="bg-white border border-slate-200/70 rounded-[14px] px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_8px_20px_-8px_rgba(15,23,42,0.12)] hover:-translate-y-[1px] transition-all duration-200">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Expired / Failed</p>
-          <p className="text-rose-600 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.expiredOrFailed)}</p>
+          <p className="font-num text-rose-600 font-bold text-[20px] leading-none">{formatMoney(totals.expiredOrFailed)}</p>
         </div>
       </div>
 
@@ -1666,8 +1722,8 @@ function FinancesTab({ applications }) {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
-                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+            className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition-all duration-150 ${filter === f
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-[0_4px_10px_-2px_rgba(0,87,231,0.45)]'
                 : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
               }`}
           >
@@ -1683,9 +1739,9 @@ function FinancesTab({ applications }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
+                <tr className="border-b border-slate-200/80 bg-slate-50/60 text-left">
                   {['Applicant', 'Reference', 'Method', 'Amount', 'Confirmed', 'Status', 'Date'].map((h, i) => (
-                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
+                    <th key={i} className="px-5 py-3.5 font-display text-[10.5px] font-bold text-slate-500 uppercase tracking-[0.1em] whitespace-nowrap">
                       {h}
                     </th>
                   ))}
@@ -1696,7 +1752,7 @@ function FinancesTab({ applications }) {
                   const p = a.payment;
                   const name = getApplicantName(a);
                   return (
-                    <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
+                    <tr key={p.id} className="border-b border-slate-100/80 hover:bg-blue-50/25 transition-colors last:border-0">
                       <td className="px-5 py-4 text-slate-800 font-semibold">{name || '—'}</td>
                       <td className="px-5 py-4 text-slate-500 text-xs font-mono">{p.tx_ref}</td>
                       <td className="px-5 py-4">
@@ -1704,7 +1760,7 @@ function FinancesTab({ applications }) {
                           {methodLabel[p.method] || p.method}
                         </Pill>
                       </td>
-                      <td className="px-5 py-4 text-slate-800 font-bold">{formatMoney(p.amount)}</td>
+                      <td className="px-5 py-4 font-num text-slate-800 font-semibold">{formatMoney(p.amount)}</td>
                       <td className="px-5 py-4 text-slate-600">
                         {p.confirmed_amount ? formatMoney(p.confirmed_amount) : '—'}
                       </td>
@@ -1762,15 +1818,17 @@ function Sidebar({ open, onClose, tab, setTab }) {
         />
       )}
       <aside
-        className={`fixed lg:static top-20 lg:top-0 left-0 h-[calc(100vh-5rem)] lg:h-screen w-64 z-50 flex flex-col border-r border-blue-900/40
+        className={`fixed lg:static top-20 lg:top-0 left-0 h-[calc(100vh-5rem)] lg:h-screen w-64 z-50 flex flex-col border-r border-black/20
           transition-transform duration-200 ease-out
           ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
-        style={{ background: '#152035' }}
+        style={{ background: 'linear-gradient(180deg, #17233B 0%, #101A2E 55%, #0C1526 100%)' }}
       >
-        <div className="flex items-center justify-between px-5 pt-6 pb-5 border-b border-blue-900/30">
-          <div className="flex items-center gap-2">
-            <Image src="/logo.webp" alt="LASOP Logo" width={28} height={28} />
-            <span className="text-white font-bold text-[15px] tracking-wide">LASOP</span>
+        <div className="flex items-center justify-between px-5 pt-6 pb-5 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-white/[0.06] border border-white/[0.08] flex items-center justify-center p-1">
+              <Image src="/logo.webp" alt="LASOP Logo" width={22} height={22} />
+            </div>
+            <span className="font-display text-white font-extrabold text-[15px] tracking-wide">LASOP</span>
           </div>
           <button onClick={onClose} className="text-slate-400 lg:hidden" aria-label="Close menu">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -1789,12 +1847,12 @@ function Sidebar({ open, onClose, tab, setTab }) {
               <button
                 key={item.key}
                 onClick={() => { setTab(item.key); onClose(); }}
-                className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-lg transition-all duration-150 ${active
-                  ? 'bg-white text-[#0057E7] font-semibold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
+                className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-[9px] transition-all duration-150 ${active
+                  ? 'bg-white text-[#0057E7] font-semibold shadow-[0_4px_14px_-2px_rgba(0,0,0,0.3)]'
+                  : 'text-slate-300/90 hover:bg-white/[0.06] hover:text-white font-medium'
                   }`}
               >
-                {active && <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[#0057E7]" />}
+                {active && <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[#0057E7] shadow-[0_0_8px_rgba(0,87,231,0.7)]" />}
                 <NavIcon path={item.icon} />
                 {item.label}
               </button>
@@ -1802,8 +1860,8 @@ function Sidebar({ open, onClose, tab, setTab }) {
           })}
         </nav>
 
-        <div className="px-2.5 pb-5 pt-2 border-t border-blue-900/30">
-          <button className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-400 hover:text-white px-3 py-2 rounded-lg hover:bg-white/[0.08] transition-colors mt-2">
+        <div className="px-2.5 pb-5 pt-2 border-t border-white/[0.06]">
+          <button className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-400 hover:text-white px-3 py-2 rounded-[9px] hover:bg-white/[0.06] transition-colors mt-2">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
               <path d="M16 17l5-5-5-5M21 12H9" />
@@ -1836,30 +1894,31 @@ function Sidebar({ open, onClose, tab, setTab }) {
 
 function TopBar({ onMenuClick, title }) {
   return (
-    <header className="bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70 border-b border-slate-200 px-4 lg:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
+    <header className="bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70 border-b border-slate-200/80 px-4 lg:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
       <div className="flex items-center gap-3">
-        <button onClick={onMenuClick} aria-label="Menu" className="text-slate-500 hover:text-slate-700 transition-colors">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+        <button onClick={onMenuClick} aria-label="Menu" className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 -ml-1 p-1.5 rounded-lg transition-colors">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
         </button>
-        <p className="text-slate-800 font-semibold text-[14px] hidden sm:block tracking-tight">{title}</p>
+        <p className="font-display text-slate-800 font-bold text-[14px] hidden sm:block tracking-tight">{title}</p>
       </div>
 
-      <div className="flex items-center gap-4">
-        <button aria-label="Messages" className="text-slate-400 hover:text-slate-600 transition-colors">
+      <div className="flex items-center gap-1">
+        <button aria-label="Messages" className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-lg transition-colors">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
           </svg>
         </button>
-        <button aria-label="Notifications" className="text-slate-400 hover:text-slate-600 transition-colors">
+        <button aria-label="Notifications" className="relative text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-lg transition-colors">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 01-3.46 0" />
           </svg>
         </button>
-        <button className="flex items-center gap-1.5 text-slate-700 font-medium text-[13px]">
-          Admin
+        <button className="flex items-center gap-2 text-slate-700 font-semibold text-[13px] ml-2 pl-3 border-l border-slate-200">
+          <span className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0A66FF] to-[#0043B3] text-white text-[11px] font-bold flex items-center justify-center shadow-sm">A</span>
+          <span className="hidden sm:inline">Admin</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9l6 6 6-6" />
           </svg>
@@ -1952,7 +2011,8 @@ export default function BackstagePage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50 pt-20">
+    <div className="min-h-screen flex bg-[#F7F8FA] pt-20">
+      <GlobalType />
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} />
 
       <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
@@ -1994,7 +2054,7 @@ export default function BackstagePage() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat on WhatsApp"
-        className="fixed bottom-5 right-5 w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 z-30"
+        className="fixed bottom-5 right-5 w-12 h-12 rounded-full bg-[#25D366] ring-4 ring-white flex items-center justify-center shadow-[0_8px_24px_-6px_rgba(37,211,102,0.55)] hover:shadow-[0_10px_28px_-4px_rgba(37,211,102,0.65)] hover:-translate-y-0.5 transition-all duration-200 z-30"
       >
         <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
           <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.47 3.47 1.29 4.93L2 22l5.29-1.39a9.9 9.9 0 004.75 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.79 14.02c-.24.68-1.4 1.3-1.93 1.38-.49.08-1.11.11-1.79-.11-.41-.13-.94-.3-1.62-.6-2.84-1.23-4.7-4.1-4.84-4.29-.14-.19-1.16-1.54-1.16-2.94 0-1.4.73-2.08 1-2.37.24-.27.53-.34.71-.34.18 0 .35 0 .5.01.16.01.38-.06.6.46.24.57.81 1.97.88 2.11.07.14.11.3.02.49-.09.19-.14.3-.27.46-.14.16-.29.36-.41.48-.14.14-.28.29-.12.57.16.28.71 1.17 1.52 1.9 1.05.94 1.93 1.23 2.21 1.37.28.14.44.12.6-.07.16-.19.68-.79.87-1.06.18-.27.36-.22.6-.13.24.09 1.55.73 1.82.86.27.13.45.19.51.3.07.13.07.7-.17 1.38z" />
