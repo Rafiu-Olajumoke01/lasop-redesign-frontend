@@ -326,18 +326,19 @@ const save = async (payload, existingItem) => {
 
     if (!res.ok) {
       let details = '';
+      const rawText = await res.text();
       try {
-        const errorData = await res.json();
-        console.error(`${label} save failed:`, errorData); // <-- full error visible in browser console
+        const errorData = JSON.parse(rawText);
+        console.error(`${label} save failed (JSON):`, errorData);
         details = Object.entries(errorData)
           .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
           .join(' | ');
       } catch {
-        details = `HTTP ${res.status}`;
+        console.error(`${label} save failed (raw response):`, rawText); // <-- full Django traceback lands here
+        details = `HTTP ${res.status} — check browser console for full error`;
       }
       throw new Error(details || 'Save failed. Check the fields and try again.');
     }
-
     await refresh();
   };
 
