@@ -22,7 +22,6 @@ function useTutorProfile(token) {
       });
       if (!res.ok) throw new Error('Could not load your profile.');
       const data = await res.json();
-      // Flatten user_detail into the top level so components can just use tutor.first_name etc.
       setTutor({
         ...data,
         first_name: data.user_detail?.first_name || '',
@@ -265,10 +264,58 @@ const ICONS = {
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" /> },
   { key: 'cohorts', label: 'Cohorts', icon: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M8 2v4M16 2v4M3 10h18" /></> },
+  { key: 'messages', label: 'Message', icon: <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" /> },
   { key: 'queries', label: 'Queries', icon: <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><path d="M12 9v4M12 17h.01" /></> },
   { key: 'settings', label: 'Settings', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></> },
   { key: 'profile', label: 'Profile', icon: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" /></> },
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Message tab — nav item + 4 sub-tabs (All, Admin, Cohorts, Private), per
+// admin's instruction. No Message/Conversation model exists yet, so each
+// sub-tab is an honest "coming soon" state for now.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function MessageTab() {
+  const [subTab, setSubTab] = useState('all');
+  const subTabs = [
+    { key: 'all', label: 'All' },
+    { key: 'admin', label: 'Admin' },
+    { key: 'cohorts', label: 'Cohorts' },
+    { key: 'private', label: 'Private' },
+  ];
+
+  const hints = {
+    all: 'Every conversation you\u2019re part of will show up here.',
+    admin: 'Your direct conversation with admin will show up here.',
+    cohorts: 'Group chats for your cohorts will show up here.',
+    private: 'One-to-one conversations with students will show up here.',
+  };
+
+  return (
+    <div>
+      <PageHeader title="Message" subtitle="Talk to admin and students directly">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {subTabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setSubTab(t.key)}
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${subTab === t.key
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </PageHeader>
+      <Card>
+        <EmptyState title="Coming soon" hint={hints[subTab]} />
+      </Card>
+    </div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Dashboard tab
@@ -278,8 +325,6 @@ function DashboardTab({ tutor, statsData, cohortsData, setTab }) {
   const { stats, loading: statsLoading, error: statsError } = statsData;
   const { cohorts, loading: cohortsLoading, error: cohortsError } = cohortsData;
 
-  // "Ongoing" = anything not yet completed, based on the real current_stage_label
-  // the Cohort model already calculates (see cohorts/models.py current_stage).
   const ongoing = cohorts.filter((c) => c.current_stage_label && c.current_stage_label !== 'Completed');
 
   return (
@@ -339,8 +384,7 @@ function DashboardTab({ tutor, statsData, cohortsData, setTab }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Cohorts tab — real cohort data; roster/attendance not built yet, so kept
-// as a clear "coming soon" instead of fake interactive controls.
+// Cohorts tab
 // ═══════════════════════════════════════════════════════════════════════════
 
 function CohortsTab({ cohorts, loading, error }) {
@@ -391,8 +435,7 @@ function CohortsTab({ cohorts, loading, error }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Settings tab — only bio / profile picture are real; email & password
-// have no backend endpoint yet, so they're marked coming soon.
+// Settings tab
 // ═══════════════════════════════════════════════════════════════════════════
 
 function SettingsTab({ tutor, updateProfile }) {
@@ -688,6 +731,7 @@ export default function TutorPortalPage() {
             {tab === 'cohorts' && (
               <CohortsTab cohorts={cohortsData.cohorts} loading={cohortsData.loading} error={cohortsData.error} />
             )}
+            {tab === 'messages' && <MessageTab />}
             {tab === 'queries' && (
               <ComingSoon title="Queries" hint="This will be wired up once the Query model is built on the backend." />
             )}
