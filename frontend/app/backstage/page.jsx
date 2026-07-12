@@ -302,6 +302,10 @@ const save = async (payload, existingItem) => {
         if (value === undefined || value === null) return;
         if (value instanceof File) {
           formData.append(key, value);
+        } else if (key === 'cohorts' && Array.isArray(value)) {
+          // Many-to-many relationship fields need each ID sent as its own
+          // entry, not one JSON string, or Django rejects it.
+          value.forEach((id) => formData.append('cohorts', id));
         } else if (Array.isArray(value) || typeof value === 'object') {
           formData.append(key, JSON.stringify(value));
         } else {
