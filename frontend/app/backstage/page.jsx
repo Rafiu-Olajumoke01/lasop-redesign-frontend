@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -49,7 +48,7 @@ function slugify(text) {
 function Card({ children, className = '', interactive = false }) {
   return (
     <div
-      className={`bg-white border border-slate-200/80 rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)]
+      className={`bg-white border border-slate-200/80 rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)]
         ${interactive ? 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)] hover:border-slate-300 hover:-translate-y-[1px] transition-all duration-200' : ''}
         ${className}`}
     >
@@ -104,7 +103,7 @@ function PaymentPill({ payment }) {
 function EmptyState({ title, hint }) {
   return (
     <div className="py-20 text-center">
-      <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 mx-auto mb-4 flex items-center justify-center text-xl">
+      <div className="w-12 h-12 rounded-lg bg-slate-50 border border-slate-200/80 mx-auto mb-4 flex items-center justify-center text-xl">
         📭
       </div>
       <p className="text-slate-700 font-semibold mb-1">{title}</p>
@@ -125,7 +124,7 @@ function Spinner({ text }) {
 function ErrorBanner({ message }) {
   if (!message) return null;
   return (
-    <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-3 mb-5">
+    <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-lg px-4 py-3 mb-5">
       <span className="mt-0.5 shrink-0">⚠</span>
       {message}
     </div>
@@ -136,7 +135,7 @@ function PrimaryButton({ children, className = '', ...props }) {
   return (
     <button
       {...props}
-      className={`bg-[#0057E7] hover:bg-[#0A66FF] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-lg
+      className={`bg-[#0057E7] hover:bg-[#0A66FF] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-md
         shadow-sm hover:shadow-md transition-all duration-150 active:scale-[0.97] ${className}`}
     >
       {children}
@@ -149,7 +148,7 @@ function SecondaryButton({ children, ...props }) {
     <button
       {...props}
       className="bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-medium px-4 py-2.5
-        rounded-lg border border-slate-200 transition-all duration-150 active:scale-[0.97]"
+        rounded-md border border-slate-200 transition-all duration-150 active:scale-[0.97]"
     >
       {children}
     </button>
@@ -170,7 +169,7 @@ function LinkButton({ children, danger, ...props }) {
 
 const inputClass =
   'w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 ' +
-  'outline-none rounded-lg px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 transition';
+  'outline-none rounded-md px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 transition';
 
 function Field({ label, children }) {
   return (
@@ -184,12 +183,12 @@ function Field({ label, children }) {
 function Modal({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-2xl ring-1 ring-black/5">
+      <div className="bg-white border border-slate-200 rounded-xl w-full max-w-lg max-h-[88vh] overflow-y-auto shadow-2xl ring-1 ring-black/5">
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200/80">
           <h3 className="text-base font-bold text-slate-900 tracking-tight">{title}</h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400
+            className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400
               hover:text-slate-700 hover:bg-slate-100 transition text-sm"
           >
             ✕
@@ -240,7 +239,7 @@ function PageHeader({ title, subtitle, children }) {
   return (
     <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
       <div>
-        <h2 className="text-xl font-black text-slate-900 tracking-tight">{title}</h2>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h2>
         {subtitle && <p className="text-slate-400 text-sm mt-0.5">{subtitle}</p>}
       </div>
       {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
@@ -469,7 +468,7 @@ function ManagerCard({ title, onClick, icon }) {
   return (
     <button
       onClick={onClick}
-      className="group flex items-center justify-between bg-white border border-slate-200/80 rounded-xl px-4 py-4
+      className="group flex items-center justify-between bg-white border border-slate-200/80 rounded-lg px-4 py-4
         shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]
         hover:border-slate-300 hover:-translate-y-[1px] transition-all duration-200 text-left"
     >
@@ -479,7 +478,7 @@ function ManagerCard({ title, onClick, icon }) {
           Open Manager
         </p>
       </div>
-      <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-400 group-hover:text-[#0057E7] group-hover:border-blue-200 group-hover:bg-blue-50 transition-colors shrink-0">
+      <div className="w-9 h-9 rounded-md bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-400 group-hover:text-[#0057E7] group-hover:border-blue-200 group-hover:bg-blue-50 transition-colors shrink-0">
         {icon}
       </div>
     </button>
@@ -488,13 +487,13 @@ function ManagerCard({ title, onClick, icon }) {
 
 function OverviewStatCard({ label, value, icon }) {
   return (
-    <div className="flex items-center justify-between bg-white border border-slate-200/80 rounded-xl px-4 py-4
+    <div className="flex items-center justify-between bg-white border border-slate-200/80 rounded-lg px-4 py-4
       shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)] hover:border-slate-300 transition-all duration-200">
       <div>
         <p className="text-slate-500 font-medium text-[13px] mb-1.5">{label}</p>
         <p className="text-slate-900 font-bold text-[22px] leading-none tracking-tight">{value}</p>
       </div>
-      <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-300 shrink-0">
+      <div className="w-9 h-9 rounded-md bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-300 shrink-0">
         {icon}
       </div>
     </div>
@@ -515,7 +514,7 @@ function OverviewTab({ courses, locations, applications, dashboardStats, tutors,
     <div>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
         <h1 className="text-[19px] font-bold text-slate-900 tracking-tight">Overview</h1>
-        <div className="flex items-center gap-1.5 border border-slate-200 rounded-lg px-3 py-1.5 text-slate-500 font-medium text-[12px] bg-white shadow-sm">
+        <div className="flex items-center gap-1.5 border border-slate-200 rounded-md px-3 py-1.5 text-slate-500 font-medium text-[12px] bg-white shadow-sm">
           June 2026
         </div>
       </div>
@@ -599,7 +598,7 @@ function CoursesTab({ courses }) {
           {courses.items.map((c) => (
             <Card key={c.id} interactive className="p-5">
               {c.image && (
-                <div className="w-full h-32 rounded-lg overflow-hidden mb-3 bg-slate-100">
+                <div className="w-full h-32 rounded-md overflow-hidden mb-3 bg-slate-100">
                   <img src={`${API_BASE}${c.image}`} alt={c.title} className="w-full h-full object-cover" />
                 </div>
               )}
@@ -635,7 +634,7 @@ function CoursesTab({ courses }) {
             <Field label="Course image">
               <div className="flex items-center gap-3">
                 {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-lg object-cover border border-slate-200" />
+                  <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-md object-cover border border-slate-200" />
                 )}
                 <input type="file" accept="image/*" onChange={handleImageChange} className={inputClass} />
               </div>
@@ -1133,7 +1132,7 @@ function TutorsTab({ tutors, cohorts }) {
             )}
 
             <Field label="Assigned cohorts">
-              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-2.5">
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto border border-slate-200 rounded-md p-2.5">
                 {cohorts.items.length === 0 && <span className="text-slate-400 text-xs">No cohorts exist yet</span>}
                 {cohorts.items.map((c) => {
                   const checked = form.cohorts.includes(c.id);
@@ -1287,7 +1286,7 @@ function ApplicationsTab({ applications, token }) {
                             disabled={confirmingId === a.id}
                             className="text-[12px] font-semibold text-emerald-700 hover:text-emerald-800
                               border border-emerald-300 hover:border-emerald-400 bg-emerald-50
-                              px-3 py-1.5 rounded-lg transition disabled:opacity-40 mr-3"
+                              px-3 py-1.5 rounded-md transition disabled:opacity-40 mr-3"
                           >
                             {confirmingId === a.id ? 'Confirming…' : 'Mark as paid'}
                           </button>
@@ -1643,19 +1642,19 @@ function FinancesTab({ applications }) {
       <PageHeader title="Finances" subtitle={`${paymentsList.length} payment record${paymentsList.length !== 1 ? 's' : ''}`} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="bg-white border border-slate-200/80 rounded-lg px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Confirmed revenue</p>
           <p className="text-emerald-600 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.confirmed)}</p>
         </div>
-        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="bg-white border border-slate-200/80 rounded-lg px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Awaiting confirmation</p>
           <p className="text-amber-600 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.awaiting)}</p>
         </div>
-        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="bg-white border border-slate-200/80 rounded-lg px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Pending</p>
           <p className="text-slate-700 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.pending)}</p>
         </div>
-        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="bg-white border border-slate-200/80 rounded-lg px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <p className="text-slate-500 font-medium text-[13px] mb-1.5">Expired / Failed</p>
           <p className="text-rose-600 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.expiredOrFailed)}</p>
         </div>
@@ -1768,11 +1767,8 @@ function Sidebar({ open, onClose, tab, setTab }) {
         style={{ background: '#152035' }}
       >
         <div className="flex items-center justify-between px-5 pt-6 pb-5 border-b border-blue-900/30">
-          <div className="flex items-center gap-2">
-            <Image src="/logo.webp" alt="LASOP Logo" width={28} height={28} />
-            <span className="text-white font-bold text-[15px] tracking-wide">LASOP</span>
-          </div>
-          <button onClick={onClose} className="text-slate-400 lg:hidden" aria-label="Close menu">
+          <span className="text-slate-400 font-bold text-[11px] uppercase tracking-[0.16em]">Admin Panel</span>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors lg:hidden" aria-label="Close menu">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -1789,7 +1785,7 @@ function Sidebar({ open, onClose, tab, setTab }) {
               <button
                 key={item.key}
                 onClick={() => { setTab(item.key); onClose(); }}
-                className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-lg transition-all duration-150 ${active
+                className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-all duration-150 ${active
                   ? 'bg-white text-[#0057E7] font-semibold shadow-sm'
                   : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
                   }`}
@@ -1803,7 +1799,7 @@ function Sidebar({ open, onClose, tab, setTab }) {
         </nav>
 
         <div className="px-2.5 pb-5 pt-2 border-t border-blue-900/30">
-          <button className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-400 hover:text-white px-3 py-2 rounded-lg hover:bg-white/[0.08] transition-colors mt-2">
+          <button className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/[0.08] transition-colors mt-2">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
               <path d="M16 17l5-5-5-5M21 12H9" />
@@ -1846,19 +1842,21 @@ function TopBar({ onMenuClick, title }) {
         <p className="text-slate-800 font-semibold text-[14px] hidden sm:block tracking-tight">{title}</p>
       </div>
 
-      <div className="flex items-center gap-4">
-        <button aria-label="Messages" className="text-slate-400 hover:text-slate-600 transition-colors">
+      <div className="flex items-center gap-1.5">
+        <button aria-label="Messages" className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors rounded-md p-2">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
           </svg>
         </button>
-        <button aria-label="Notifications" className="text-slate-400 hover:text-slate-600 transition-colors">
+        <button aria-label="Notifications" className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors rounded-md p-2">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 01-3.46 0" />
           </svg>
         </button>
-        <button className="flex items-center gap-1.5 text-slate-700 font-medium text-[13px]">
+        <span className="w-px h-5 bg-slate-200 mx-1" />
+        <button className="flex items-center gap-1.5 text-slate-700 font-medium text-[13px] hover:bg-slate-100 transition-colors rounded-md px-2 py-1.5">
+          <span className="w-6 h-6 rounded-full bg-[#0057E7] text-white text-[11px] font-bold flex items-center justify-center">A</span>
           Admin
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9l6 6 6-6" />
