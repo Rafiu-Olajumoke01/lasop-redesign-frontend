@@ -121,6 +121,96 @@ function useTutorCohorts(token) {
   return { cohorts, loading, error };
 }
 
+// ── Class sessions for a given cohort (tutor's own) ─────────────────────────
+
+function useCohortSessions(token, cohortId) {
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    if (!cohortId) return;
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/sessions/?cohort=${cohortId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load sessions.');
+      const data = await res.json();
+      const all = Array.isArray(data) ? data : data.results || [];
+      // Defensive client-side filter in case the backend doesn't yet
+      // support ?cohort= filtering and returns every session for this tutor.
+      setSessions(all.filter((s) => s.cohort === cohortId));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, cohortId]);
+
+  useEffect(() => { if (token && cohortId) refresh(); }, [token, cohortId, refresh]);
+
+  const createSession = async (payload) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/sessions/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ...payload, cohort: cohortId }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Session create failed:', text);
+      throw new Error('Could not create session.');
+    }
+    await refresh();
+  };
+
+  return { sessions, loading, error, refresh, createSession };
+}
+
+// ── Roster + attendance for a single session ─────────────────────────────────
+
+function useSessionAttendance(token, sessionId) {
+  const [roster, setRoster] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!sessionId) return;
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/sessions/${sessionId}/roster/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load the roster.');
+      setRoster(await res.json());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, sessionId]);
+
+  useEffect(() => { if (token && sessionId) refresh(); }, [token, sessionId, refresh]);
+
+  const submitAttendance = async (records) => {
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/sessions/${sessionId}/attendance/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ records }),
+      });
+      if (!res.ok) throw new Error('Could not save attendance.');
+      return await res.json();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return { roster, loading, error, saving, refresh, submitAttendance };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Shared UI — mirrors Backstage's component set
 // ═══════════════════════════════════════════════════════════════════════════
@@ -384,28 +474,236 @@ function DashboardTab({ tutor, statsData, cohortsData, setTab }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Cohorts tab
+// Cohorts tab — now with class sessions + attendance
 // ═══════════════════════════════════════════════════════════════════════════
 
-function CohortsTab({ cohorts, loading, error }) {
+const emptySession = { topic: '', date: '', start_time: '', end_time: '' };
+
+function SessionAttendanceView({ token, session, onBack }) {
+  const { roster, loading, error, saving, submitAttendance } = useSessionAttendance(token, session.id);
+  const [statuses, setStatuses] = useState({});
+  const [saveErr, setSaveErr] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (roster.length) {
+      const initial = {};
+      roster.forEach((r) => { initial[r.application_id] = statuses[r.application_id] || 'present'; });
+      setStatuses((prev) => ({ ...initial, ...prev }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roster]);
+
+  const setStatus = (appId, status) => setStatuses((prev) => ({ ...prev, [appId]: status }));
+
+  const handleSubmit = async () => {
+    setSaveErr(''); setSaved(false);
+    try {
+      const records = roster.map((r) => ({
+        application: r.application_id,
+        status: statuses[r.application_id] || 'present',
+      }));
+      await submitAttendance(records);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e) {
+      setSaveErr(e.message);
+    }
+  };
+
+  const statusStyles = {
+    present: 'border-emerald-500 bg-emerald-500 text-white',
+    late: 'border-amber-500 bg-amber-500 text-white',
+    absent: 'border-rose-500 bg-rose-500 text-white',
+  };
+
+  return (
+    <div>
+      <button onClick={onBack} className="text-[#0057E7] text-sm font-semibold mb-4 flex items-center gap-1.5 hover:underline">
+        <Icon path={<path d="M15 18l-6-6 6-6" />} size={16} /> Back to sessions
+      </button>
+      <PageHeader
+        title={session.topic || 'Class session'}
+        subtitle={`${session.date} · ${session.start_time}–${session.end_time}`}
+      />
+
+      {saved && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3 mb-4">
+          Attendance saved
+        </div>
+      )}
+      <ErrorBanner message={error || saveErr} />
+
+      {loading ? (
+        <Spinner text="Loading roster…" />
+      ) : roster.length === 0 ? (
+        <Card><EmptyState title="No students enrolled" hint="This cohort has no applications yet." /></Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="divide-y divide-slate-100">
+            {roster.map((r) => (
+              <div key={r.application_id} className="flex items-center justify-between px-5 py-3.5 flex-wrap gap-3">
+                <div>
+                  <p className="text-slate-800 font-semibold text-sm">{r.student_name}</p>
+                  <p className="text-slate-400 text-xs">{r.student_email}</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {['present', 'late', 'absent'].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setStatus(r.application_id, s)}
+                      className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border capitalize transition ${
+                        (statuses[r.application_id] || 'present') === s
+                          ? statusStyles[s]
+                          : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {roster.length > 0 && (
+        <PrimaryButton className="mt-5" onClick={handleSubmit} disabled={saving}>
+          {saving ? 'Saving…' : 'Save attendance'}
+        </PrimaryButton>
+      )}
+    </div>
+  );
+}
+
+function CohortSessionsView({ token, cohort, onBack }) {
+  const { sessions, loading, error, createSession } = useCohortSessions(token, cohort.id);
+  const [openSession, setOpenSession] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState(emptySession);
+  const [saving, setSaving] = useState(false);
+  const [formErr, setFormErr] = useState('');
+
+  if (openSession) {
+    return <SessionAttendanceView token={token} session={openSession} onBack={() => setOpenSession(null)} />;
+  }
+
+  const handleCreate = async () => {
+    setSaving(true); setFormErr('');
+    try {
+      await createSession(form);
+      setForm(emptySession);
+      setModalOpen(false);
+    } catch (e) {
+      setFormErr(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={onBack} className="text-[#0057E7] text-sm font-semibold mb-4 flex items-center gap-1.5 hover:underline">
+        <Icon path={<path d="M15 18l-6-6 6-6" />} size={16} /> Back to cohorts
+      </button>
+      <PageHeader
+        title={cohort.name}
+        subtitle={`${cohort.current_stage_label} · ${cohort.student_count ?? 0} students`}
+      >
+        <PrimaryButton onClick={() => setModalOpen(true)}>+ New session</PrimaryButton>
+      </PageHeader>
+
+      <ErrorBanner message={error} />
+
+      {loading ? (
+        <Spinner text="Loading sessions…" />
+      ) : sessions.length === 0 ? (
+        <Card>
+          <EmptyState
+            title="No class sessions yet"
+            hint="Create your first session for this cohort to start marking attendance."
+          />
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {sessions.map((s) => (
+            <Card key={s.id} className="p-5 hover:border-slate-300 transition-colors">
+              <div className="flex items-start justify-between mb-2">
+                <h3 className="text-slate-900 font-bold text-[15px]">{s.topic || 'Untitled session'}</h3>
+                <Pill color="blue">{s.duration_hours}h</Pill>
+              </div>
+              <p className="text-slate-400 text-xs mb-4">{s.date} · {s.start_time}–{s.end_time}</p>
+              <SecondaryButton onClick={() => setOpenSession(s)} className="w-full justify-center">
+                Mark attendance
+              </SecondaryButton>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h3 className="text-slate-900 font-bold text-base mb-4">New class session</h3>
+            {formErr && <ErrorBanner message={formErr} />}
+            <div className="space-y-4">
+              <Field label="Topic">
+                <input
+                  className={inputClass}
+                  value={form.topic}
+                  onChange={(e) => setForm({ ...form, topic: e.target.value })}
+                  placeholder="e.g. React state management"
+                />
+              </Field>
+              <Field label="Date">
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Start time">
+                  <input
+                    type="time"
+                    className={inputClass}
+                    value={form.start_time}
+                    onChange={(e) => setForm({ ...form, start_time: e.target.value })}
+                  />
+                </Field>
+                <Field label="End time">
+                  <input
+                    type="time"
+                    className={inputClass}
+                    value={form.end_time}
+                    onChange={(e) => setForm({ ...form, end_time: e.target.value })}
+                  />
+                </Field>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <SecondaryButton className="flex-1 justify-center" onClick={() => setModalOpen(false)}>
+                  Cancel
+                </SecondaryButton>
+                <PrimaryButton className="flex-1 justify-center" onClick={handleCreate} disabled={saving}>
+                  {saving ? 'Creating…' : 'Create session'}
+                </PrimaryButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CohortsTab({ token, cohorts, loading, error }) {
   const [openCohortId, setOpenCohortId] = useState(null);
   const cohort = cohorts.find((c) => c.id === openCohortId);
 
   if (cohort) {
-    return (
-      <div>
-        <button onClick={() => setOpenCohortId(null)} className="text-[#0057E7] text-sm font-semibold mb-4 flex items-center gap-1.5 hover:underline">
-          <Icon path={<path d="M15 18l-6-6 6-6" />} size={16} /> Back to cohorts
-        </button>
-        <PageHeader title={cohort.name} subtitle={`${cohort.current_stage_label} · ${cohort.student_count ?? 0} students`} />
-        <Card>
-          <EmptyState
-            title="Student roster & attendance coming soon"
-            hint="This will show once attendance and class-session tracking are built on the backend."
-          />
-        </Card>
-      </div>
-    );
+    return <CohortSessionsView token={token} cohort={cohort} onBack={() => setOpenCohortId(null)} />;
   }
 
   return (
@@ -732,7 +1030,7 @@ export default function TutorPortalPage() {
               <DashboardTab tutor={tutor} statsData={statsData} cohortsData={cohortsData} setTab={setTab} />
             )}
             {tab === 'cohorts' && (
-              <CohortsTab cohorts={cohortsData.cohorts} loading={cohortsData.loading} error={cohortsData.error} />
+              <CohortsTab token={token} cohorts={cohortsData.cohorts} loading={cohortsData.loading} error={cohortsData.error} />
             )}
             {tab === 'messages' && <MessageTab />}
             {tab === 'queries' && (
