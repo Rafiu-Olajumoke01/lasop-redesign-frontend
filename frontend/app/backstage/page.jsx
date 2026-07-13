@@ -532,26 +532,19 @@ function OverviewTab({ courses, locations, applications, dashboardStats, tutors,
 
   return (
     <div>
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
-        <h1 className="text-[19px] font-bold text-slate-900 tracking-tight">Overview</h1>
-        <div className="flex items-center gap-1.5 border border-slate-200 rounded-md px-3 py-1.5 text-slate-500 font-medium text-[12px] bg-white shadow-sm">
-          June 2026
-        </div>
-      </div>
-
       <ErrorBanner message={dashboardStats.error} />
 
-      <div className="mb-6">
+      <div className="mb-5">
         <SectionLabel>Quick actions</SectionLabel>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <ManagerCard title="Manage guests" onClick={() => onNavigate('guests')} icon={<PersonIcon />} />
           <ManagerCard title="Manage blog" onClick={() => onNavigate('blog')} icon={<BlogIcon />} />
         </div>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-5">
         <SectionLabel>At a glance</SectionLabel>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <HighlightStatCard label="New applicants" value={pending} icon={<NewApplicantIcon />} />
           <HighlightStatCard label="Current cohorts" value={dashboardStats.loading ? '—' : currentCohorts} icon={<CohortIcon />} />
         </div>
@@ -559,7 +552,7 @@ function OverviewTab({ courses, locations, applications, dashboardStats, tutors,
 
       <div>
         <SectionLabel>Totals</SectionLabel>
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {/* Students/Graduates show 0 until backend provides real counts */}
           <OverviewStatCard label="Students" value={0} icon={<GroupIcon />} />
           <OverviewStatCard label="Tutors" value={tutors.loading ? '—' : tutors.items.length} icon={<TutorIcon />} />
@@ -1861,34 +1854,38 @@ function Sidebar({ open, onClose, tab, setTab }) {
 
 // ─── Top bar ───────────────────────────────────────────────────────────────────
 
-function TopBar({ onMenuClick, title }) {
+function TopBar({ onMenuClick, title, dateLabel }) {
   return (
     <header className="bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70 border-b border-slate-200 px-4 lg:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
       <div className="flex items-center gap-3">
-        <button onClick={onMenuClick} aria-label="Menu" className="text-slate-500 hover:text-slate-700 transition-colors">
+        <button onClick={onMenuClick} aria-label="Menu" className="text-slate-500 hover:text-slate-700 transition-colors lg:hidden">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
         </button>
-        <p className="text-slate-800 font-semibold text-[14px] hidden sm:block tracking-tight">{title}</p>
+        <p className="text-slate-800 font-semibold text-[14px] tracking-tight">{title}</p>
       </div>
 
-      <div className="flex items-center gap-1.5">
-        <button aria-label="Messages" className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors rounded-md p-2">
+      <div className="flex items-center gap-1">
+        {dateLabel && (
+          <span className="hidden sm:inline-flex items-center border border-slate-200 rounded-md px-2.5 py-1 text-slate-500 font-medium text-[12px] bg-white mr-1.5">
+            {dateLabel}
+          </span>
+        )}
+        <button aria-label="Messages" className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors rounded-md p-1.5">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
           </svg>
         </button>
-        <button aria-label="Notifications" className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors rounded-md p-2">
+        <button aria-label="Notifications" className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors rounded-md p-1.5">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 01-3.46 0" />
           </svg>
         </button>
-        <span className="w-px h-5 bg-slate-200 mx-1" />
-        <button className="flex items-center gap-1.5 text-slate-700 font-medium text-[13px] hover:bg-slate-100 transition-colors rounded-md px-2 py-1.5">
-          <span className="w-6 h-6 rounded-full bg-[#0057E7] text-white text-[11px] font-bold flex items-center justify-center">A</span>
-          Admin
+        <button className="flex items-center gap-1.5 text-slate-700 font-medium text-[13px] hover:bg-slate-100 transition-colors rounded-md pl-1.5 pr-2 py-1.5 ml-0.5">
+          <span className="w-6 h-6 rounded-full bg-[#0057E7] text-white text-[11px] font-bold flex items-center justify-center shrink-0">A</span>
+          <span className="hidden sm:inline">Admin</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9l6 6 6-6" />
           </svg>
@@ -1985,7 +1982,7 @@ export default function BackstagePage() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} />
 
       <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
-        <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} />
+        <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} dateLabel={tab === 'overview' ? 'June 2026' : null} />
 
         <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto pb-24">
           <div className="max-w-6xl">
