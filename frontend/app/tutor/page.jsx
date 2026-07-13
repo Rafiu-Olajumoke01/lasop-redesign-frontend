@@ -582,12 +582,12 @@ function Sidebar({ open, onClose, tab, setTab }) {
         className={`fixed lg:static top-0 left-0 h-screen w-64 z-50 flex flex-col border-r border-blue-900/40 transition-transform duration-200 ease-out ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{ background: '#152035' }}
       >
-        <div className="flex items-center justify-between px-5 pt-6 pb-5 border-b border-blue-900/30">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-[#0057E7] flex items-center justify-center text-white text-xs font-bold">L</div>
-            <span className="text-white font-bold text-[15px] tracking-wide">LASOP · Tutor</span>
+        <div className="flex items-start justify-between px-5 pt-6 pb-5 border-b border-blue-900/30">
+          <div className="flex flex-col gap-1.5">
+            <img src="/logo.webp" alt="LASOP" className="h-7 w-auto object-contain" />
+            <span className="text-slate-400 font-semibold text-[11px] uppercase tracking-[0.14em]">Tutor Portal</span>
           </div>
-          <button onClick={onClose} className="text-slate-400 lg:hidden" aria-label="Close menu">
+          <button onClick={onClose} className="text-slate-400 lg:hidden mt-0.5" aria-label="Close menu">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
