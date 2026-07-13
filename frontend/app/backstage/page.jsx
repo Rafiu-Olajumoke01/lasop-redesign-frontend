@@ -1187,6 +1187,204 @@ function TutorsTab({ tutors, cohorts }) {
   );
 }
 
+// ─── Students tab ───────────────────────────────────────────────────────────
+//
+// Drop this component into backstage/page.jsx (or wherever the other tab
+// components like TutorsTab live). It needs the same shared UI helpers
+// already defined in that file: Card, PageHeader, ErrorBanner, Spinner,
+// EmptyState, Pill, inputClass, API_BASE.
+//
+// Usage in the page shell:
+//   {tab === 'students' && <StudentsTab token={token} tutors={tutors} />}
+//
+// (replace the old `{tab === 'students' && <ComingSoon title="Students" />}`)
+
+function useStudents(token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/users/students/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load students.');
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  const assignTutor = async (studentId, tutorId) => {
+    const res = await fetch(`${API_BASE}/api/users/students/${studentId}/assign-tutor/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ assigned_tutor: tutorId }),
+    });
+    if (!res.ok) {
+      const raw = await res.text();
+      let details = '';
+      try {
+        const errorData = JSON.parse(raw);
+        details = Object.entries(errorData)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(' | ');
+      } catch {
+        details = `HTTP ${res.status}`;
+      }
+      throw new Error(details || 'Could not assign tutor.');
+    }
+    await refresh();
+  };
+
+  return { items, loading, error, refresh, assignTutor };
+}
+
+function getStudentName(s) {
+  const full = `${s.first_name || ''} ${s.last_name || ''}`.trim();
+  return full || s.email;
+}
+
+function getTutorLabel(t) {
+  const u = t.user_detail;
+  if (!u) return 'Unnamed tutor';
+  return `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
+}
+
+function StudentsTab({ token, tutors }) {
+  const students = useStudents(token);
+  const [savingId, setSavingId] = useState(null);
+  const [actionError, setActionError] = useState('');
+  const [filter, setFilter] = useState('all'); // all | assigned | unassigned
+
+  const filtered = useMemo(() => {
+    if (filter === 'assigned') return students.items.filter((s) => s.assigned_tutor_detail);
+    if (filter === 'unassigned') return students.items.filter((s) => !s.assigned_tutor_detail);
+    return students.items;
+  }, [students.items, filter]);
+
+  const handleAssign = async (studentId, tutorIdRaw) => {
+    const tutorId = tutorIdRaw === '' ? null : Number(tutorIdRaw);
+    setActionError('');
+    setSavingId(studentId);
+    try {
+      await students.assignTutor(studentId, tutorId);
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const filters = [
+    { key: 'all', label: 'All' },
+    { key: 'unassigned', label: 'Unassigned' },
+    { key: 'assigned', label: 'Assigned' },
+  ];
+
+  return (
+    <div>
+      <PageHeader
+        title="Students"
+        subtitle={`${filtered.length} of ${students.items.length} total`}
+      >
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {filters.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f.key
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </PageHeader>
+
+      <ErrorBanner message={students.error || actionError} />
+
+      {students.loading ? (
+        <Spinner text="Loading students…" />
+      ) : filtered.length === 0 ? (
+        <Card><EmptyState title="No students" hint="Nothing matches this filter yet." /></Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
+                  {['Student', 'Email', 'Phone', 'Tutor', ''].map((h, i) => (
+                    <th
+                      key={i}
+                      className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((s) => {
+                  const currentTutorId = s.assigned_tutor_detail?.id ?? '';
+                  const isSaving = savingId === s.id;
+                  return (
+                    <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+                            {getStudentName(s).charAt(0).toUpperCase()}
+                          </div>
+                          <p className="text-slate-800 font-semibold leading-none">{getStudentName(s)}</p>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-slate-500">{s.email}</td>
+                      <td className="px-5 py-4 text-slate-500">{s.phone_number || '—'}</td>
+                      <td className="px-5 py-4">
+                        {s.assigned_tutor_detail ? (
+                          <Pill color="blue">{s.assigned_tutor_detail.name}</Pill>
+                        ) : (
+                          <Pill color="rose">Unassigned</Pill>
+                        )}
+                      </td>
+                      <td className="px-5 py-4 text-right whitespace-nowrap">
+                        <select
+                          className={`${inputClass} text-[12px] py-1.5 w-44 inline-block`}
+                          value={currentTutorId}
+                          disabled={isSaving || tutors.loading}
+                          onChange={(e) => handleAssign(s.id, e.target.value)}
+                        >
+                          <option value="">Unassigned</option>
+                          {tutors.items.map((t) => (
+                            <option key={t.id} value={t.id}>{getTutorLabel(t)}</option>
+                          ))}
+                        </select>
+                        {isSaving && <span className="text-slate-400 text-[11px] ml-2">Saving…</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 // ─── Applicants tab ─────────────────────────────────────────────────────────────
 
 function ApplicationsTab({ applications, token }) {
@@ -2004,7 +2202,7 @@ export default function BackstagePage() {
 
             {tab === 'cohorts' && <CohortsTab cohorts={cohorts} />}
             {tab === 'tutors' && <TutorsTab tutors={tutors} cohorts={cohorts} />}
-            {tab === 'students' && <ComingSoon title="Students" />}
+            {tab === 'students' && <StudentsTab token={token} tutors={tutors} />}
             {tab === 'staffs' && <ComingSoon title="Staffs" />}
             {tab === 'finances' && <FinancesTab applications={applications} />}
             {tab === 'queries' && <ComingSoon title="Queries" />}
