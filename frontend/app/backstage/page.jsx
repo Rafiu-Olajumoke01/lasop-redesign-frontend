@@ -468,20 +468,40 @@ function ManagerCard({ title, onClick, icon }) {
   return (
     <button
       onClick={onClick}
-      className="group flex items-center justify-between bg-white border border-slate-200/80 rounded-lg px-4 py-4
-        shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]
-        hover:border-slate-300 hover:-translate-y-[1px] transition-all duration-200 text-left"
+      className="group flex items-center gap-3 bg-white border border-slate-200/80 rounded-md px-4 py-3.5 w-full
+        hover:border-blue-200 hover:bg-blue-50/40 transition-all duration-150 text-left"
     >
-      <div>
-        <p className="text-slate-800 font-semibold text-[14px] mb-1">{title}</p>
-        <p className="text-[#0057E7] font-semibold text-[13px] leading-tight">
-          Open Manager
-        </p>
-      </div>
-      <div className="w-9 h-9 rounded-md bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-400 group-hover:text-[#0057E7] group-hover:border-blue-200 group-hover:bg-blue-50 transition-colors shrink-0">
+      <div className="w-9 h-9 rounded-md bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#0057E7] shrink-0">
         {icon}
       </div>
+      <p className="flex-1 min-w-0 text-slate-800 font-semibold text-[13.5px] truncate">{title}</p>
+      <svg
+        className="text-slate-300 group-hover:text-[#0057E7] group-hover:translate-x-0.5 transition-all shrink-0"
+        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+      >
+        <path d="M9 6l6 6-6 6" />
+      </svg>
     </button>
+  );
+}
+
+function SectionLabel({ children }) {
+  return <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.12em] mb-2.5">{children}</p>;
+}
+
+function HighlightStatCard({ label, value, icon }) {
+  return (
+    <div className="relative overflow-hidden flex items-center justify-between bg-white border border-slate-200/80 rounded-lg pl-6 pr-5 py-5
+      shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)] hover:border-blue-200 transition-all duration-200">
+      <span className="absolute left-0 top-0 bottom-0 w-1 bg-[#0057E7]" />
+      <div>
+        <p className="text-slate-500 font-medium text-[13px] mb-1.5">{label}</p>
+        <p className="text-slate-900 font-bold text-[30px] leading-none tracking-tight">{value}</p>
+      </div>
+      <div className="w-11 h-11 rounded-md bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#0057E7] shrink-0">
+        {icon}
+      </div>
+    </div>
   );
 }
 
@@ -521,22 +541,33 @@ function OverviewTab({ courses, locations, applications, dashboardStats, tutors,
 
       <ErrorBanner message={dashboardStats.error} />
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        <ManagerCard title="Manage guests" onClick={() => onNavigate('guests')} icon={<PersonIcon />} />
-        <ManagerCard title="Manage blog" onClick={() => onNavigate('blog')} icon={<BlogIcon />} />
+      <div className="mb-6">
+        <SectionLabel>Quick actions</SectionLabel>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <ManagerCard title="Manage guests" onClick={() => onNavigate('guests')} icon={<PersonIcon />} />
+          <ManagerCard title="Manage blog" onClick={() => onNavigate('blog')} icon={<BlogIcon />} />
+        </div>
+      </div>
 
-        {/* Placeholders below (students/staff/graduates) show 0 until backend provides real counts */}
-        <OverviewStatCard label="No of students" value={0} icon={<GroupIcon />} />
-        <OverviewStatCard label="No of tutors" value={tutors.loading ? '—' : tutors.items.length} icon={<TutorIcon />} />
+      <div className="mb-6">
+        <SectionLabel>At a glance</SectionLabel>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <HighlightStatCard label="New applicants" value={pending} icon={<NewApplicantIcon />} />
+          <HighlightStatCard label="Current cohorts" value={dashboardStats.loading ? '—' : currentCohorts} icon={<CohortIcon />} />
+        </div>
+      </div>
 
-        <OverviewStatCard label="No of centers" value={locations.items.length} icon={<BuildingIcon />} />
-        <OverviewStatCard label="Courses" value={courses.items.length} icon={<CoursesIcon />} />
-
-        <OverviewStatCard label="Current cohorts" value={dashboardStats.loading ? '—' : currentCohorts} icon={<CohortIcon />} />
-        <OverviewStatCard label="Completed cohorts" value={dashboardStats.loading ? '—' : completedCohorts} icon={<CheckBadgeIcon />} />
-
-        <OverviewStatCard label="New applicants" value={pending} icon={<NewApplicantIcon />} />
-        <OverviewStatCard label="Graduates" value={0} icon={<GradCapIcon />} />
+      <div>
+        <SectionLabel>Totals</SectionLabel>
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {/* Students/Graduates show 0 until backend provides real counts */}
+          <OverviewStatCard label="Students" value={0} icon={<GroupIcon />} />
+          <OverviewStatCard label="Tutors" value={tutors.loading ? '—' : tutors.items.length} icon={<TutorIcon />} />
+          <OverviewStatCard label="Centers" value={locations.items.length} icon={<BuildingIcon />} />
+          <OverviewStatCard label="Courses" value={courses.items.length} icon={<CoursesIcon />} />
+          <OverviewStatCard label="Completed cohorts" value={dashboardStats.loading ? '—' : completedCohorts} icon={<CheckBadgeIcon />} />
+          <OverviewStatCard label="Graduates" value={0} icon={<GradCapIcon />} />
+        </div>
       </div>
     </div>
   );
