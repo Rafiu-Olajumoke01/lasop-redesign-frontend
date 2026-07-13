@@ -590,6 +590,10 @@ function CohortSessionsView({ token, cohort, onBack }) {
   }
 
   const handleCreate = async () => {
+    if (!form.topic || !form.date || !form.start_time || !form.end_time) {
+      setFormErr('Please fill in all fields before creating the session.');
+      return;
+    }
     setSaving(true); setFormErr('');
     try {
       await createSession(form);
