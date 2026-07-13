@@ -584,7 +584,10 @@ function Sidebar({ open, onClose, tab, setTab }) {
       >
         <div className="flex items-start justify-between px-5 pt-6 pb-5 border-b border-blue-900/30">
           <div className="flex flex-col gap-1.5">
-            <img src="/logo.webp" alt="LASOP" className="h-7 w-auto object-contain" />
+            <div className="flex items-center gap-2">
+              <img src="/logo.webp" alt="LASOP" className="h-7 w-7 object-contain" />
+              <span className="text-[#8BB8FF] font-bold text-[15px] tracking-wide">LASOP</span>
+            </div>
             <span className="text-slate-400 font-semibold text-[11px] uppercase tracking-[0.14em]">Tutor Portal</span>
           </div>
           <button onClick={onClose} className="text-slate-400 lg:hidden mt-0.5" aria-label="Close menu">
