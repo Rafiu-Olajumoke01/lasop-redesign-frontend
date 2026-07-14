@@ -477,7 +477,7 @@ function DashboardTab({ tutor, statsData, cohortsData, setTab }) {
 // Cohorts tab — now with class sessions + attendance
 // ═══════════════════════════════════════════════════════════════════════════
 
-const emptySession = { topic: '', date: '', start_time: '', end_time: '' };
+const emptySession = { topics_covered: '', date: '', start_time: '', end_time: '' };
 
 function SessionAttendanceView({ token, session, onBack }) {
   const { roster, loading, error, saving, submitAttendance } = useSessionAttendance(token, session.id);
@@ -523,7 +523,7 @@ function SessionAttendanceView({ token, session, onBack }) {
         <Icon path={<path d="M15 18l-6-6 6-6" />} size={16} /> Back to sessions
       </button>
       <PageHeader
-        title={session.topic || 'Class session'}
+        title={session.topics_covered ? session.topics_covered.split('\n')[0] : 'Class session'}
         subtitle={`${session.date} · ${session.start_time}–${session.end_time}`}
       />
 
@@ -590,7 +590,7 @@ function CohortSessionsView({ token, cohort, onBack }) {
   }
 
   const handleCreate = async () => {
-    if (!form.topic || !form.date || !form.start_time || !form.end_time) {
+    if (!form.topics_covered || !form.date || !form.start_time || !form.end_time) {
       setFormErr('Please fill in all fields before creating the session.');
       return;
     }
@@ -634,7 +634,9 @@ function CohortSessionsView({ token, cohort, onBack }) {
           {sessions.map((s) => (
             <Card key={s.id} className="p-5 hover:border-slate-300 transition-colors">
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-slate-900 font-bold text-[15px]">{s.topic || 'Untitled session'}</h3>
+                <h3 className="text-slate-900 font-bold text-[15px]">
+                  {s.topics_covered ? s.topics_covered.split('\n')[0] : 'Untitled session'}
+                </h3>
                 <Pill color="blue">{s.duration_hours}h</Pill>
               </div>
               <p className="text-slate-400 text-xs mb-4">{s.date} · {s.start_time}–{s.end_time}</p>
@@ -652,12 +654,13 @@ function CohortSessionsView({ token, cohort, onBack }) {
             <h3 className="text-slate-900 font-bold text-base mb-4">New class session</h3>
             {formErr && <ErrorBanner message={formErr} />}
             <div className="space-y-4">
-              <Field label="Topic">
-                <input
+              <Field label="Topics covered">
+                <textarea
                   className={inputClass}
-                  value={form.topic}
-                  onChange={(e) => setForm({ ...form, topic: e.target.value })}
-                  placeholder="e.g. React state management"
+                  rows={4}
+                  value={form.topics_covered}
+                  onChange={(e) => setForm({ ...form, topics_covered: e.target.value })}
+                  placeholder={"e.g. HTML Tables\nHTML Forms\nHTML Tags"}
                 />
               </Field>
               <Field label="Date">
