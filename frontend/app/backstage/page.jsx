@@ -286,7 +286,7 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
 
   useEffect(() => { if (token) refresh(); }, [token, refresh]);
 
-const save = async (payload, existingItem) => {
+  const save = async (payload, existingItem) => {
     if (existingItem && !supportsUpdate) throw new Error(`Updating ${label} isn't supported yet.`);
     const url = existingItem ? `${API_BASE}${detailPath(existingItem)}` : `${API_BASE}${basePath}`;
 
@@ -1387,9 +1387,10 @@ function StudentsTab({ token, tutors }) {
 
 // ─── Applicants tab ─────────────────────────────────────────────────────────────
 
-function ApplicationsTab({ applications, token }) {
+function ApplicationsTab({ applications, token, cohorts }) {
   const [filter, setFilter] = useState('all');
   const [confirmingId, setConfirmingId] = useState(null);
+  const [assigningId, setAssigningId] = useState(null);
   const [actionError, setActionError] = useState('');
 
   const filtered = useMemo(() => {
@@ -1417,6 +1418,20 @@ function ApplicationsTab({ applications, token }) {
       setActionError(e.message);
     } finally {
       setConfirmingId(null);
+    }
+  };
+  const handleAssignCohort = async (application, cohortIdRaw) => {
+    setActionError('');
+    setAssigningId(application.id);
+    try {
+      await applications.save(
+        { cohort: cohortIdRaw === '' ? null : Number(cohortIdRaw) },
+        application
+      );
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setAssigningId(null);
     }
   };
 
@@ -1452,7 +1467,7 @@ function ApplicationsTab({ applications, token }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
-                  {['Applicant', 'Course', 'Mode', 'Fee', 'Payment', 'Date', ''].map((h, i) => (
+                  {['Applicant', 'Course', 'Mode', 'Fee', 'Payment', 'Cohort', 'Date', ''].map((h, i) => (
                     <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                       {h}
                     </th>
@@ -1497,6 +1512,23 @@ function ApplicationsTab({ applications, token }) {
                       </td>
                       <td className="px-5 py-4">
                         <PaymentPill payment={a.payment} />
+                      </td>
+                      <td className="px-5 py-4">
+                        {a.payment?.status === 'paid' ? (
+                          <select
+                            className={`${inputClass} text-[12px] py-1.5 w-40 inline-block`}
+                            value={a.cohort_detail?.id ?? a.cohort ?? ''}
+                            disabled={assigningId === a.id || cohorts.loading}
+                            onChange={(e) => handleAssignCohort(a, e.target.value)}
+                          >
+                            <option value="">Unassigned</option>
+                            {cohorts.items.map((c) => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
                       </td>
                       <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">
                         {date || '—'}
@@ -1888,8 +1920,8 @@ function FinancesTab({ applications }) {
             key={f}
             onClick={() => setFilter(f)}
             className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
-                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
-                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+              ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+              : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
               }`}
           >
             {f === 'all' ? 'All' : f.replace(/_/g, ' ')}
@@ -2134,7 +2166,7 @@ export default function BackstagePage() {
     token
   );
   const applications = useAdminResource(
-    { label: 'applications', basePath: '/api/applications/', detailPath: (a) => `/api/applications/${a.id}/`, supportsUpdate: false },
+    { label: 'applications', basePath: '/api/applications/', detailPath: (a) => `/api/applications/${a.id}/`, supportsUpdate: true },
     token
   );
   const cohorts = useAdminResource(
@@ -2196,7 +2228,7 @@ export default function BackstagePage() {
             )}
             {tab === 'syllabus' && <CoursesTab courses={courses} />}
             {tab === 'centers' && <LocationsTab locations={locations} />}
-            {tab === 'applicants' && <ApplicationsTab applications={applications} token={token} />}
+            {tab === 'applicants' && <ApplicationsTab applications={applications} token={token} cohorts={cohorts} />}
             {tab === 'exam' && <ExamsTab exams={exams} cohorts={cohorts} courses={courses} />}
             {tab === 'results' && <ResultsTab results={results} exams={exams} applications={applications} />}
 
