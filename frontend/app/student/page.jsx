@@ -136,12 +136,12 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
       <div className="absolute inset-0 bg-[#05070B]/80 backdrop-blur-sm" />
 
       {/* Modal card */}
-      <div className="relative w-full max-w-[420px] bg-[#0D1118] border border-[#232B3A] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden">
+      <div className="relative w-full max-w-[420px] bg-[#0D1118] border border-[#232B3A] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Accent top bar */}
         <div className="h-[3px] w-full bg-gradient-to-r from-[#5B8CFF] via-[#7CFF6B] to-[#5B8CFF]" />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-4">
+        <div className="flex items-center justify-between px-5 sm:px-6 pt-5 pb-4">
           <div>
             <p className="text-[#F1F3F7] text-[15px] font-semibold">Bank Transfer</p>
             <p className="text-[#5A6275] text-[11px] font-mono mt-0.5">secure · manual review</p>
@@ -157,12 +157,12 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
         </div>
 
         {step !== 'choose' && (
-          <div className="px-6 pb-4">
+          <div className="px-5 sm:px-6 pb-4">
             <StepDots step={step} />
           </div>
         )}
 
-        <div className="px-6 pb-6">
+        <div className="px-5 sm:px-6 pb-6">
           {error && (
             <div className="bg-[#2A1414] border border-[#501313] rounded-lg px-4 py-3 mb-4">
               <p className="text-[#F09595] text-xs">{error}</p>
@@ -254,9 +254,9 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
                     key={field}
                     className={`flex items-center justify-between px-4 py-3.5 ${i !== 0 ? 'border-t border-[#1C2330]' : ''}`}
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-[#5A6275] text-[10px] uppercase tracking-wide mb-1">{label}</p>
-                      <p className="text-[#F1F3F7] text-[15px] font-semibold">{value}</p>
+                      <p className="text-[#F1F3F7] text-[15px] font-semibold truncate">{value}</p>
                     </div>
                     <button
                       onClick={() => handleCopy(field, value)}
@@ -324,6 +324,74 @@ function PaymentStatusBadge({ status, amountPaid }) {
   }
 
   return null;
+}
+
+// ─── Certificate Card ──────────────────────────────────────────────────────
+
+function DocumentIcon({ className }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <path d="M14 2v6h6M9 13h6M9 17h6" />
+    </svg>
+  );
+}
+
+function formatDate(d) {
+  if (!d) return null;
+  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function CertificateCard({ certificate }) {
+  const isReady = !!certificate;
+
+  return (
+    <div className="bg-[#11151D] border border-[#1C2330] rounded-lg overflow-hidden hover:border-[#2A2F3A] transition mb-9">
+      <div className="flex items-center gap-1.5 px-3 py-2 bg-[#0E121A] border-b border-[#1C2330]">
+        <span className="w-[7px] h-[7px] rounded-full bg-[#FF5F57] inline-block" />
+        <span className="w-[7px] h-[7px] rounded-full bg-[#FEBC2E] inline-block" />
+        <span className="w-[7px] h-[7px] rounded-full bg-[#28C840] inline-block" />
+        <span className="ml-1.5 text-[11px] text-[#6B7585] font-mono truncate">certificate.status</span>
+      </div>
+
+      <div className="p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
+            isReady ? 'bg-[#14201A] border-[#2A4034] text-[#7CFF6B]' : 'bg-[#1C2330] border-[#232B3A] text-[#6B7585]'
+          }`}>
+            <DocumentIcon className="w-4.5 h-4.5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[#F1F3F7] font-medium text-sm">
+              {isReady ? 'Your certificate is ready' : 'Certificate not ready yet'}
+            </p>
+            <p className="text-[#6B7585] text-[11px] mt-0.5">
+              {isReady
+                ? certificate.issued_date
+                  ? `Issued ${formatDate(certificate.issued_date)}`
+                  : `Uploaded ${formatDate(certificate.uploaded_at)}`
+                : "We'll notify you once it's uploaded."}
+            </p>
+          </div>
+        </div>
+
+        {isReady ? (
+          <a
+            href={certificate.file}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#5B8CFF] hover:bg-[#7FAAFF] text-[#0B0E14] transition shrink-0"
+          >
+            Download certificate
+          </a>
+        ) : (
+          <span className="text-sm font-medium px-4 py-2.5 rounded-lg border border-[#232B3A] text-[#5A6275] cursor-not-allowed shrink-0">
+            Not ready
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ─── Course Card ──────────────────────────────────────────────────────────────
@@ -513,7 +581,7 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-[#0A0C10] pt-20">
       {/* Top bar */}
       <div className="border-b border-[#1C2330] bg-[#0A0C10]">
-        <div className="max-w-5xl mx-auto px-5 md:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-5 md:px-8 py-4 flex items-center justify-between">
           <span className="text-[#F1F3F7] font-semibold text-[15px]">LASOP</span>
           <button
             onClick={handleLogout}
@@ -524,40 +592,40 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-5 md:px-8 pt-10 pb-16">
+      <div className="max-w-5xl mx-auto px-4 sm:px-5 md:px-8 pt-8 sm:pt-10 pb-16">
 
         {/* ── Profile ── */}
-        <div className="flex items-center gap-4 mb-9">
-          <div className="w-16 h-16 rounded-full bg-[#14201A] border border-[#2A4034] flex items-center justify-center text-xl font-semibold text-[#7CFF6B] shrink-0">
+        <div className="flex items-center gap-4 mb-8 sm:mb-9">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#14201A] border border-[#2A4034] flex items-center justify-center text-lg sm:text-xl font-semibold text-[#7CFF6B] shrink-0">
             {initials || '··'}
           </div>
           <div className="min-w-0">
-            <h1 className="text-[#F1F3F7] font-semibold text-2xl leading-tight truncate">
+            <h1 className="text-[#F1F3F7] font-semibold text-xl sm:text-2xl leading-tight truncate">
               {firstName} {lastName}
             </h1>
-            <p className="text-[#6B7585] text-sm mt-1 truncate">
+            <p className="text-[#6B7585] text-xs sm:text-sm mt-1 truncate">
               {user?.email}{user?.phone_number ? ` · ${user.phone_number}` : ''}
             </p>
           </div>
         </div>
 
         {/* ── Stats ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[#1C2330] border border-[#1C2330] rounded-xl overflow-hidden mb-9">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[#1C2330] border border-[#1C2330] rounded-xl overflow-hidden mb-8 sm:mb-9">
           {[
             { label: 'Courses enrolled', value: count, accent: '#7CFF6B' },
             { label: 'Total fees', value: formattedFees, accent: '#5B8CFF' },
             { label: 'Online', value: onlineCount, accent: '#7CFF6B' },
             { label: 'Physical', value: physicalCount, accent: '#FFB454' },
           ].map(({ label, value, accent }) => (
-            <div key={label} className="bg-[#0D1118] px-5 py-5">
-              <p className="text-[#5A6275] text-xs mb-2">{label}</p>
-              <p className="text-3xl font-semibold" style={{ color: accent }}>{value}</p>
+            <div key={label} className="bg-[#0D1118] px-4 sm:px-5 py-4 sm:py-5">
+              <p className="text-[#5A6275] text-[11px] sm:text-xs mb-2">{label}</p>
+              <p className="text-2xl sm:text-3xl font-semibold" style={{ color: accent }}>{value}</p>
             </div>
           ))}
         </div>
 
         {(reviewCount > 0 || paidCount > 0) && (
-          <div className="flex items-center gap-3 mb-9 -mt-4">
+          <div className="flex items-center gap-2 sm:gap-3 mb-8 sm:mb-9 -mt-4 flex-wrap">
             {reviewCount > 0 && (
               <span className="text-xs text-[#FFB454] bg-[#1E1A0E] border border-[#3A2E0A] rounded-full px-3 py-1.5">
                 {reviewCount} payment{reviewCount > 1 ? 's' : ''} in review
@@ -577,8 +645,11 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* ── Certificate ── */}
+        <CertificateCard certificate={user?.certificate} />
+
         {/* ── Courses ── */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h2 className="text-[#F1F3F7] font-semibold text-lg">
             Courses{count > 0 ? ` (${count})` : ''}
           </h2>
@@ -588,7 +659,7 @@ export default function DashboardPage() {
         </div>
 
         {count === 0 ? (
-          <div className="bg-[#0D1118] border border-dashed border-[#232B3A] rounded-xl p-12 text-center">
+          <div className="bg-[#0D1118] border border-dashed border-[#232B3A] rounded-xl p-8 sm:p-12 text-center">
             <p className="text-[#8B95A7] text-sm mb-1">No courses yet</p>
             <p className="text-[#4A5263] text-xs mb-4">Your enrolled courses will show up here.</p>
             <Link href="/apply" className="inline-block text-[#7CFF6B] text-sm hover:text-[#9AFF8C] transition border border-[#1F3326] hover:border-[#2A4034] rounded-md px-4 py-2 font-medium">
