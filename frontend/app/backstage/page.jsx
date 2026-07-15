@@ -1262,6 +1262,7 @@ function getTutorLabel(t) {
 }
 
 function StudentsTab({ token, tutors }) {
+  const router = useRouter();
   const students = useStudents(token);
   const [savingId, setSavingId] = useState(null);
   const [actionError, setActionError] = useState('');
@@ -1341,7 +1342,11 @@ function StudentsTab({ token, tutors }) {
                   const currentTutorId = s.assigned_tutor_detail?.id ?? '';
                   const isSaving = savingId === s.id;
                   return (
-                    <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
+                    <tr
+                      key={s.id}
+                      onClick={() => router.push(`/backstage/students/${s.id}`)}
+                      className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0 cursor-pointer"
+                    >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-7 h-7 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
@@ -1359,7 +1364,7 @@ function StudentsTab({ token, tutors }) {
                           <Pill color="rose">Unassigned</Pill>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-right whitespace-nowrap">
+                     <td className="px-5 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <select
                           className={`${inputClass} text-[12px] py-1.5 w-44 inline-block`}
                           value={currentTutorId}
