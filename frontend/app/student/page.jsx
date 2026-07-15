@@ -109,12 +109,222 @@ function Spinner({ text }) {
   );
 }
 
-function OverviewStatCard({ label, value, accent = '#0057E7' }) {
+function PageHeader({ title, subtitle, children }) {
   return (
-    <div className="bg-white px-4 sm:px-5 py-4 sm:py-5">
-      <p className="text-slate-500 text-[11px] sm:text-xs mb-2 font-medium">{label}</p>
-      <p className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: accent }}>{value}</p>
+    <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h2>
+        {subtitle && <p className="text-slate-400 text-sm mt-0.5">{subtitle}</p>}
+      </div>
+      {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
     </div>
+  );
+}
+
+function SectionLabel({ children }) {
+  return <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.12em] mb-2.5">{children}</p>;
+}
+
+function HighlightStatCard({ label, value, icon }) {
+  return (
+    <div className="relative overflow-hidden flex items-center justify-between bg-white border border-slate-200/80 rounded-lg pl-6 pr-5 py-5
+      shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)] hover:border-blue-200 transition-all duration-200">
+      <span className="absolute left-0 top-0 bottom-0 w-1 bg-[#0057E7]" />
+      <div>
+        <p className="text-slate-500 font-medium text-[13px] mb-1.5">{label}</p>
+        <p className="text-slate-900 font-bold text-[30px] leading-none tracking-tight">{value}</p>
+      </div>
+      <div className="w-11 h-11 rounded-md bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#0057E7] shrink-0">
+        {icon}
+      </div>
+    </div>
+  );
+}
+
+function OverviewStatCard({ label, value, icon }) {
+  return (
+    <div className="flex items-center justify-between bg-white border border-slate-200/80 rounded-lg px-4 py-4
+      shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)] hover:border-slate-300 transition-all duration-200">
+      <div>
+        <p className="text-slate-500 font-medium text-[13px] mb-1.5">{label}</p>
+        <p className="text-slate-900 font-bold text-[22px] leading-none tracking-tight">{value}</p>
+      </div>
+      <div className="w-9 h-9 rounded-md bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-300 shrink-0">
+        {icon}
+      </div>
+    </div>
+  );
+}
+
+function ManagerCard({ title, onClick, icon }) {
+  return (
+    <button
+      onClick={onClick}
+      className="group flex items-center gap-3 bg-white border border-slate-200/80 rounded-md px-4 py-3.5 w-full
+        hover:border-blue-200 hover:bg-blue-50/40 transition-all duration-150 text-left"
+    >
+      <div className="w-9 h-9 rounded-md bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#0057E7] shrink-0">
+        {icon}
+      </div>
+      <p className="flex-1 min-w-0 text-slate-800 font-semibold text-[13.5px] truncate">{title}</p>
+      <svg
+        className="text-slate-300 group-hover:text-[#0057E7] group-hover:translate-x-0.5 transition-all shrink-0"
+        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+      >
+        <path d="M9 6l6 6-6 6" />
+      </svg>
+    </button>
+  );
+}
+
+// ─── Icons ──────────────────────────────────────────────────────────────────
+
+function CoursesIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+    </svg>
+  );
+}
+function OnlineIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <rect x="2" y="4" width="20" height="13" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+    </svg>
+  );
+}
+function BuildingIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1" />
+    </svg>
+  );
+}
+function WalletIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M2 10h20M16 15h2" />
+    </svg>
+  );
+}
+function DocumentIcon({ className }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <path d="M14 2v6h6M9 13h6M9 17h6" />
+    </svg>
+  );
+}
+
+function NavIcon({ path }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+      {path}
+    </svg>
+  );
+}
+
+const NAV = [
+  { key: 'overview', label: 'Overview', icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" /> },
+  { key: 'courses', label: 'My Courses', icon: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></> },
+  { key: 'certificate', label: 'Certificate', icon: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></> },
+  { key: 'payments', label: 'Payments', icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></> },
+];
+
+// ─── Sidebar ────────────────────────────────────────────────────────────────
+
+function Sidebar({ open, onClose, tab, setTab, onLogout }) {
+  return (
+    <>
+      {open && (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+        />
+      )}
+      <aside
+        className={`fixed lg:static top-20 lg:top-0 left-0 h-[calc(100vh-5rem)] lg:h-screen w-64 z-50 flex flex-col border-r border-blue-900/40
+          transition-transform duration-200 ease-out
+          ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        style={{ background: '#152035' }}
+      >
+        <div className="flex items-center justify-between px-5 pt-6 pb-5 border-b border-blue-900/30">
+          <span className="text-slate-400 font-bold text-[11px] uppercase tracking-[0.16em]">Student Panel</span>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors lg:hidden" aria-label="Close menu">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="flex-1 px-2.5 pt-3 space-y-0.5 overflow-y-auto pb-4">
+          {NAV.map((item) => {
+            const active = tab === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => { setTab(item.key); onClose(); }}
+                className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-all duration-150 ${active
+                  ? 'bg-white text-[#0057E7] font-semibold shadow-sm'
+                  : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
+                  }`}
+              >
+                {active && <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[#0057E7]" />}
+                <NavIcon path={item.icon} />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="px-2.5 pb-5 pt-2 border-t border-blue-900/30">
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-2.5 text-[13px] font-medium text-slate-400 hover:text-white px-3 py-2 rounded-md hover:bg-white/[0.08] transition-colors mt-2"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+              <path d="M16 17l5-5-5-5M21 12H9" />
+            </svg>
+            Log out
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+// ─── Top bar ────────────────────────────────────────────────────────────────
+
+function TopBar({ onMenuClick, title, initials }) {
+  return (
+    <header className="bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70 border-b border-slate-200 px-4 lg:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
+      <div className="flex items-center gap-3">
+        <button onClick={onMenuClick} aria-label="Menu" className="text-slate-500 hover:text-slate-700 transition-colors lg:hidden">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
+        <p className="text-slate-800 font-semibold text-[14px] tracking-tight">{title}</p>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <button aria-label="Notifications" className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors rounded-md p-1.5">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 01-3.46 0" />
+          </svg>
+        </button>
+        <span className="flex items-center gap-1.5 text-slate-700 font-medium text-[13px] pl-1.5 pr-2 py-1.5 ml-0.5">
+          <span className="w-6 h-6 rounded-full bg-[#0057E7] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+            {initials || '··'}
+          </span>
+        </span>
+      </div>
+    </header>
   );
 }
 
@@ -237,12 +447,9 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
 
-      {/* Modal card */}
       <div className="relative w-full max-w-[420px] bg-white border border-slate-200 rounded-xl shadow-2xl ring-1 ring-black/5 overflow-hidden max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-slate-200/80">
           <div>
             <p className="text-slate-900 text-[15px] font-bold tracking-tight">Bank Transfer</p>
@@ -265,7 +472,6 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
         <div className="px-5 sm:px-6 pt-4 pb-6">
           <ErrorBanner message={error} />
 
-          {/* Step 1: Choose payment type */}
           {step === 'choose' && (
             <div className="space-y-2.5">
               <button
@@ -297,7 +503,6 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
             </div>
           )}
 
-          {/* Step 2: Enter amount */}
           {step === 'amount' && (
             <div className="space-y-5">
               <div>
@@ -331,7 +536,6 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
             </div>
           )}
 
-          {/* Step 3: Bank details */}
           {step === 'bank_details' && (
             <div className="space-y-4">
               <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
@@ -395,15 +599,6 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
 
 // ─── Certificate Card ──────────────────────────────────────────────────────
 
-function DocumentIcon({ className }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-      <path d="M14 2v6h6M9 13h6M9 17h6" />
-    </svg>
-  );
-}
-
 function formatDate(d) {
   if (!d) return null;
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -413,7 +608,7 @@ function CertificateCard({ certificate }) {
   const isReady = !!certificate;
 
   return (
-    <Card interactive className="mb-9 p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap">
+    <Card interactive className="p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap">
       <div className="flex items-center gap-3 min-w-0">
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
           isReady ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-300'
@@ -455,7 +650,6 @@ function CertificateCard({ certificate }) {
 // ─── Course Card ──────────────────────────────────────────────────────────────
 
 function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemove, onPaymentUpdate }) {
-  const isOnline = app.mode_of_learning === 'online';
   const isPaymentOpen = openPayment === app.id;
   const paymentStatus = app.payment_status || 'not_started';
   const isPaid = paymentStatus === 'paid';
@@ -509,7 +703,6 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
         </button>
       )}
 
-      {/* Pay button */}
       {!isPaid && (
         <div className="mt-4 pt-3.5 border-t border-slate-100">
           {isPaymentOpen ? (
@@ -540,25 +733,180 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
   );
 }
 
-// ─── Top bar ────────────────────────────────────────────────────────────────
+// ─── Overview tab ───────────────────────────────────────────────────────────
 
-function TopBar({ onLogout }) {
+function OverviewTab({ user, applications, onNavigate }) {
+  const count = applications.length;
+  const onlineCount = applications.filter((a) => a.mode_of_learning === 'online').length;
+  const physicalCount = applications.filter((a) => a.mode_of_learning === 'physical').length;
+  const totalFees = applications.reduce((sum, a) => sum + (Number(a.course_detail?.fee) || 0), 0);
+  const paidCount = applications.filter((a) => a.payment_status === 'paid').length;
+  const reviewCount = applications.filter((a) => a.payment_status === 'in_review').length;
+  const formattedFees = totalFees >= 1000000
+    ? `₦${(totalFees / 1000000).toFixed(1)}M`
+    : `₦${totalFees.toLocaleString()}`;
+
+  const firstName = user?.first_name || '';
+  const lastName = user?.last_name || '';
+  const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`;
+
   return (
-    <div className="border-b border-slate-200 bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70 sticky top-0 z-20">
-      <div className="max-w-5xl mx-auto px-4 sm:px-5 md:px-8 py-4 flex items-center justify-between">
-        <span className="text-slate-900 font-bold text-[15px] tracking-tight">LASOP</span>
-        <button
-          onClick={onLogout}
-          className="text-xs font-medium text-slate-500 hover:text-slate-800 border border-slate-200 hover:border-slate-300 bg-white px-3.5 py-2 rounded-md transition"
-        >
-          Log out
-        </button>
+    <div>
+      <div className="flex items-center gap-4 mb-7">
+        <div className="w-14 h-14 rounded-full bg-[#0057E7] flex items-center justify-center text-lg font-bold text-white shrink-0">
+          {initials || '··'}
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-slate-900 font-bold text-xl leading-tight tracking-tight truncate">
+            {firstName} {lastName}
+          </h1>
+          <p className="text-slate-400 text-sm mt-1 truncate">
+            {user?.email}{user?.phone_number ? ` · ${user.phone_number}` : ''}
+          </p>
+        </div>
+      </div>
+
+      {(reviewCount > 0 || paidCount > 0) && (
+        <div className="flex items-center gap-2 flex-wrap mb-6">
+          {reviewCount > 0 && <Pill color="amber">{reviewCount} payment{reviewCount > 1 ? 's' : ''} in review</Pill>}
+          {paidCount > 0 && <Pill color="emerald">{paidCount} paid</Pill>}
+        </div>
+      )}
+
+      <div className="mb-5">
+        <SectionLabel>Quick actions</SectionLabel>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <ManagerCard title="View my courses" onClick={() => onNavigate('courses')} icon={<CoursesIcon />} />
+          <ManagerCard title="Check my certificate" onClick={() => onNavigate('certificate')} icon={<DocumentIcon className="w-4 h-4" />} />
+        </div>
+      </div>
+
+      <div className="mb-5">
+        <SectionLabel>At a glance</SectionLabel>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <HighlightStatCard label="Courses enrolled" value={count} icon={<CoursesIcon />} />
+          <HighlightStatCard label="Total fees" value={formattedFees} icon={<WalletIcon />} />
+        </div>
+      </div>
+
+      <div>
+        <SectionLabel>Breakdown</SectionLabel>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
+          <OverviewStatCard label="Online" value={onlineCount} icon={<OnlineIcon />} />
+          <OverviewStatCard label="Physical" value={physicalCount} icon={<BuildingIcon />} />
+          <OverviewStatCard label="Paid" value={paidCount} icon={<WalletIcon />} />
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Dashboard Page ───────────────────────────────────────────────────────────
+// ─── Courses tab ────────────────────────────────────────────────────────────
+
+function CoursesTab({ applications, token, openPayment, setOpenPayment, onRemove, onPaymentUpdate }) {
+  const count = applications.length;
+
+  return (
+    <div>
+      <PageHeader title="My Courses" subtitle={count > 0 ? `${count} enrolled` : undefined}>
+        <Link href="/apply">
+          <PrimaryButton>+ Add course</PrimaryButton>
+        </Link>
+      </PageHeader>
+
+      {count === 0 ? (
+        <Card className="border-dashed">
+          <EmptyState title="No courses yet" hint="Your enrolled courses will show up here." />
+          <div className="text-center pb-8 -mt-4">
+            <Link href="/apply" className="inline-block text-[#0057E7] text-sm hover:text-[#0A66FF] transition border border-blue-200 hover:border-blue-300 bg-blue-50 rounded-md px-4 py-2 font-semibold">
+              + Add course
+            </Link>
+          </div>
+        </Card>
+      ) : count === 1 ? (
+        <CourseCard
+          app={applications[0]}
+          featured
+          token={token}
+          openPayment={openPayment}
+          setOpenPayment={setOpenPayment}
+          onRemove={onRemove}
+          onPaymentUpdate={onPaymentUpdate}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {applications.map((app, i) => (
+            <CourseCard
+              key={app.id}
+              app={app}
+              featured={count % 2 !== 0 && i === count - 1}
+              token={token}
+              openPayment={openPayment}
+              setOpenPayment={setOpenPayment}
+              onRemove={onRemove}
+              onPaymentUpdate={onPaymentUpdate}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Certificate tab ─────────────────────────────────────────────────────────
+
+function CertificateTab({ certificate }) {
+  return (
+    <div>
+      <PageHeader title="Certificate" />
+      <CertificateCard certificate={certificate} />
+    </div>
+  );
+}
+
+// ─── Payments tab ────────────────────────────────────────────────────────────
+
+function PaymentsTab({ applications }) {
+  const withPayments = applications.filter((a) => a.payment_status && a.payment_status !== 'not_started');
+
+  return (
+    <div>
+      <PageHeader title="Payments" subtitle={`${withPayments.length} record${withPayments.length !== 1 ? 's' : ''}`} />
+      {withPayments.length === 0 ? (
+        <Card><EmptyState title="No payment activity yet" hint="Payments you make will show up here." /></Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
+                  {['Course', 'Mode', 'Fee', 'Status', 'Date'].map((h, i) => (
+                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {withPayments.map((a) => (
+                  <tr key={a.id} className="border-b border-slate-100 last:border-0">
+                    <td className="px-5 py-4 text-slate-800 font-semibold">{a.course_detail?.title}</td>
+                    <td className="px-5 py-4"><ModePill mode={a.mode_of_learning} /></td>
+                    <td className="px-5 py-4 text-slate-800 font-bold">₦{Number(a.course_detail?.fee).toLocaleString()}</td>
+                    <td className="px-5 py-4"><PaymentStatusBadge status={a.payment_status} amountPaid={a.amount_paid} /></td>
+                    <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">
+                      {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── Page shell ────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -568,6 +916,8 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
   const [openPayment, setOpenPayment] = useState(null);
   const [token, setToken] = useState('');
+  const [tab, setTab] = useState('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const t = localStorage.getItem('access');
@@ -626,119 +976,48 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Spinner text="Loading dashboard…" />
-      </main>
-    );
-  }
-
   const firstName = user?.first_name || '';
   const lastName = user?.last_name || '';
   const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`;
-  const onlineCount = applications.filter((a) => a.mode_of_learning === 'online').length;
-  const physicalCount = applications.filter((a) => a.mode_of_learning === 'physical').length;
-  const count = applications.length;
-  const totalFees = applications.reduce((sum, a) => sum + (Number(a.course_detail?.fee) || 0), 0);
-  const paidCount = applications.filter((a) => a.payment_status === 'paid').length;
-  const reviewCount = applications.filter((a) => a.payment_status === 'in_review').length;
+  const currentLabel = NAV.find((n) => n.key === tab)?.label || 'Overview';
 
-  const formattedFees = totalFees >= 1000000
-    ? `₦${(totalFees / 1000000).toFixed(1)}M`
-    : `₦${totalFees.toLocaleString()}`;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Spinner text="Loading dashboard…" />
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-slate-50 pt-20">
-      <TopBar onLogout={handleLogout} />
+    <div className="min-h-screen flex bg-slate-50 pt-20">
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} onLogout={handleLogout} />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-5 md:px-8 pt-8 sm:pt-10 pb-16">
+      <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
+        <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} initials={initials} />
 
-        {/* ── Profile ── */}
-        <div className="flex items-center gap-4 mb-8 sm:mb-9">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#0057E7] flex items-center justify-center text-lg sm:text-xl font-bold text-white shrink-0">
-            {initials || '··'}
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-slate-900 font-bold text-xl sm:text-2xl leading-tight tracking-tight truncate">
-              {firstName} {lastName}
-            </h1>
-            <p className="text-slate-400 text-xs sm:text-sm mt-1 truncate">
-              {user?.email}{user?.phone_number ? ` · ${user.phone_number}` : ''}
-            </p>
-          </div>
-        </div>
+        <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto pb-24">
+          <div className="max-w-5xl">
+            <ErrorBanner message={error} />
 
-        {/* ── Stats ── */}
-        <Card className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-slate-200/80 mb-8 sm:mb-9 overflow-hidden">
-          <OverviewStatCard label="Courses enrolled" value={count} accent="#0057E7" />
-          <OverviewStatCard label="Total fees" value={formattedFees} accent="#0057E7" />
-          <OverviewStatCard label="Online" value={onlineCount} accent="#059669" />
-          <OverviewStatCard label="Physical" value={physicalCount} accent="#D97706" />
-        </Card>
-
-        {(reviewCount > 0 || paidCount > 0) && (
-          <div className="flex items-center gap-2 sm:gap-3 mb-8 sm:mb-9 flex-wrap">
-            {reviewCount > 0 && (
-              <Pill color="amber">{reviewCount} payment{reviewCount > 1 ? 's' : ''} in review</Pill>
+            {tab === 'overview' && (
+              <OverviewTab user={user} applications={applications} onNavigate={setTab} />
             )}
-            {paidCount > 0 && (
-              <Pill color="emerald">{paidCount} paid</Pill>
-            )}
-          </div>
-        )}
-
-        <ErrorBanner message={error} />
-
-        {/* ── Certificate ── */}
-        <CertificateCard certificate={user?.certificate} />
-
-        {/* ── Courses ── */}
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h2 className="text-slate-900 font-bold text-lg tracking-tight">
-            Courses{count > 0 ? ` (${count})` : ''}
-          </h2>
-          <Link href="/apply" className="text-[#0057E7] text-sm hover:text-[#0A66FF] transition font-semibold">
-            + Add course
-          </Link>
-        </div>
-
-        {count === 0 ? (
-          <Card className="border-dashed">
-            <EmptyState title="No courses yet" hint="Your enrolled courses will show up here." />
-            <div className="text-center pb-8 -mt-4">
-              <Link href="/apply" className="inline-block text-[#0057E7] text-sm hover:text-[#0A66FF] transition border border-blue-200 hover:border-blue-300 bg-blue-50 rounded-md px-4 py-2 font-semibold">
-                + Add course
-              </Link>
-            </div>
-          </Card>
-        ) : count === 1 ? (
-          <CourseCard
-            app={applications[0]}
-            featured
-            token={token}
-            openPayment={openPayment}
-            setOpenPayment={setOpenPayment}
-            onRemove={handleRemoveCourse}
-            onPaymentUpdate={handlePaymentUpdate}
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            {applications.map((app, i) => (
-              <CourseCard
-                key={app.id}
-                app={app}
-                featured={count % 2 !== 0 && i === count - 1}
+            {tab === 'courses' && (
+              <CoursesTab
+                applications={applications}
                 token={token}
                 openPayment={openPayment}
                 setOpenPayment={setOpenPayment}
                 onRemove={handleRemoveCourse}
                 onPaymentUpdate={handlePaymentUpdate}
               />
-            ))}
+            )}
+            {tab === 'certificate' && <CertificateTab certificate={user?.certificate} />}
+            {tab === 'payments' && <PaymentsTab applications={applications} />}
           </div>
-        )}
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
