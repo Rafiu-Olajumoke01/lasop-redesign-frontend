@@ -53,10 +53,10 @@ export default function LoginPage() {
         } else if (profile.is_tutor) {
           router.push('/tutor');
         } else {
-          router.push('/dashboard');
+          router.push('/student');
         }
       } else {
-        router.push('/dashboard');
+        router.push('/student');
       }
 
     } catch (err) {

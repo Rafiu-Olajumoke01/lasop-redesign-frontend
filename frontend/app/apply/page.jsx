@@ -85,7 +85,7 @@ export default function ApplyPage() {
         return;
       }
 
-      router.push('/dashboard');
+      router.push('/student');
 
     } catch (err) {
       setError('Network error, please try again');
