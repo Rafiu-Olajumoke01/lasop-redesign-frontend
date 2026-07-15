@@ -1364,7 +1364,7 @@ function StudentsTab({ token, tutors }) {
                           <Pill color="rose">Unassigned</Pill>
                         )}
                       </td>
-                     <td className="px-5 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-5 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <select
                           className={`${inputClass} text-[12px] py-1.5 w-44 inline-block`}
                           value={currentTutorId}
@@ -1393,6 +1393,7 @@ function StudentsTab({ token, tutors }) {
 // ─── Applicants tab ─────────────────────────────────────────────────────────────
 
 function ApplicationsTab({ applications, token, cohorts }) {
+  const router = useRouter();
   const [filter, setFilter] = useState('all');
   const [confirmingId, setConfirmingId] = useState(null);
   const [assigningId, setAssigningId] = useState(null);
@@ -1488,7 +1489,11 @@ function ApplicationsTab({ applications, token, cohorts }) {
                   const date = formatDate(a.created_at);
                   const canConfirm = a.payment?.status === 'awaiting_confirmation';
                   return (
-                    <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
+                    <tr
+                      key={a.id}
+                      onClick={() => router.push(`/backstage/applicant/${a.id}`)}
+                      className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0 cursor-pointer"
+                    >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           {name ? (
@@ -1518,7 +1523,7 @@ function ApplicationsTab({ applications, token, cohorts }) {
                       <td className="px-5 py-4">
                         <PaymentPill payment={a.payment} />
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
                         {a.payment?.status === 'paid' ? (
                           <select
                             className={`${inputClass} text-[12px] py-1.5 w-40 inline-block`}
@@ -1538,7 +1543,7 @@ function ApplicationsTab({ applications, token, cohorts }) {
                       <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">
                         {date || '—'}
                       </td>
-                      <td className="px-5 py-4 text-right whitespace-nowrap">
+                      <td className="px-5 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         {canConfirm && (
                           <button
                             onClick={() => handleMarkPaid(a)}
