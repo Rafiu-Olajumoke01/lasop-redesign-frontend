@@ -1293,6 +1293,27 @@ function StudentsTab({ token, tutors }) {
     { key: 'assigned', label: 'Assigned' },
   ];
 
+  const TutorSelect = ({ s }) => {
+    const currentTutorId = s.assigned_tutor_detail?.id ?? '';
+    const isSaving = savingId === s.id;
+    return (
+      <div onClick={(e) => e.stopPropagation()}>
+        <select
+          className={`${inputClass} text-[12px] py-1.5 w-full sm:w-44 inline-block`}
+          value={currentTutorId}
+          disabled={isSaving || tutors.loading}
+          onChange={(e) => handleAssign(s.id, e.target.value)}
+        >
+          <option value="">Unassigned</option>
+          {tutors.items.map((t) => (
+            <option key={t.id} value={t.id}>{getTutorLabel(t)}</option>
+          ))}
+        </select>
+        {isSaving && <span className="text-slate-400 text-[11px] ml-2">Saving…</span>}
+      </div>
+    );
+  };
+
   return (
     <div>
       <PageHeader
@@ -1323,7 +1344,36 @@ function StudentsTab({ token, tutors }) {
         <Card><EmptyState title="No students" hint="Nothing matches this filter yet." /></Card>
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile: stacked cards */}
+          <div className="sm:hidden divide-y divide-slate-100">
+            {filtered.map((s) => (
+              <div
+                key={s.id}
+                onClick={() => router.push(`/backstage/students/${s.id}`)}
+                className="p-4 active:bg-slate-50 transition cursor-pointer"
+              >
+                <div className="flex items-center gap-3 mb-2.5">
+                  <div className="w-8 h-8 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                    {getStudentName(s).charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-slate-800 font-semibold text-sm leading-tight truncate">{getStudentName(s)}</p>
+                    <p className="text-slate-400 text-xs truncate">{s.email}</p>
+                  </div>
+                  {s.assigned_tutor_detail ? (
+                    <Pill color="blue">{s.assigned_tutor_detail.name}</Pill>
+                  ) : (
+                    <Pill color="rose">Unassigned</Pill>
+                  )}
+                </div>
+                <p className="text-slate-500 text-xs mb-3">{s.phone_number || 'No phone number'}</p>
+                <TutorSelect s={s} />
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
@@ -1338,49 +1388,45 @@ function StudentsTab({ token, tutors }) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((s) => {
-                  const currentTutorId = s.assigned_tutor_detail?.id ?? '';
-                  const isSaving = savingId === s.id;
-                  return (
-                    <tr
-                      key={s.id}
-                      onClick={() => router.push(`/backstage/students/${s.id}`)}
-                      className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0 cursor-pointer"
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
-                            {getStudentName(s).charAt(0).toUpperCase()}
-                          </div>
-                          <p className="text-slate-800 font-semibold leading-none">{getStudentName(s)}</p>
+                {filtered.map((s) => (
+                  <tr
+                    key={s.id}
+                    onClick={() => router.push(`/backstage/students/${s.id}`)}
+                    className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0 cursor-pointer"
+                  >
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+                          {getStudentName(s).charAt(0).toUpperCase()}
                         </div>
-                      </td>
-                      <td className="px-5 py-4 text-slate-500">{s.email}</td>
-                      <td className="px-5 py-4 text-slate-500">{s.phone_number || '—'}</td>
-                      <td className="px-5 py-4">
-                        {s.assigned_tutor_detail ? (
-                          <Pill color="blue">{s.assigned_tutor_detail.name}</Pill>
-                        ) : (
-                          <Pill color="rose">Unassigned</Pill>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          className={`${inputClass} text-[12px] py-1.5 w-44 inline-block`}
-                          value={currentTutorId}
-                          disabled={isSaving || tutors.loading}
-                          onChange={(e) => handleAssign(s.id, e.target.value)}
-                        >
-                          <option value="">Unassigned</option>
-                          {tutors.items.map((t) => (
-                            <option key={t.id} value={t.id}>{getTutorLabel(t)}</option>
-                          ))}
-                        </select>
-                        {isSaving && <span className="text-slate-400 text-[11px] ml-2">Saving…</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
+                        <p className="text-slate-800 font-semibold leading-none">{getStudentName(s)}</p>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-slate-500">{s.email}</td>
+                    <td className="px-5 py-4 text-slate-500">{s.phone_number || '—'}</td>
+                    <td className="px-5 py-4">
+                      {s.assigned_tutor_detail ? (
+                        <Pill color="blue">{s.assigned_tutor_detail.name}</Pill>
+                      ) : (
+                        <Pill color="rose">Unassigned</Pill>
+                      )}
+                    </td>
+                    <td className="px-5 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        className={`${inputClass} text-[12px] py-1.5 w-44 inline-block`}
+                        value={s.assigned_tutor_detail?.id ?? ''}
+                        disabled={savingId === s.id || tutors.loading}
+                        onChange={(e) => handleAssign(s.id, e.target.value)}
+                      >
+                        <option value="">Unassigned</option>
+                        {tutors.items.map((t) => (
+                          <option key={t.id} value={t.id}>{getTutorLabel(t)}</option>
+                        ))}
+                      </select>
+                      {savingId === s.id && <span className="text-slate-400 text-[11px] ml-2">Saving…</span>}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -1426,6 +1472,7 @@ function ApplicationsTab({ applications, token, cohorts }) {
       setConfirmingId(null);
     }
   };
+
   const handleAssignCohort = async (application, cohortIdRaw) => {
     setActionError('');
     setAssigningId(application.id);
@@ -1440,6 +1487,22 @@ function ApplicationsTab({ applications, token, cohorts }) {
       setAssigningId(null);
     }
   };
+
+  const CohortSelect = ({ a }) => (
+    <div onClick={(e) => e.stopPropagation()}>
+      <select
+        className={`${inputClass} text-[12px] py-1.5 w-full sm:w-40 inline-block`}
+        value={a.cohort_detail?.id ?? a.cohort ?? ''}
+        disabled={assigningId === a.id || cohorts.loading}
+        onChange={(e) => handleAssignCohort(a, e.target.value)}
+      >
+        <option value="">Unassigned</option>
+        {cohorts.items.map((c) => (
+          <option key={c.id} value={c.id}>{c.name}</option>
+        ))}
+      </select>
+    </div>
+  );
 
   return (
     <div>
@@ -1469,7 +1532,73 @@ function ApplicationsTab({ applications, token, cohorts }) {
         <Card><EmptyState title="No applications" hint="Nothing matches this filter yet." /></Card>
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile: stacked cards */}
+          <div className="sm:hidden divide-y divide-slate-100">
+            {filtered.map((a) => {
+              const name = getApplicantName(a);
+              const email = getApplicantEmail(a);
+              const course = getCourseTitle(a);
+              const mode = a.mode_of_learning;
+              const date = formatDate(a.created_at);
+              const canConfirm = a.payment?.status === 'awaiting_confirmation';
+              return (
+                <div
+                  key={a.id}
+                  onClick={() => router.push(`/backstage/applicant/${a.id}`)}
+                  className="p-4 active:bg-slate-50 transition cursor-pointer"
+                >
+                  <div className="flex items-start gap-3 mb-2.5">
+                    {name ? (
+                      <div className="w-8 h-8 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {name.charAt(0).toUpperCase()}
+                      </div>
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-slate-800 font-semibold text-sm leading-tight truncate">{name || 'Not available'}</p>
+                      {email && <p className="text-slate-400 text-xs truncate">{email}</p>}
+                    </div>
+                    <PaymentPill payment={a.payment} />
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    {course && <span className="text-slate-600 text-xs">{course}</span>}
+                    {mode && <ModePill mode={mode} />}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
+                    <span>{date || '—'}</span>
+                    <span className="text-slate-800 font-bold text-sm">
+                      {a.payment ? formatMoney(a.payment.confirmed_amount || a.payment.amount) : formatMoney(getCourseFee(a))}
+                    </span>
+                  </div>
+
+                  {a.payment?.status === 'paid' && (
+                    <div className="mb-3">
+                      <CohortSelect a={a} />
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                    {canConfirm && (
+                      <button
+                        onClick={() => handleMarkPaid(a)}
+                        disabled={confirmingId === a.id}
+                        className="flex-1 text-center text-[12px] font-semibold text-emerald-700
+                          border border-emerald-300 bg-emerald-50
+                          px-3 py-2 rounded-md transition disabled:opacity-40"
+                      >
+                        {confirmingId === a.id ? 'Confirming…' : 'Mark as paid'}
+                      </button>
+                    )}
+                    <LinkButton danger onClick={() => applications.remove(a)}>Delete</LinkButton>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
@@ -1525,17 +1654,7 @@ function ApplicationsTab({ applications, token, cohorts }) {
                       </td>
                       <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
                         {a.payment?.status === 'paid' ? (
-                          <select
-                            className={`${inputClass} text-[12px] py-1.5 w-40 inline-block`}
-                            value={a.cohort_detail?.id ?? a.cohort ?? ''}
-                            disabled={assigningId === a.id || cohorts.loading}
-                            onChange={(e) => handleAssignCohort(a, e.target.value)}
-                          >
-                            <option value="">Unassigned</option>
-                            {cohorts.items.map((c) => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                          </select>
+                          <CohortSelect a={a} />
                         ) : (
                           <span className="text-slate-400 text-xs">—</span>
                         )}
