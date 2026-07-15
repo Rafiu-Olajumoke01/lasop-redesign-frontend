@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -13,6 +13,111 @@ const BANK_DETAILS = {
   accountNumber: '1223017613',
 };
 
+// ─── Shared UI (matches /backstage) ────────────────────────────────────────
+
+function Card({ children, className = '', interactive = false }) {
+  return (
+    <div
+      className={`bg-white border border-slate-200/80 rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)]
+        ${interactive ? 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)] hover:border-slate-300 hover:-translate-y-[1px] transition-all duration-200' : ''}
+        ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Pill({ children, color = 'slate' }) {
+  const map = {
+    blue: 'bg-blue-50 text-[#0057E7] border-blue-200/80',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200/80',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+    rose: 'bg-rose-50 text-rose-700 border-rose-200/80',
+    slate: 'bg-slate-100 text-slate-600 border-slate-200/80',
+  };
+  return (
+    <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border tracking-wide leading-none ${map[color] || map.slate}`}>
+      {children}
+    </span>
+  );
+}
+
+function ModePill({ mode }) {
+  if (!mode) return null;
+  return <Pill color={mode === 'online' ? 'blue' : 'slate'}>{mode}</Pill>;
+}
+
+function PaymentStatusBadge({ status, amountPaid }) {
+  if (!status || status === 'not_started') return null;
+  if (status === 'in_review') return <Pill color="amber">Payment in review</Pill>;
+  if (status === 'paid') return <Pill color="emerald">{`Paid · ₦${Number(amountPaid).toLocaleString()}`}</Pill>;
+  return null;
+}
+
+function ErrorBanner({ message }) {
+  if (!message) return null;
+  return (
+    <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-lg px-4 py-3 mb-5">
+      <span className="mt-0.5 shrink-0">⚠</span>
+      {message}
+    </div>
+  );
+}
+
+function PrimaryButton({ children, className = '', ...props }) {
+  return (
+    <button
+      {...props}
+      className={`bg-[#0057E7] hover:bg-[#0A66FF] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-md
+        shadow-sm hover:shadow-md transition-all duration-150 active:scale-[0.97] ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SecondaryButton({ children, className = '', ...props }) {
+  return (
+    <button
+      {...props}
+      className={`bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-medium px-4 py-2.5
+        rounded-md border border-slate-200 transition-all duration-150 active:scale-[0.97] ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function EmptyState({ title, hint }) {
+  return (
+    <div className="py-14 text-center">
+      <div className="w-12 h-12 rounded-lg bg-slate-50 border border-slate-200/80 mx-auto mb-4 flex items-center justify-center text-xl">
+        📭
+      </div>
+      <p className="text-slate-700 font-semibold mb-1">{title}</p>
+      {hint && <p className="text-slate-400 text-sm">{hint}</p>}
+    </div>
+  );
+}
+
+function Spinner({ text }) {
+  return (
+    <div className="py-20 text-center">
+      <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-[#0057E7] animate-spin mx-auto mb-3" />
+      <p className="text-slate-400 text-sm">{text}</p>
+    </div>
+  );
+}
+
+function OverviewStatCard({ label, value, accent = '#0057E7' }) {
+  return (
+    <div className="bg-white px-4 sm:px-5 py-4 sm:py-5">
+      <p className="text-slate-500 text-[11px] sm:text-xs mb-2 font-medium">{label}</p>
+      <p className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: accent }}>{value}</p>
+    </div>
+  );
+}
+
 // ─── Step Indicator ─────────────────────────────────────────────────────────
 
 function StepDots({ step }) {
@@ -24,7 +129,7 @@ function StepDots({ step }) {
         <span
           key={s}
           className={`h-1 rounded-full transition-all duration-300 ${
-            i === activeIndex ? 'w-5 bg-[#5B8CFF]' : i < activeIndex ? 'w-1 bg-[#3A4A6E]' : 'w-1 bg-[#1C2330]'
+            i === activeIndex ? 'w-5 bg-[#0057E7]' : i < activeIndex ? 'w-1 bg-[#0057E7]/40' : 'w-1 bg-slate-200'
           }`}
         />
       ))}
@@ -133,68 +238,59 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-[#05070B]/80 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
 
       {/* Modal card */}
-      <div className="relative w-full max-w-[420px] bg-[#0D1118] border border-[#232B3A] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden max-h-[90vh] overflow-y-auto">
-        {/* Accent top bar */}
-        <div className="h-[3px] w-full bg-gradient-to-r from-[#5B8CFF] via-[#7CFF6B] to-[#5B8CFF]" />
-
+      <div className="relative w-full max-w-[420px] bg-white border border-slate-200 rounded-xl shadow-2xl ring-1 ring-black/5 overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 sm:px-6 pt-5 pb-4">
+        <div className="flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-slate-200/80">
           <div>
-            <p className="text-[#F1F3F7] text-[15px] font-semibold">Bank Transfer</p>
-            <p className="text-[#5A6275] text-[11px] font-mono mt-0.5">secure · manual review</p>
+            <p className="text-slate-900 text-[15px] font-bold tracking-tight">Bank Transfer</p>
+            <p className="text-slate-400 text-[11px] mt-0.5">Secure · manual review</p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-[#6B7585] hover:text-[#E6E9EF] hover:bg-[#1A2030] transition shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shrink-0 text-sm"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
+            ✕
           </button>
         </div>
 
         {step !== 'choose' && (
-          <div className="px-5 sm:px-6 pb-4">
+          <div className="px-5 sm:px-6 pt-4">
             <StepDots step={step} />
           </div>
         )}
 
-        <div className="px-5 sm:px-6 pb-6">
-          {error && (
-            <div className="bg-[#2A1414] border border-[#501313] rounded-lg px-4 py-3 mb-4">
-              <p className="text-[#F09595] text-xs">{error}</p>
-            </div>
-          )}
+        <div className="px-5 sm:px-6 pt-4 pb-6">
+          <ErrorBanner message={error} />
 
           {/* Step 1: Choose payment type */}
           {step === 'choose' && (
             <div className="space-y-2.5">
               <button
                 onClick={() => handleChoosePaymentType('full')}
-                className="w-full text-left bg-[#11151D] hover:bg-[#141925] border border-[#1C2330] hover:border-[#2A4034] rounded-xl p-4 transition flex items-center justify-between"
+                className="w-full text-left bg-white hover:bg-slate-50 border border-slate-200 hover:border-emerald-300 rounded-lg p-4 transition flex items-center justify-between"
               >
                 <div>
-                  <p className="text-[#F1F3F7] text-sm font-semibold mb-1">Pay in Full</p>
-                  <p className="text-[#6B7585] text-xs">
+                  <p className="text-slate-900 text-sm font-semibold mb-1">Pay in Full</p>
+                  <p className="text-slate-400 text-xs">
                     {totalFee ? `₦${totalFee.toLocaleString()}` : 'Complete course fee'}
                   </p>
                 </div>
-                <span className="w-8 h-8 rounded-full bg-[#14201A] border border-[#2A4034] flex items-center justify-center text-[#7CFF6B] shrink-0">
+                <span className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </span>
               </button>
               <button
                 onClick={() => handleChoosePaymentType('part')}
-                className="w-full text-left bg-[#11151D] hover:bg-[#141925] border border-[#1C2330] hover:border-[#2A3F6A] rounded-xl p-4 transition flex items-center justify-between"
+                className="w-full text-left bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-300 rounded-lg p-4 transition flex items-center justify-between"
               >
                 <div>
-                  <p className="text-[#F1F3F7] text-sm font-semibold mb-1">Part Payment</p>
-                  <p className="text-[#6B7585] text-xs">Pay an amount of your choice</p>
+                  <p className="text-slate-900 text-sm font-semibold mb-1">Part Payment</p>
+                  <p className="text-slate-400 text-xs">Pay an amount of your choice</p>
                 </div>
-                <span className="w-8 h-8 rounded-full bg-[#0E1829] border border-[#1C2B4A] flex items-center justify-center text-[#5B8CFF] shrink-0">
+                <span className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-[#0057E7] shrink-0">
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7H11M11 7L7.5 3.5M11 7L7.5 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </span>
               </button>
@@ -205,11 +301,11 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
           {step === 'amount' && (
             <div className="space-y-5">
               <div>
-                <p className="text-[#8B95A7] text-[13px] mb-3">
+                <p className="text-slate-500 text-[13px] mb-3">
                   Type how much you want to pay
                 </p>
-                <div className="flex items-center bg-[#11151D] border border-[#232B3A] focus-within:border-[#5B8CFF] rounded-xl px-4 py-4 transition">
-                  <span className="text-[#5B8CFF] font-semibold text-xl mr-2 shrink-0">₦</span>
+                <div className="flex items-center bg-white border border-slate-300 focus-within:border-[#0057E7] focus-within:ring-2 focus-within:ring-[#0057E7]/15 rounded-lg px-4 py-4 transition">
+                  <span className="text-[#0057E7] font-semibold text-xl mr-2 shrink-0">₦</span>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -217,26 +313,20 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
                     onChange={handleAmountChange}
                     placeholder="0"
                     autoFocus
-                    className="bg-transparent outline-none text-[#F1F3F7] text-xl font-semibold w-full placeholder:text-[#2A3142]"
+                    className="bg-transparent outline-none text-slate-900 text-xl font-semibold w-full placeholder:text-slate-300"
                   />
                 </div>
                 {totalFee > 0 && (
-                  <p className="text-[#4A5263] text-[11px] mt-2">Total course fee: ₦{totalFee.toLocaleString()}</p>
+                  <p className="text-slate-400 text-[11px] mt-2">Total course fee: ₦{totalFee.toLocaleString()}</p>
                 )}
               </div>
               <div className="flex items-center gap-2.5">
-                <button
-                  onClick={() => { setStep('choose'); setError(''); }}
-                  className="px-4 py-3 rounded-xl border border-[#232B3A] text-[#8B95A7] hover:text-[#E6E9EF] hover:border-[#2A2F3A] transition text-sm"
-                >
+                <SecondaryButton onClick={() => { setStep('choose'); setError(''); }}>
                   Back
-                </button>
-                <button
-                  onClick={handleSubmitAmount}
-                  className="flex-1 bg-[#5B8CFF] hover:bg-[#7FAAFF] text-[#0B0E14] text-sm font-semibold py-3 rounded-xl transition"
-                >
+                </SecondaryButton>
+                <PrimaryButton className="flex-1 justify-center" onClick={handleSubmitAmount}>
                   Continue
-                </button>
+                </PrimaryButton>
               </div>
             </div>
           )}
@@ -244,7 +334,7 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
           {/* Step 3: Bank details */}
           {step === 'bank_details' && (
             <div className="space-y-4">
-              <div className="bg-[#11151D] border border-[#232B3A] rounded-xl overflow-hidden">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
                 {[
                   { label: 'Account Name', value: BANK_DETAILS.accountName, field: 'name' },
                   { label: 'Bank', value: BANK_DETAILS.bankName, field: 'bank' },
@@ -252,18 +342,18 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
                 ].map(({ label, value, field }, i) => (
                   <div
                     key={field}
-                    className={`flex items-center justify-between px-4 py-3.5 ${i !== 0 ? 'border-t border-[#1C2330]' : ''}`}
+                    className={`flex items-center justify-between px-4 py-3.5 ${i !== 0 ? 'border-t border-slate-200' : ''}`}
                   >
                     <div className="min-w-0">
-                      <p className="text-[#5A6275] text-[10px] uppercase tracking-wide mb-1">{label}</p>
-                      <p className="text-[#F1F3F7] text-[15px] font-semibold truncate">{value}</p>
+                      <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1 font-bold">{label}</p>
+                      <p className="text-slate-900 text-[15px] font-semibold truncate">{value}</p>
                     </div>
                     <button
                       onClick={() => handleCopy(field, value)}
-                      className={`text-[11px] font-medium px-2.5 py-1.5 rounded-md transition shrink-0 ml-3 ${
+                      className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-md transition shrink-0 ml-3 ${
                         copiedField === field
-                          ? 'bg-[#14201A] text-[#7CFF6B]'
-                          : 'bg-[#1A2030] text-[#5B8CFF] hover:bg-[#202840]'
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-blue-50 text-[#0057E7] hover:bg-blue-100'
                       }`}
                     >
                       {copiedField === field ? '✓ Copied' : 'Copy'}
@@ -272,19 +362,19 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
                 ))}
               </div>
 
-              <div className="bg-gradient-to-r from-[#0E1829] to-[#0E1424] border border-[#1C2B4A] rounded-xl px-4 py-3.5 flex items-center justify-between">
-                <span className="text-[#7FAAFF] text-xs">Amount to pay</span>
-                <span className="text-[#F1F3F7] font-bold text-base">₦{amount || '0'}</span>
+              <div className="bg-blue-50 border border-blue-200/80 rounded-lg px-4 py-3.5 flex items-center justify-between">
+                <span className="text-[#0057E7] text-xs font-medium">Amount to pay</span>
+                <span className="text-slate-900 font-bold text-base">₦{amount || '0'}</span>
               </div>
 
-              <p className="text-[#5A6275] text-[12px] leading-relaxed">
-                Transfer this amount using your bank app, then confirm below. Your payment status will show as <span className="text-[#FFB454]">in review</span> until our team verifies it.
+              <p className="text-slate-500 text-[12px] leading-relaxed">
+                Transfer this amount using your bank app, then confirm below. Your payment status will show as <span className="text-amber-600 font-medium">in review</span> until our team verifies it.
               </p>
 
               <button
                 onClick={handleInitiatePayment}
                 disabled={loading}
-                className="w-full bg-[#7CFF6B] hover:bg-[#9AFF8C] disabled:opacity-50 text-[#0B0E14] text-sm font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-bold py-3.5 rounded-lg transition flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
               >
                 {loading ? (
                   'Submitting...'
@@ -301,29 +391,6 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
       </div>
     </div>
   );
-}
-// ─── Payment Status Badge ───────────────────────────────────────────────────
-
-function PaymentStatusBadge({ status, amountPaid }) {
-  if (!status || status === 'not_started') return null;
-
-  if (status === 'in_review') {
-    return (
-      <span className="text-[11px] px-2.5 py-1 rounded-md font-mono bg-[#1E1A0E] text-[#FFB454] border border-[#3A2E0A]">
-        Payment in review
-      </span>
-    );
-  }
-
-  if (status === 'paid') {
-    return (
-      <span className="text-[11px] px-2.5 py-1 rounded-md font-mono bg-[#14201A] text-[#7CFF6B] border border-[#2A4034]">
-        Paid · ₦{Number(amountPaid).toLocaleString()}
-      </span>
-    );
-  }
-
-  return null;
 }
 
 // ─── Certificate Card ──────────────────────────────────────────────────────
@@ -346,51 +413,42 @@ function CertificateCard({ certificate }) {
   const isReady = !!certificate;
 
   return (
-    <div className="bg-[#11151D] border border-[#1C2330] rounded-lg overflow-hidden hover:border-[#2A2F3A] transition mb-9">
-      <div className="flex items-center gap-1.5 px-3 py-2 bg-[#0E121A] border-b border-[#1C2330]">
-        <span className="w-[7px] h-[7px] rounded-full bg-[#FF5F57] inline-block" />
-        <span className="w-[7px] h-[7px] rounded-full bg-[#FEBC2E] inline-block" />
-        <span className="w-[7px] h-[7px] rounded-full bg-[#28C840] inline-block" />
-        <span className="ml-1.5 text-[11px] text-[#6B7585] font-mono truncate">certificate.status</span>
-      </div>
-
-      <div className="p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
-            isReady ? 'bg-[#14201A] border-[#2A4034] text-[#7CFF6B]' : 'bg-[#1C2330] border-[#232B3A] text-[#6B7585]'
-          }`}>
-            <DocumentIcon className="w-4.5 h-4.5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[#F1F3F7] font-medium text-sm">
-              {isReady ? 'Your certificate is ready' : 'Certificate not ready yet'}
-            </p>
-            <p className="text-[#6B7585] text-[11px] mt-0.5">
-              {isReady
-                ? certificate.issued_date
-                  ? `Issued ${formatDate(certificate.issued_date)}`
-                  : `Uploaded ${formatDate(certificate.uploaded_at)}`
-                : "We'll notify you once it's uploaded."}
-            </p>
-          </div>
+    <Card interactive className="mb-9 p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
+          isReady ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-300'
+        }`}>
+          <DocumentIcon className="w-4.5 h-4.5" />
         </div>
-
-        {isReady ? (
-          <a
-            href={certificate.file}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#5B8CFF] hover:bg-[#7FAAFF] text-[#0B0E14] transition shrink-0"
-          >
-            Download certificate
-          </a>
-        ) : (
-          <span className="text-sm font-medium px-4 py-2.5 rounded-lg border border-[#232B3A] text-[#5A6275] cursor-not-allowed shrink-0">
-            Not ready
-          </span>
-        )}
+        <div className="min-w-0">
+          <p className="text-slate-900 font-semibold text-sm tracking-tight">
+            {isReady ? 'Your certificate is ready' : 'Certificate not ready yet'}
+          </p>
+          <p className="text-slate-400 text-[11px] mt-0.5">
+            {isReady
+              ? certificate.issued_date
+                ? `Issued ${formatDate(certificate.issued_date)}`
+                : `Uploaded ${formatDate(certificate.uploaded_at)}`
+              : "We'll notify you once it's uploaded."}
+          </p>
+        </div>
       </div>
-    </div>
+
+      {isReady ? (
+        <a
+          href={certificate.file}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm font-semibold px-4 py-2.5 rounded-md bg-[#0057E7] hover:bg-[#0A66FF] text-white transition shrink-0 shadow-sm hover:shadow-md active:scale-[0.97]"
+        >
+          Download certificate
+        </a>
+      ) : (
+        <span className="text-sm font-medium px-4 py-2.5 rounded-md border border-slate-200 text-slate-400 cursor-not-allowed shrink-0">
+          Not ready
+        </span>
+      )}
+    </Card>
   );
 }
 
@@ -398,95 +456,108 @@ function CertificateCard({ certificate }) {
 
 function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemove, onPaymentUpdate }) {
   const isOnline = app.mode_of_learning === 'online';
-  const slug = (app.course_detail?.title || 'course')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
   const isPaymentOpen = openPayment === app.id;
   const paymentStatus = app.payment_status || 'not_started';
   const isPaid = paymentStatus === 'paid';
 
   return (
-    <div
-      className={
-        'bg-[#11151D] border border-[#1C2330] rounded-lg overflow-hidden hover:border-[#2A2F3A] transition group ' +
-        (featured ? 'md:col-span-2' : '')
-      }
-    >
-      <div className="flex items-center gap-1.5 px-3 py-2 bg-[#0E121A] border-b border-[#1C2330]">
-        <span className="w-[7px] h-[7px] rounded-full bg-[#FF5F57] inline-block" />
-        <span className="w-[7px] h-[7px] rounded-full bg-[#FEBC2E] inline-block" />
-        <span className="w-[7px] h-[7px] rounded-full bg-[#28C840] inline-block" />
-        <span className="ml-1.5 text-[11px] text-[#6B7585] font-mono truncate">{slug}.course</span>
-        <button
-          onClick={() => onRemove(app.id)}
-          aria-label="Remove course"
-          className="ml-auto text-[11px] text-[#5A6275] hover:text-[#F09595] transition shrink-0 opacity-60 group-hover:opacity-100"
-        >
-          remove()
-        </button>
-      </div>
-
-      <div className={featured ? 'p-5 md:p-6' : 'p-4'}>
-        <div className={featured ? 'flex items-start justify-between gap-6 flex-wrap' : ''}>
-          <div className={featured ? 'flex-1 min-w-[220px]' : ''}>
-            <h3 className={'text-[#F1F3F7] font-medium leading-snug mb-2.5 ' + (featured ? 'text-base' : 'text-sm')}>
+    <Card interactive className={featured ? 'md:col-span-2 p-5 md:p-6' : 'p-4'}>
+      <div className={featured ? 'flex items-start justify-between gap-6 flex-wrap' : ''}>
+        <div className={featured ? 'flex-1 min-w-[220px]' : ''}>
+          <div className="flex items-start justify-between gap-3">
+            <h3 className={'text-slate-900 font-bold leading-snug mb-2.5 tracking-tight ' + (featured ? 'text-base' : 'text-sm')}>
               {app.course_detail?.title}
             </h3>
-            <div className="flex items-center gap-2 mb-2.5 flex-wrap">
-              <span className={'text-[11px] px-2.5 py-1 rounded-md font-mono ' + (isOnline ? 'bg-[#14201A] text-[#7CFF6B]' : 'bg-[#261B0E] text-[#FFB454]')}>
-                {app.mode_of_learning}
-              </span>
-              <span className="text-[11px] text-[#6B7585]">{app.course_detail?.duration}</span>
-              <PaymentStatusBadge status={paymentStatus} amountPaid={app.amount_paid} />
-            </div>
-            {app.location_detail && (
-              <p className="text-[11px] text-[#6B7585] mb-2.5">
-                {app.location_detail.name} — {app.location_detail.address}
-              </p>
+            {!featured && (
+              <button
+                onClick={() => onRemove(app.id)}
+                aria-label="Remove course"
+                className="text-[11px] text-slate-300 hover:text-rose-500 transition shrink-0"
+              >
+                Remove
+              </button>
             )}
           </div>
-
-          <div className={featured ? 'flex flex-col items-end justify-between gap-2 shrink-0' : 'flex items-center justify-between pt-2.5 border-t border-[#1C2330] mt-0'}>
-            <p className={'text-[#5B8CFF] font-medium ' + (featured ? 'text-lg' : 'text-sm')}>
-              ₦{Number(app.course_detail?.fee).toLocaleString()}
-            </p>
-            <p className="text-[#6B7585] text-[11px]">
-              {new Date(app.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-            </p>
+          <div className="flex items-center gap-2 mb-2.5 flex-wrap">
+            <ModePill mode={app.mode_of_learning} />
+            <span className="text-[11px] text-slate-400">{app.course_detail?.duration}</span>
+            <PaymentStatusBadge status={paymentStatus} amountPaid={app.amount_paid} />
           </div>
+          {app.location_detail && (
+            <p className="text-[11px] text-slate-400 mb-2.5">
+              {app.location_detail.name} — {app.location_detail.address}
+            </p>
+          )}
         </div>
 
-        {/* Pay button */}
-        {!isPaid && (
-          <div className="mt-4 pt-3.5 border-t border-[#1C2330]">
-            <button
-              onClick={() => setOpenPayment(isPaymentOpen ? null : app.id)}
-              className={`text-sm font-semibold px-4 py-2.5 rounded-lg transition ${
-                isPaymentOpen
-                  ? 'bg-transparent border border-[#2A2F3A] text-[#6B7585] hover:text-[#F09595] hover:border-[#501313]'
-                  : 'bg-[#5B8CFF] hover:bg-[#7FAAFF] text-[#0B0E14]'
-              }`}
-            >
-              {isPaymentOpen ? 'Cancel' : 'Pay Now'}
-            </button>
-          </div>
-        )}
+        <div className={featured ? 'flex flex-col items-end justify-between gap-2 shrink-0' : 'flex items-center justify-between pt-2.5 border-t border-slate-100 mt-3 w-full'}>
+          <p className={'text-[#0057E7] font-bold ' + (featured ? 'text-lg' : 'text-sm')}>
+            ₦{Number(app.course_detail?.fee).toLocaleString()}
+          </p>
+          <p className="text-slate-400 text-[11px]">
+            {new Date(app.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </p>
+        </div>
+      </div>
 
-        {isPaymentOpen && (
-          <PaymentTransfer
-            applicationId={app.id}
-            authToken={token}
-            totalFee={Number(app.course_detail?.fee) || 0}
-            onClose={() => setOpenPayment(null)}
-            onSubmitted={() => {
-              onPaymentUpdate(app.id, 'in_review');
-              setOpenPayment(null);
-            }}
-          />
-        )}
+      {featured && (
+        <button
+          onClick={() => onRemove(app.id)}
+          className="text-[11px] text-slate-300 hover:text-rose-500 transition mt-3"
+        >
+          Remove course
+        </button>
+      )}
+
+      {/* Pay button */}
+      {!isPaid && (
+        <div className="mt-4 pt-3.5 border-t border-slate-100">
+          {isPaymentOpen ? (
+            <SecondaryButton onClick={() => setOpenPayment(null)} className="text-slate-500">
+              Cancel
+            </SecondaryButton>
+          ) : (
+            <PrimaryButton onClick={() => setOpenPayment(app.id)}>
+              Pay Now
+            </PrimaryButton>
+          )}
+        </div>
+      )}
+
+      {isPaymentOpen && (
+        <PaymentTransfer
+          applicationId={app.id}
+          authToken={token}
+          totalFee={Number(app.course_detail?.fee) || 0}
+          onClose={() => setOpenPayment(null)}
+          onSubmitted={() => {
+            onPaymentUpdate(app.id, 'in_review');
+            setOpenPayment(null);
+          }}
+        />
+      )}
+    </Card>
+  );
+}
+
+// ─── Top bar ────────────────────────────────────────────────────────────────
+
+function TopBar({ onLogout }) {
+  return (
+    <div className="border-b border-slate-200 bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70 sticky top-0 z-20">
+      <div className="max-w-5xl mx-auto px-4 sm:px-5 md:px-8 py-4 flex items-center justify-between">
+        <span className="text-slate-900 font-bold text-[15px] tracking-tight">LASOP</span>
+        <button
+          onClick={onLogout}
+          className="text-xs font-medium text-slate-500 hover:text-slate-800 border border-slate-200 hover:border-slate-300 bg-white px-3.5 py-2 rounded-md transition"
+        >
+          Log out
+        </button>
       </div>
     </div>
   );
 }
+
 // ─── Dashboard Page ───────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -557,8 +628,8 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0A0C10] flex items-center justify-center">
-        <p className="text-[#6B7585] text-sm">Loading dashboard...</p>
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Spinner text="Loading dashboard…" />
       </main>
     );
   }
@@ -578,94 +649,69 @@ export default function DashboardPage() {
     : `₦${totalFees.toLocaleString()}`;
 
   return (
-    <main className="min-h-screen bg-[#0A0C10] pt-20">
-      {/* Top bar */}
-      <div className="border-b border-[#1C2330] bg-[#0A0C10]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-5 md:px-8 py-4 flex items-center justify-between">
-          <span className="text-[#F1F3F7] font-semibold text-[15px]">LASOP</span>
-          <button
-            onClick={handleLogout}
-            className="text-xs text-[#8B95A7] hover:text-[#E6E9EF] border border-[#2A2F3A] hover:border-[#3A4050] px-3.5 py-2 rounded-md transition"
-          >
-            Log out
-          </button>
-        </div>
-      </div>
+    <main className="min-h-screen bg-slate-50 pt-20">
+      <TopBar onLogout={handleLogout} />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-5 md:px-8 pt-8 sm:pt-10 pb-16">
 
         {/* ── Profile ── */}
         <div className="flex items-center gap-4 mb-8 sm:mb-9">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#14201A] border border-[#2A4034] flex items-center justify-center text-lg sm:text-xl font-semibold text-[#7CFF6B] shrink-0">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#0057E7] flex items-center justify-center text-lg sm:text-xl font-bold text-white shrink-0">
             {initials || '··'}
           </div>
           <div className="min-w-0">
-            <h1 className="text-[#F1F3F7] font-semibold text-xl sm:text-2xl leading-tight truncate">
+            <h1 className="text-slate-900 font-bold text-xl sm:text-2xl leading-tight tracking-tight truncate">
               {firstName} {lastName}
             </h1>
-            <p className="text-[#6B7585] text-xs sm:text-sm mt-1 truncate">
+            <p className="text-slate-400 text-xs sm:text-sm mt-1 truncate">
               {user?.email}{user?.phone_number ? ` · ${user.phone_number}` : ''}
             </p>
           </div>
         </div>
 
         {/* ── Stats ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[#1C2330] border border-[#1C2330] rounded-xl overflow-hidden mb-8 sm:mb-9">
-          {[
-            { label: 'Courses enrolled', value: count, accent: '#7CFF6B' },
-            { label: 'Total fees', value: formattedFees, accent: '#5B8CFF' },
-            { label: 'Online', value: onlineCount, accent: '#7CFF6B' },
-            { label: 'Physical', value: physicalCount, accent: '#FFB454' },
-          ].map(({ label, value, accent }) => (
-            <div key={label} className="bg-[#0D1118] px-4 sm:px-5 py-4 sm:py-5">
-              <p className="text-[#5A6275] text-[11px] sm:text-xs mb-2">{label}</p>
-              <p className="text-2xl sm:text-3xl font-semibold" style={{ color: accent }}>{value}</p>
-            </div>
-          ))}
-        </div>
+        <Card className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-slate-200/80 mb-8 sm:mb-9 overflow-hidden">
+          <OverviewStatCard label="Courses enrolled" value={count} accent="#0057E7" />
+          <OverviewStatCard label="Total fees" value={formattedFees} accent="#0057E7" />
+          <OverviewStatCard label="Online" value={onlineCount} accent="#059669" />
+          <OverviewStatCard label="Physical" value={physicalCount} accent="#D97706" />
+        </Card>
 
         {(reviewCount > 0 || paidCount > 0) && (
-          <div className="flex items-center gap-2 sm:gap-3 mb-8 sm:mb-9 -mt-4 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-3 mb-8 sm:mb-9 flex-wrap">
             {reviewCount > 0 && (
-              <span className="text-xs text-[#FFB454] bg-[#1E1A0E] border border-[#3A2E0A] rounded-full px-3 py-1.5">
-                {reviewCount} payment{reviewCount > 1 ? 's' : ''} in review
-              </span>
+              <Pill color="amber">{reviewCount} payment{reviewCount > 1 ? 's' : ''} in review</Pill>
             )}
             {paidCount > 0 && (
-              <span className="text-xs text-[#7CFF6B] bg-[#14201A] border border-[#2A4034] rounded-full px-3 py-1.5">
-                {paidCount} paid
-              </span>
+              <Pill color="emerald">{paidCount} paid</Pill>
             )}
           </div>
         )}
 
-        {error && (
-          <div className="bg-[#2A1414] border border-[#501313] text-[#F09595] text-xs rounded-lg px-4 py-3 mb-5">
-            {error}
-          </div>
-        )}
+        <ErrorBanner message={error} />
 
         {/* ── Certificate ── */}
         <CertificateCard certificate={user?.certificate} />
 
         {/* ── Courses ── */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h2 className="text-[#F1F3F7] font-semibold text-lg">
+          <h2 className="text-slate-900 font-bold text-lg tracking-tight">
             Courses{count > 0 ? ` (${count})` : ''}
           </h2>
-          <Link href="/apply" className="text-[#7CFF6B] text-sm hover:text-[#9AFF8C] transition font-medium">
+          <Link href="/apply" className="text-[#0057E7] text-sm hover:text-[#0A66FF] transition font-semibold">
             + Add course
           </Link>
         </div>
 
         {count === 0 ? (
-          <div className="bg-[#0D1118] border border-dashed border-[#232B3A] rounded-xl p-8 sm:p-12 text-center">
-            <p className="text-[#8B95A7] text-sm mb-1">No courses yet</p>
-            <p className="text-[#4A5263] text-xs mb-4">Your enrolled courses will show up here.</p>
-            <Link href="/apply" className="inline-block text-[#7CFF6B] text-sm hover:text-[#9AFF8C] transition border border-[#1F3326] hover:border-[#2A4034] rounded-md px-4 py-2 font-medium">
-              + Add course
-            </Link>
-          </div>
+          <Card className="border-dashed">
+            <EmptyState title="No courses yet" hint="Your enrolled courses will show up here." />
+            <div className="text-center pb-8 -mt-4">
+              <Link href="/apply" className="inline-block text-[#0057E7] text-sm hover:text-[#0A66FF] transition border border-blue-200 hover:border-blue-300 bg-blue-50 rounded-md px-4 py-2 font-semibold">
+                + Add course
+              </Link>
+            </div>
+          </Card>
         ) : count === 1 ? (
           <CourseCard
             app={applications[0]}
