@@ -218,12 +218,17 @@ export default function Navbar() {
         </div>
 
         {/* Mobile Toggle */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="lg:hidden text-3xl cursor-pointer text-white"
-        >
-          {isOpen ? "✕" : "☰"}
-        </button>
+        {/* Mobile Apply + Toggle */}
+        <div className="lg:hidden flex items-center gap-4">
+          <ApplyButton className="text-sm font-semibold text-white bg-white/10 border border-white/20 px-4 py-2 rounded-lg" />
+
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="text-3xl cursor-pointer text-white"
+          >
+            {isOpen ? "✕" : "☰"}
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
