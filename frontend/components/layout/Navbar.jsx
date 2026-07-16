@@ -202,7 +202,7 @@ export default function Navbar() {
 
           {isLoggedIn ? (
             <Link
-              href="/dashboard"
+              href="/student"
               className="flex items-center justify-center bg-[#0057E7] text-white px-5 py-2 rounded-lg font-semibold shadow-[0_10px_30px_rgba(0,87,231,0.35)] hover:bg-[#0A66FF] hover:-translate-y-[2px] transition-all duration-300"
             >
               Dashboard
@@ -316,7 +316,7 @@ export default function Navbar() {
                     Contact
                   </Link>
                   {isLoggedIn && (
-                    <Link href="/dashboard" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
+                    <Link href="/student" onClick={() => setIsOpen(false)} className="py-4 text-white border-b border-white/10">
                       Dashboard
                     </Link>
                   )}
