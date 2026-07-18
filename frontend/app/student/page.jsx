@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -349,8 +350,6 @@ function StepDots({ step }) {
 
 // ─── Promo Code Box ──────────────────────────────────────────────────────
 
-// ─── Promo Code Box ──────────────────────────────────────────────────────
-
 function PromoCodeBox({ onApply, applying, appliedCode, discountPercent, promoError }) {
   const [codeInput, setCodeInput] = useState('');
 
@@ -396,6 +395,14 @@ function PromoCodeBox({ onApply, applying, appliedCode, discountPercent, promoEr
 }
 
 // ─── Payment Transfer Modal (Manual Bank Transfer Flow) ────────────────────
+//
+// Rendered via createPortal straight into document.body. Without this, the
+// modal was mounting nested inside <Card interactive> in CourseCard — and
+// Card's hover:-translate-y-[1px] transform makes that Card a CSS
+// "containing block" for any position:fixed descendant while hovered, so
+// the modal was getting trapped/squished inside the small course card
+// instead of covering the screen. Same fix pattern already used in
+// ApplyModal.jsx.
 
 function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmitted }) {
   const [step, setStep] = useState('choose');
@@ -404,6 +411,7 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copiedField, setCopiedField] = useState('');
+  const [mounted, setMounted] = useState(false);
 
   // Promo code state
   const [appliedCode, setAppliedCode] = useState('');
@@ -415,6 +423,8 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
     'Content-Type': 'application/json',
     Authorization: `Bearer ${authToken}`,
   }), [authToken]);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const handleKey = (e) => e.key === 'Escape' && onClose();
@@ -533,7 +543,9 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
     setTimeout(() => setCopiedField(''), 1500);
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -695,7 +707,8 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
