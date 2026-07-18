@@ -349,8 +349,9 @@ function StepDots({ step }) {
 
 // ─── Promo Code Box ──────────────────────────────────────────────────────
 
+// ─── Promo Code Box ──────────────────────────────────────────────────────
+
 function PromoCodeBox({ onApply, applying, appliedCode, discountPercent, promoError }) {
-  const [expanded, setExpanded] = useState(false);
   const [codeInput, setCodeInput] = useState('');
 
   if (appliedCode) {
@@ -366,28 +367,18 @@ function PromoCodeBox({ onApply, applying, appliedCode, discountPercent, promoEr
     );
   }
 
-  if (!expanded) {
-    return (
-      <button
-        onClick={() => setExpanded(true)}
-        className="text-[#0057E7] text-sm font-medium hover:text-[#0A66FF] transition"
-      >
-        Have a promo code?
-      </button>
-    );
-  }
-
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2">
+      <p className="text-slate-500 text-[12px] font-medium">Promo code (optional)</p>
       <div className="flex items-center gap-2">
         <input
           type="text"
           value={codeInput}
           onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-          placeholder="Enter promo code"
-          autoFocus
+          placeholder="e.g. LASOP15"
           className="flex-1 bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15
-            rounded-lg px-3.5 py-2.5 text-sm outline-none transition uppercase placeholder:normal-case placeholder:text-slate-300"
+            rounded-lg px-3.5 py-2.5 text-sm font-medium text-slate-900 outline-none transition
+            placeholder:text-slate-400 placeholder:font-normal"
         />
         <SecondaryButton
           onClick={() => onApply(codeInput)}
