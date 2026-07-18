@@ -347,6 +347,63 @@ function StepDots({ step }) {
   );
 }
 
+// ─── Promo Code Box ──────────────────────────────────────────────────────
+
+function PromoCodeBox({ onApply, applying, appliedCode, discountPercent, promoError }) {
+  const [expanded, setExpanded] = useState(false);
+  const [codeInput, setCodeInput] = useState('');
+
+  if (appliedCode) {
+    return (
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-center justify-between">
+        <div>
+          <p className="text-emerald-700 text-sm font-semibold">
+            Code &ldquo;{appliedCode}&rdquo; applied ✓
+          </p>
+          <p className="text-emerald-600 text-xs mt-0.5">{discountPercent}% discount applied</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!expanded) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        className="text-[#0057E7] text-sm font-medium hover:text-[#0A66FF] transition"
+      >
+        Have a promo code?
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={codeInput}
+          onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+          placeholder="Enter promo code"
+          autoFocus
+          className="flex-1 bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15
+            rounded-lg px-3.5 py-2.5 text-sm outline-none transition uppercase placeholder:normal-case placeholder:text-slate-300"
+        />
+        <SecondaryButton
+          onClick={() => onApply(codeInput)}
+          disabled={applying || !codeInput.trim()}
+          className="shrink-0"
+        >
+          {applying ? 'Applying...' : 'Apply'}
+        </SecondaryButton>
+      </div>
+      {promoError && (
+        <p className="text-rose-600 text-xs">{promoError}</p>
+      )}
+    </div>
+  );
+}
+
 // ─── Payment Transfer Modal (Manual Bank Transfer Flow) ────────────────────
 
 function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmitted }) {
@@ -356,6 +413,12 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copiedField, setCopiedField] = useState('');
+
+  // Promo code state
+  const [appliedCode, setAppliedCode] = useState('');
+  const [discountPercent, setDiscountPercent] = useState(null);
+  const [applyingPromo, setApplyingPromo] = useState(false);
+  const [promoError, setPromoError] = useState('');
 
   const getAuthHeaders = useCallback(() => ({
     'Content-Type': 'application/json',
@@ -425,7 +488,11 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
         {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ payment_type: paymentType, amount: rawAmount() }),
+          body: JSON.stringify({
+            payment_type: paymentType,
+            amount: rawAmount(),
+            ...(appliedCode ? { promo_code: appliedCode } : {}),
+          }),
         }
       );
       if (!res.ok) throw new Error('Could not save payment details. Please try again.');
@@ -433,6 +500,39 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
     } catch (err) {
       setError(err.message);
       setLoading(false);
+    }
+  };
+
+  // Apply promo code: re-hits initiate/ with the code, backend recalculates amount
+  const handleApplyPromo = async (code) => {
+    setApplyingPromo(true);
+    setPromoError('');
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/applications/${applicationId}/payments/manual/initiate/`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            payment_type: paymentType,
+            amount: rawAmount(),
+            promo_code: code,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setPromoError(data.detail || 'Invalid or inactive promo code.');
+        return;
+      }
+      // Backend returns the corrected amount (discounted, for full payment)
+      setAmount(Number(data.amount).toLocaleString());
+      setAppliedCode(data.promo_code);
+      setDiscountPercent(data.discount_percent);
+    } catch (err) {
+      setPromoError('Could not apply code. Please try again.');
+    } finally {
+      setApplyingPromo(false);
     }
   };
 
@@ -538,6 +638,17 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
 
           {step === 'bank_details' && (
             <div className="space-y-4">
+              {/* Promo code — only offered for full payment, since discount applies to the course fee */}
+              {paymentType === 'full' && (
+                <PromoCodeBox
+                  onApply={handleApplyPromo}
+                  applying={applyingPromo}
+                  appliedCode={appliedCode}
+                  discountPercent={discountPercent}
+                  promoError={promoError}
+                />
+              )}
+
               <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
                 {[
                   { label: 'Account Name', value: BANK_DETAILS.accountName, field: 'name' },
