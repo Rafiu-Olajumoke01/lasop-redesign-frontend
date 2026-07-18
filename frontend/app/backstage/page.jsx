@@ -385,10 +385,11 @@ function useDashboardStats(token) {
 // only supports list + create right now, so there's no toggle-active or
 // delete here yet. Add a detail view (GET/PATCH/DELETE by id) on the backend
 // and wire those in when ready.
-// ASSUMPTION: base path is /api/payments/promo-codes/ — update PROMO_BASE
-// below if your urls.py mounts it somewhere else.
+// Confirmed from payments/urls.py: this app's urls are included at /api/
+// directly (not /api/payments/) — matches the existing admin-confirm call
+// at /api/applications/<id>/payments/admin-confirm/ used elsewhere in this file.
 
-const PROMO_BASE = '/api/payments/promo-codes/';
+const PROMO_BASE = '/api/promo-codes/';
 
 function usePromoCodes(token) {
   const [items, setItems] = useState([]);
