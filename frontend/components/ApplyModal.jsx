@@ -100,11 +100,11 @@ export default function ApplyModal({ isOpen, onClose, preselectedCourse }) {
       if (!applicationRes.ok) {
         // Account was created but application failed — still send them to dashboard,
         // they're logged in and can be helped manually if needed
-        router.push('/dashboard');
+        router.push('/student');
         return;
       }
 
-      router.push('/dashboard');
+      router.push('/student');
     } catch (err) {
       setError('Network error, please try again');
     } finally {

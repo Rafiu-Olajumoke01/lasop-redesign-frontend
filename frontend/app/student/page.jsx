@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -219,6 +219,23 @@ function DocumentIcon({ className }) {
     </svg>
   );
 }
+function TutorAvatarIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M22 10L12 5 2 10l10 5 10-5z" />
+      <path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5" />
+      <path d="M22 10v6" />
+    </svg>
+  );
+}
+function ClassworkIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <path d="M14 2v6h6M9 13h6M9 17h6" />
+    </svg>
+  );
+}
 
 function NavIcon({ path }) {
   return (
@@ -231,6 +248,7 @@ function NavIcon({ path }) {
 const NAV = [
   { key: 'overview', label: 'Overview', icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" /> },
   { key: 'courses', label: 'My Courses', icon: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></> },
+  { key: 'classwork', label: 'Classwork', icon: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6M9 13h6M9 17h6" /></> },
   { key: 'certificate', label: 'Certificate', icon: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></> },
   { key: 'payments', label: 'Payments', icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></> },
 ];
@@ -762,6 +780,28 @@ function CertificateCard({ certificate }) {
   );
 }
 
+// ─── Assigned Tutor Card ────────────────────────────────────────────────────
+
+function AssignedTutorCard({ tutor }) {
+  const hasTutor = !!tutor;
+
+  return (
+    <Card interactive className="p-4 sm:p-5 flex items-center gap-4">
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
+        hasTutor ? 'bg-blue-50 border-blue-200 text-[#0057E7]' : 'bg-slate-50 border-slate-200 text-slate-300'
+      }`}>
+        <TutorAvatarIcon />
+      </div>
+      <div className="min-w-0">
+        <p className="text-slate-400 text-[11px] uppercase tracking-wide font-bold mb-0.5">Assigned Tutor</p>
+        <p className="text-slate-900 font-semibold text-sm tracking-tight">
+          {hasTutor ? tutor.name : 'Not assigned yet'}
+        </p>
+      </div>
+    </Card>
+  );
+}
+
 // ─── Course Card ──────────────────────────────────────────────────────────────
 
 function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemove, onPaymentUpdate }) {
@@ -887,6 +927,10 @@ function OverviewTab({ user, applications, onNavigate }) {
           {paidCount > 0 && <Pill color="emerald">{paidCount} paid</Pill>}
         </div>
       )}
+
+      <div className="mb-5">
+        <AssignedTutorCard tutor={user?.assigned_tutor_detail} />
+      </div>
 
       <div className="mb-5">
         <SectionLabel>Quick actions</SectionLabel>
@@ -1021,6 +1065,161 @@ function PaymentsTab({ applications }) {
   );
 }
 
+// ─── Classwork tab ────────────────────────────────────────────────────────────
+//
+// Merges exams (labelled "Classwork" for students) with the student's own
+// results. A classwork item with no matching result yet shows as "Pending".
+
+function useClasswork(token, cohortIds) {
+  const [classwork, setClasswork] = useState([]);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const cohortKey = cohortIds.join(',');
+
+  useEffect(() => {
+    if (!token || cohortIds.length === 0) { setLoading(false); return; }
+
+    const fetchAll = async () => {
+      setLoading(true); setError('');
+      try {
+        const examResponses = await Promise.all(
+          cohortIds.map((id) =>
+            fetch(`${API_BASE}/api/exams/?cohort=${id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            }).then((r) => (r.ok ? r.json() : []))
+          )
+        );
+        const allExams = examResponses.flat();
+
+        const resultsRes = await fetch(`${API_BASE}/api/results/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const allResults = resultsRes.ok ? await resultsRes.json() : [];
+
+        setClasswork(allExams);
+        setResults(allResults);
+      } catch {
+        setError('Could not load classwork.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, cohortKey]);
+
+  const merged = useMemo(() => {
+    return classwork.map((cw) => {
+      const result = results.find((r) => r.exam === cw.id);
+      return { ...cw, result: result || null };
+    });
+  }, [classwork, results]);
+
+  return { items: merged, loading, error };
+}
+
+function ClassworkStatusPill({ item }) {
+  if (item.result?.status === 'passed') return <Pill color="emerald">Passed{item.result.score != null ? ` · ${item.result.score}/${item.total_marks}` : ''}</Pill>;
+  if (item.result?.status === 'failed') return <Pill color="rose">Failed{item.result.score != null ? ` · ${item.result.score}/${item.total_marks}` : ''}</Pill>;
+  if (!item.is_open) return <Pill color="slate">Closed</Pill>;
+  return <Pill color="amber">Pending</Pill>;
+}
+
+function ClassworkTab({ token, cohortIds }) {
+  const classwork = useClasswork(token, cohortIds);
+  const [filter, setFilter] = useState('all');
+
+  const filtered = useMemo(() => {
+    if (filter === 'all') return classwork.items;
+    if (filter === 'pending') return classwork.items.filter((i) => !i.result || i.result.status === 'pending');
+    if (filter === 'passed') return classwork.items.filter((i) => i.result?.status === 'passed');
+    if (filter === 'failed') return classwork.items.filter((i) => i.result?.status === 'failed');
+    return classwork.items;
+  }, [classwork.items, filter]);
+
+  const filters = ['all', 'pending', 'passed', 'failed'];
+
+  if (cohortIds.length === 0) {
+    return (
+      <div>
+        <PageHeader title="Classwork" />
+        <Card><EmptyState title="No cohort assigned yet" hint="Classwork will show up here once you're placed in a cohort." /></Card>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <PageHeader title="Classwork" subtitle={`${filtered.length} of ${classwork.items.length} total`}>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {filters.map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                }`}
+            >
+              {f === 'all' ? 'All' : f}
+            </button>
+          ))}
+        </div>
+      </PageHeader>
+
+      <ErrorBanner message={classwork.error} />
+
+      {classwork.loading ? (
+        <Spinner text="Loading classwork…" />
+      ) : filtered.length === 0 ? (
+        <Card><EmptyState title="No classwork yet" hint="Nothing matches this filter yet." /></Card>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((item) => (
+            <Card key={item.id} interactive className="p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <h3 className="text-slate-900 font-bold text-sm tracking-tight">{item.title}</h3>
+                    <Pill color="indigo">{item.exam_type}</Pill>
+                  </div>
+                  <p className="text-slate-400 text-xs">{item.course_title}</p>
+                </div>
+                <ClassworkStatusPill item={item} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm mt-4 pt-3 border-t border-slate-100">
+                <div>
+                  <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Due date</p>
+                  <p className="text-slate-700 font-medium">{formatDate(item.due_date) || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Pass mark</p>
+                  <p className="text-slate-700 font-medium">{item.pass_mark}/{item.total_marks}</p>
+                </div>
+              </div>
+
+              {item.instructions && (
+                <p className="text-slate-500 text-sm leading-relaxed mt-3 pt-3 border-t border-slate-100">{item.instructions}</p>
+              )}
+
+              {item.result?.feedback && (
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">Feedback</p>
+                  <p className="text-slate-600 text-sm">{item.result.feedback}</p>
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Page shell ────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -1096,6 +1295,13 @@ export default function DashboardPage() {
   const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`;
   const currentLabel = NAV.find((n) => n.key === tab)?.label || 'Overview';
 
+  // Cohort IDs the student belongs to, derived from their applications —
+  // used to fetch classwork scoped to the right cohort(s).
+  const cohortIds = useMemo(
+    () => [...new Set(applications.map((a) => a.cohort_detail?.id).filter(Boolean))],
+    [applications]
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -1128,6 +1334,7 @@ export default function DashboardPage() {
                 onPaymentUpdate={handlePaymentUpdate}
               />
             )}
+            {tab === 'classwork' && <ClassworkTab token={token} cohortIds={cohortIds} />}
             {tab === 'certificate' && <CertificateTab certificate={user?.certificate} />}
             {tab === 'payments' && <PaymentsTab applications={applications} />}
           </div>
