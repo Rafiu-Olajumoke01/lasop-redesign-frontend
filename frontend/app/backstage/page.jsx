@@ -379,6 +379,65 @@ function useDashboardStats(token) {
   return { stats, loading, error, refresh };
 }
 
+// ─── Promo codes hook ───────────────────────────────────────────────────────
+//
+// Wired to AdminPromoCodeListCreateView (GET/POST /promo-codes/) — this view
+// only supports list + create right now, so there's no toggle-active or
+// delete here yet. Add a detail view (GET/PATCH/DELETE by id) on the backend
+// and wire those in when ready.
+// ASSUMPTION: base path is /api/payments/promo-codes/ — update PROMO_BASE
+// below if your urls.py mounts it somewhere else.
+
+const PROMO_BASE = '/api/payments/promo-codes/';
+
+function usePromoCodes(token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}${PROMO_BASE}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Could not load promo codes (${res.status}).`);
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  const create = async (payload) => {
+    const res = await fetch(`${API_BASE}${PROMO_BASE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const raw = await res.text();
+      let details = '';
+      try {
+        const errorData = JSON.parse(raw);
+        details = Object.entries(errorData)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(' | ');
+      } catch {
+        details = `HTTP ${res.status}`;
+      }
+      throw new Error(details || 'Could not create promo code.');
+    }
+    await refresh();
+  };
+
+  return { items, loading, error, refresh, create };
+}
+
 // ─── Overview icons ─────────────────────────────────────────────────────────
 
 function PersonIcon() {
@@ -460,6 +519,14 @@ function TutorIcon() {
       <path d="M22 10L12 5 2 10l10 5 10-5z" />
       <path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5" />
       <path d="M22 10v6" />
+    </svg>
+  );
+}
+function TagIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M20.59 13.41L11 3.83A2 2 0 009.5 3H4a1 1 0 00-1 1v5.5c0 .53.21 1.04.59 1.41l9.58 9.58a2 2 0 002.83 0l4.59-4.59a2 2 0 000-2.83z" />
+      <circle cx="7.5" cy="7.5" r="1" />
     </svg>
   );
 }
@@ -1990,9 +2057,135 @@ function ResultsTab({ results, exams, applications }) {
   );
 }
 
+// ─── Promo Codes section (lives inside Finances tab) ─────────────────────────
+
+const emptyPromoForm = { code: '', discount_percent: '' };
+
+function PromoCodesSection({ token }) {
+  const promos = usePromoCodes(token);
+  const [modal, setModal] = useState(null); // 'new' | null
+  const [form, setForm] = useState(emptyPromoForm);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const [copiedId, setCopiedId] = useState(null);
+
+  const openNew = () => { setForm(emptyPromoForm); setModal('new'); setErr(''); };
+  const close = () => setModal(null);
+
+  const handleSave = async () => {
+    setSaving(true); setErr('');
+    try {
+      await promos.create({
+        code: form.code.trim().toUpperCase(),
+        discount_percent: form.discount_percent,
+      });
+      close();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCopy = (code, id) => {
+    navigator.clipboard?.writeText(code);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId((prev) => (prev === id ? null : prev)), 1500);
+  };
+
+  return (
+    <div className="mb-8">
+      <PageHeader title="Promo Codes" subtitle={`${promos.items.length} code${promos.items.length !== 1 ? 's' : ''}`}>
+        <PrimaryButton onClick={openNew}>+ Generate code</PrimaryButton>
+      </PageHeader>
+
+      <ErrorBanner message={promos.error} />
+
+      {promos.loading ? <Spinner text="Loading promo codes…" /> : promos.items.length === 0 ? (
+        <Card><EmptyState title="No promo codes yet" hint="Generate one for students to use at checkout." /></Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
+                  {['Code', 'Discount', 'Status', 'Created'].map((h, i) => (
+                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {promos.items.map((p) => (
+                  <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0">
+                    <td className="px-5 py-4">
+                      <button
+                        onClick={() => handleCopy(p.code, p.id)}
+                        className="flex items-center gap-2 text-slate-800 font-mono font-semibold hover:text-[#0057E7] transition"
+                      >
+                        <TagIcon />
+                        {p.code}
+                        <span className="text-[11px] font-sans font-medium text-slate-400">
+                          {copiedId === p.id ? 'Copied!' : 'Copy'}
+                        </span>
+                      </button>
+                    </td>
+                    <td className="px-5 py-4 text-slate-700 font-medium">{p.discount_percent}% off</td>
+                    <td className="px-5 py-4">
+                      <Pill color={p.is_active ? 'emerald' : 'slate'}>{p.is_active ? 'Active' : 'Disabled'}</Pill>
+                    </td>
+                    <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">
+                      {formatDate(p.created_at) || '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* No disable/delete actions yet — AdminPromoCodeListCreateView only
+              supports list + create. Add a detail view on the backend
+              (GET/PATCH/DELETE by id) to enable those here. */}
+        </Card>
+      )}
+
+      {modal && (
+        <Modal title="Generate promo code" onClose={close}>
+          <div className="space-y-4">
+            {err && <ErrorBanner message={err} />}
+
+            <Field label="Code">
+              <input
+                className={inputClass}
+                value={form.code}
+                onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+                placeholder="e.g. WELCOME2026"
+              />
+            </Field>
+
+            <Field label="Discount (%)">
+              <input
+                type="number"
+                min="1"
+                max="100"
+                className={inputClass}
+                value={form.discount_percent}
+                onChange={(e) => setForm({ ...form, discount_percent: e.target.value })}
+                placeholder="e.g. 15"
+              />
+            </Field>
+
+            <PrimaryButton className="w-full justify-center" onClick={handleSave} disabled={saving}>
+              {saving ? 'Generating…' : 'Generate code'}
+            </PrimaryButton>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 // ─── Finances tab ─────────────────────────────────────────────────────────────
 
-function FinancesTab({ applications }) {
+function FinancesTab({ applications, token }) {
   const [filter, setFilter] = useState('all');
 
   const paymentsList = useMemo(
@@ -2042,6 +2235,8 @@ function FinancesTab({ applications }) {
           <p className="text-rose-600 font-bold text-[20px] leading-none tracking-tight">{formatMoney(totals.expiredOrFailed)}</p>
         </div>
       </div>
+
+      <PromoCodesSection token={token} />
 
       <div className="flex items-center gap-1.5 flex-wrap mb-4">
         {filters.map((f) => (
@@ -2246,7 +2441,7 @@ function TopBar({ onMenuClick, title, dateLabel }) {
           <span className="w-6 h-6 rounded-full bg-[#0057E7] text-white text-[11px] font-bold flex items-center justify-center shrink-0">A</span>
           <span className="hidden sm:inline">Admin</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 9l6 6 6-6" />
+            <path d="M6 9l6 6-6 6" />
           </svg>
         </button>
       </div>
@@ -2365,7 +2560,7 @@ export default function BackstagePage() {
             {tab === 'tutors' && <TutorsTab tutors={tutors} cohorts={cohorts} />}
             {tab === 'students' && <StudentsTab token={token} tutors={tutors} />}
             {tab === 'staffs' && <ComingSoon title="Staffs" />}
-            {tab === 'finances' && <FinancesTab applications={applications} />}
+            {tab === 'finances' && <FinancesTab applications={applications} token={token} />}
             {tab === 'queries' && <ComingSoon title="Queries" />}
             {tab === 'messages' && <ComingSoon title="Messages" />}
             {tab === 'postjob' && <ComingSoon title="Post Job" />}
