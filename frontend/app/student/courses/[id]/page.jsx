@@ -6,11 +6,15 @@ import Link from 'next/link';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
-// ─── Shared UI (matches dashboard styling) ─────────────────────────────────
+// ─── Shared UI (matches /student dashboard) ────────────────────────────────
 
-function Card({ children, className = '' }) {
+function Card({ children, className = '', interactive = false }) {
   return (
-    <div className={`bg-white border border-slate-200/80 rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)] ${className}`}>
+    <div
+      className={`bg-white border border-slate-200/80 rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)]
+        ${interactive ? 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)] hover:border-slate-300 hover:-translate-y-[1px] transition-all duration-200' : ''}
+        ${className}`}
+    >
       {children}
     </div>
   );
@@ -21,6 +25,7 @@ function Pill({ children, color = 'slate' }) {
     blue: 'bg-blue-50 text-[#0057E7] border-blue-200/80',
     amber: 'bg-amber-50 text-amber-700 border-amber-200/80',
     emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+    rose: 'bg-rose-50 text-rose-700 border-rose-200/80',
     slate: 'bg-slate-100 text-slate-600 border-slate-200/80',
   };
   return (
@@ -32,7 +37,7 @@ function Pill({ children, color = 'slate' }) {
 
 function EmptyState({ title, hint }) {
   return (
-    <div className="py-10 text-center">
+    <div className="py-14 text-center">
       <div className="w-12 h-12 rounded-lg bg-slate-50 border border-slate-200/80 mx-auto mb-4 flex items-center justify-center text-xl">
         📭
       </div>
@@ -59,6 +64,22 @@ function ErrorBanner({ message }) {
       {message}
     </div>
   );
+}
+
+function PageHeader({ title, subtitle, children }) {
+  return (
+    <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h2>
+        {subtitle && <p className="text-slate-400 text-sm mt-0.5">{subtitle}</p>}
+      </div>
+      {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
+    </div>
+  );
+}
+
+function SectionLabel({ children }) {
+  return <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.12em] mb-2.5">{children}</p>;
 }
 
 function formatDate(d) {
@@ -88,13 +109,13 @@ function ClassSessionCard({ session, status }) {
     .filter(Boolean);
 
   return (
-    <Card className="p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-3 mb-3">
+    <Card interactive className="p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-slate-900 font-bold text-sm tracking-tight">
             {topicsList[0] || 'Class session'}
           </p>
-          <p className="text-slate-400 text-[12px] mt-1">
+          <p className="text-slate-400 text-[11px] mt-1">
             {formatDate(session.date)} · {formatTime(session.start_time)}–{formatTime(session.end_time)}
           </p>
         </div>
@@ -102,7 +123,7 @@ function ClassSessionCard({ session, status }) {
       </div>
 
       {topicsList.length > 1 && (
-        <ul className="text-slate-600 text-sm space-y-1 mt-2 pt-3 border-t border-slate-100 list-disc list-inside">
+        <ul className="text-slate-600 text-sm space-y-1 mt-3 pt-3 border-t border-slate-100 list-disc list-inside">
           {topicsList.slice(1).map((t, i) => (
             <li key={i}>{t}</li>
           ))}
@@ -126,7 +147,7 @@ function ClassesSection({ classes }) {
     <div className="space-y-7">
       {today.length > 0 && (
         <div>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.12em] mb-2.5">Today&apos;s Class</p>
+          <SectionLabel>Today&apos;s Class</SectionLabel>
           <div className="space-y-3">
             {today.map((s) => <ClassSessionCard key={s.id} session={s} status="today" />)}
           </div>
@@ -135,7 +156,7 @@ function ClassesSection({ classes }) {
 
       {future.length > 0 && (
         <div>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.12em] mb-2.5">Future Classes</p>
+          <SectionLabel>Future Classes</SectionLabel>
           <div className="space-y-3">
             {future.map((s) => <ClassSessionCard key={s.id} session={s} status="future" />)}
           </div>
@@ -144,7 +165,7 @@ function ClassesSection({ classes }) {
 
       {completed.length > 0 && (
         <div>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.12em] mb-2.5">Completed Classes</p>
+          <SectionLabel>Completed Classes</SectionLabel>
           <div className="space-y-3">
             {completed.map((s) => <ClassSessionCard key={s.id} session={s} status="completed" />)}
           </div>
@@ -225,6 +246,9 @@ export default function CourseDetailPage() {
     );
   }
 
+  const subTabs = ['classes', 'projects'];
+  const totalClasses = classes.today.length + classes.future.length + classes.completed.length;
+
   return (
     <div className="min-h-screen bg-slate-50 pt-20 px-4 sm:px-6 lg:px-10 py-6">
       <div className="max-w-5xl mx-auto">
@@ -232,25 +256,28 @@ export default function CourseDetailPage() {
           ← Back to dashboard
         </Link>
 
-        <h1 className="text-slate-900 font-bold text-xl tracking-tight mb-5">{courseTitle}</h1>
-
         <ErrorBanner message={error} />
 
-        <div className="flex items-center gap-1.5 mb-6 border-b border-slate-200">
-          {['classes', 'projects'].map((t) => (
-            <button
-              key={t}
-              onClick={() => setSubTab(t)}
-              className={`text-sm font-semibold px-4 py-2.5 border-b-2 -mb-px transition capitalize ${
-                subTab === t
-                  ? 'border-[#0057E7] text-[#0057E7]'
-                  : 'border-transparent text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        <PageHeader
+          title={courseTitle}
+          subtitle={subTab === 'classes' ? `${totalClasses} class${totalClasses !== 1 ? 'es' : ''}` : undefined}
+        >
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {subTabs.map((t) => (
+              <button
+                key={t}
+                onClick={() => setSubTab(t)}
+                className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition capitalize ${
+                  subTab === t
+                    ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                    : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </PageHeader>
 
         {subTab === 'classes' && <ClassesSection classes={classes} />}
         {subTab === 'projects' && <ProjectsSection />}
