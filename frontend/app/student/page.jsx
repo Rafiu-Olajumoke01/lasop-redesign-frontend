@@ -872,6 +872,15 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
         </div>
       )}
 
+      <div className="mt-4 pt-3.5 border-t border-slate-100">
+        <Link
+          href={`/student/courses/${app.course}`}
+          className="text-[#0057E7] text-sm font-semibold hover:text-[#0A66FF] transition inline-flex items-center gap-1"
+        >
+          View classes & projects →
+        </Link>
+      </div>
+      
       {isPaymentOpen && (
         <PaymentTransfer
           applicationId={app.id}
