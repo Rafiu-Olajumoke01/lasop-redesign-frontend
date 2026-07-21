@@ -552,11 +552,10 @@ function SessionAttendanceView({ token, session, onBack }) {
                     <button
                       key={s}
                       onClick={() => setStatus(r.application_id, s)}
-                      className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border capitalize transition ${
-                        (statuses[r.application_id] || 'present') === s
-                          ? statusStyles[s]
-                          : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                      }`}
+                      className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border capitalize transition ${(statuses[r.application_id] || 'present') === s
+                        ? statusStyles[s]
+                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                        }`}
                     >
                       {s}
                     </button>
@@ -884,7 +883,7 @@ function Sidebar({ open, onClose, tab, setTab }) {
     <>
       {open && <div onClick={onClose} className="fixed inset-0 bg-black/30 z-40 lg:hidden" />}
       <aside
-        className={`fixed lg:static top-0 left-0 h-screen w-64 z-50 flex flex-col border-r border-blue-900/40 transition-transform duration-200 ease-out ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        className={`fixed lg:static top-20 lg:top-0 left-0 h-[calc(100vh-5rem)] lg:h-screen w-64 z-50 flex flex-col border-r border-blue-900/40 transition-transform duration-200 ease-out ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{ background: '#152035' }}
       >
         <div className="flex items-start justify-between px-5 pt-6 pb-5 border-b border-blue-900/30">
@@ -1027,7 +1026,7 @@ export default function TutorPortalPage() {
   const tutor = profileData.tutor;
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-slate-50 pt-20">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} />
       <div className="flex-1 flex flex-col min-h-screen">
         <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} tutor={tutor} />
