@@ -436,7 +436,6 @@ function DashboardTab({ tutor, statsData, cohortsData, setTab }) {
           <StatCard label="Cohorts total" value={stats.cohorts_total} icon={<Icon path={ICONS.cohort} />} />
           <StatCard label="Cohorts completed" value={stats.cohorts_completed} icon={<Icon path={ICONS.check} />} accent="text-emerald-600" />
           <StatCard label="Cohorts ongoing" value={stats.cohorts_ongoing} icon={<Icon path={ICONS.ongoing} />} accent="text-[#0057E7]" />
-          <StatCard label="Total hours taught" value={stats.total_hours} icon={<Icon path={ICONS.clock} />} />
           <StatCard label="Days absent" value={stats.days_absent} icon={<Icon path={ICONS.absent} />} accent={stats.days_absent > 0 ? 'text-amber-600' : 'text-slate-900'} />
           <StatCard label="Pending queries" value={stats.queries_pending} icon={<Icon path={ICONS.query} />} accent={stats.queries_pending > 0 ? 'text-rose-600' : 'text-slate-900'} />
         </div>
