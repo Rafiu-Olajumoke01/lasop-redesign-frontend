@@ -411,7 +411,7 @@ function useCohortsToday(token) {
   return { items, loading, error, refresh };
 }
 
-function useCohortAttendance(token) {
+function useCohortDetail(token) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -419,14 +419,10 @@ function useCohortAttendance(token) {
   const load = useCallback(async (cohortId) => {
     setLoading(true); setError(''); setData(null);
     try {
-      const res = await fetch(`${API_BASE}/api/cohorts/${cohortId}/admin-attendance/`, {
+      const res = await fetch(`${API_BASE}/api/cohorts/${cohortId}/admin-detail/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status === 404) {
-        setError('No class session today for this cohort.');
-        return;
-      }
-      if (!res.ok) throw new Error('Could not load attendance for this cohort.');
+      if (!res.ok) throw new Error('Could not load cohort details.');
       const json = await res.json();
       setData(json);
     } catch (err) {
@@ -436,9 +432,7 @@ function useCohortAttendance(token) {
     }
   }, [token]);
 
-  const clear = () => { setData(null); setError(''); };
-
-  return { data, loading, error, load, clear };
+  return { data, loading, error, load };
 }
 
 // ─── Promo codes hook ───────────────────────────────────────────────────────
@@ -977,51 +971,117 @@ function CohortsTodaySection({ token, onViewCohort }) {
   );
 }
 
-function CohortAttendanceModal({ cohortId, cohortName, token, onClose }) {
-  const attendance = useCohortAttendance(token);
+const DAY_LABELS = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+const STUDENT_STATUS_COLOR = { active: 'emerald', inactive: 'slate', expelled: 'rose', withdrawn: 'amber' };
 
-  useEffect(() => { if (cohortId) attendance.load(cohortId); }, [cohortId]);
+function CohortDetailModal({ cohortId, token, onClose }) {
+  const detail = useCohortDetail(token);
+
+  useEffect(() => { if (cohortId) detail.load(cohortId); }, [cohortId]);
 
   const statusColor = { present: 'emerald', absent: 'rose', late: 'amber' };
 
   return (
-    <Modal title={cohortName ? `${cohortName} — Attendance` : 'Attendance'} onClose={onClose}>
-      {attendance.loading && <Spinner text="Loading attendance…" />}
-      {attendance.error && <ErrorBanner message={attendance.error} />}
+    <Modal title={detail.data ? detail.data.name : 'Cohort details'} onClose={onClose}>
+      {detail.loading && <Spinner text="Loading cohort…" />}
+      {detail.error && <ErrorBanner message={detail.error} />}
 
-      {attendance.data && (
-        <div>
-          <div className="mb-4 pb-4 border-b border-slate-100">
-            <p className="text-slate-500 text-xs mb-1">
-              {formatDate(attendance.data.session.date)} · {attendance.data.session.start_time?.slice(0, 5)}–{attendance.data.session.end_time?.slice(0, 5)}
-            </p>
-            {attendance.data.session.topics_covered && (
-              <p className="text-slate-700 text-sm"><span className="font-semibold">Focus today:</span> {attendance.data.session.topics_covered}</p>
-            )}
-            <div className="mt-2">
-              <Pill color={attendance.data.attendance_taken ? 'emerald' : 'amber'}>
-                {attendance.data.attendance_taken ? 'Attendance taken' : 'Attendance not taken yet'}
-              </Pill>
+      {detail.data && (
+        <div className="space-y-5">
+          <div className="flex items-center gap-2 flex-wrap">
+            {detail.data.current_stage_label && <Pill color="indigo">{detail.data.current_stage_label}</Pill>}
+            <Pill color={detail.data.today.is_learning_today ? 'emerald' : 'slate'}>
+              {detail.data.today.is_learning_today ? 'Learning today' : 'Not scheduled today'}
+            </Pill>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Tutor</p>
+              <p className="text-slate-700 font-medium">{detail.data.tutor_name || 'Unassigned'}</p>
+            </div>
+            <div>
+              <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Class days</p>
+              <p className="text-slate-700 font-medium">
+                {detail.data.class_days?.length
+                  ? detail.data.class_days.map((d) => DAY_LABELS[d] || d).join(', ')
+                  : '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Starts</p>
+              <p className="text-slate-700 font-medium">{formatDate(detail.data.start_date) || '—'}</p>
+            </div>
+            <div>
+              <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Ends</p>
+              <p className="text-slate-700 font-medium">{formatDate(detail.data.end_date) || '—'}</p>
             </div>
           </div>
 
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {attendance.data.roster.length === 0 && (
-              <p className="text-slate-400 text-sm text-center py-6">No students enrolled in this cohort.</p>
-            )}
-            {attendance.data.roster.map((r) => (
-              <div key={r.application_id} className="flex items-center justify-between px-3 py-2.5 border border-slate-100 rounded-md">
-                <div>
-                  <p className="text-slate-800 text-sm font-medium">{r.student_name}</p>
-                  <p className="text-slate-400 text-xs">{r.student_email}</p>
+          <div>
+            <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-2">Students</p>
+            <div className="grid grid-cols-4 gap-2">
+              {['active', 'inactive', 'expelled', 'withdrawn'].map((key) => (
+                <div key={key} className="text-center border border-slate-100 rounded-md py-2.5">
+                  <p className="text-slate-900 font-bold text-lg leading-none mb-1">{detail.data.student_counts[key]}</p>
+                  <Pill color={STUDENT_STATUS_COLOR[key]}>{key}</Pill>
                 </div>
-                {r.marked ? (
-                  <Pill color={statusColor[r.status] || 'slate'}>{r.status}</Pill>
-                ) : (
-                  <Pill color="slate">Not marked</Pill>
+              ))}
+            </div>
+            <p className="text-slate-400 text-xs mt-2">{detail.data.student_counts.total} total</p>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100">
+            <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-2">Today</p>
+            {!detail.data.today.session ? (
+              <p className="text-slate-400 text-sm">No class session scheduled for today.</p>
+            ) : (
+              <div>
+                <p className="text-slate-500 text-xs mb-1">
+                  {detail.data.today.session.start_time?.slice(0, 5)}–{detail.data.today.session.end_time?.slice(0, 5)}
+                </p>
+                {detail.data.today.session.topics_covered && (
+                  <p className="text-slate-700 text-sm mb-1">
+                    <span className="font-semibold">Focus:</span> {detail.data.today.session.topics_covered}
+                  </p>
+                )}
+                {detail.data.today.session.project_note && (
+                  <p className="text-slate-700 text-sm mb-2">
+                    <span className="font-semibold">Project:</span> {detail.data.today.session.project_note}
+                  </p>
+                )}
+                <Pill color={detail.data.today.attendance_taken ? 'emerald' : 'amber'}>
+                  {detail.data.today.attendance_taken ? 'Attendance taken' : 'Attendance not taken yet'}
+                </Pill>
+
+                {detail.data.today.roster && (
+                  <div className="space-y-2 max-h-72 overflow-y-auto mt-3">
+                    {detail.data.today.roster.length === 0 && (
+                      <p className="text-slate-400 text-sm text-center py-4">No students enrolled in this cohort.</p>
+                    )}
+                    {detail.data.today.roster.map((r) => (
+                      <div key={r.application_id} className="flex items-center justify-between px-3 py-2.5 border border-slate-100 rounded-md">
+                        <div>
+                          <p className="text-slate-800 text-sm font-medium">{r.student_name}</p>
+                          <p className="text-slate-400 text-xs">{r.student_email}</p>
+                        </div>
+                        {r.marked ? (
+                          <Pill color={statusColor[r.status] || 'slate'}>{r.status}</Pill>
+                        ) : (
+                          <Pill color="slate">Not marked</Pill>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            ))}
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-slate-100">
+            <SecondaryButton disabled className="w-full justify-center opacity-50 cursor-not-allowed">
+              Message cohort (coming soon)
+            </SecondaryButton>
           </div>
         </div>
       )}
@@ -1194,9 +1254,8 @@ function CohortsTab({ cohorts, token }) {
       )}
 
       {viewingCohortId && (
-        <CohortAttendanceModal
+        <CohortDetailModal
           cohortId={viewingCohortId}
-          cohortName={cohorts.items.find((c) => c.id === viewingCohortId)?.name}
           token={token}
           onClose={() => setViewingCohortId(null)}
         />
