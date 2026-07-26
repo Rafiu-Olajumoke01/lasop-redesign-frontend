@@ -379,6 +379,68 @@ function useDashboardStats(token) {
   return { stats, loading, error, refresh };
 }
 
+// ─── Cohorts: today + attendance hooks ─────────────────────────────────────
+//
+// Wired to AdminCohortsTodayView (GET /api/cohorts/today/) and
+// AdminCohortAttendanceView (GET /api/cohorts/<id>/admin-attendance/).
+// Both require an admin/staff JWT — same pattern as useDashboardStats.
+
+function useCohortsToday(token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/today/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Could not load today's cohorts.");
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  return { items, loading, error, refresh };
+}
+
+function useCohortAttendance(token) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async (cohortId) => {
+    setLoading(true); setError(''); setData(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/${cohortId}/admin-attendance/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 404) {
+        setError('No class session today for this cohort.');
+        return;
+      }
+      if (!res.ok) throw new Error('Could not load attendance for this cohort.');
+      const json = await res.json();
+      setData(json);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  const clear = () => { setData(null); setError(''); };
+
+  return { data, loading, error, load, clear };
+}
+
 // ─── Promo codes hook ───────────────────────────────────────────────────────
 //
 // Wired to AdminPromoCodeListCreateView (GET/POST /promo-codes/) — this view
@@ -858,16 +920,126 @@ function LocationsTab({ locations }) {
   );
 }
 
+// ─── Cohorts: "learning today" section + attendance modal ─────────────────
+
+function CohortsTodaySection({ token, onViewCohort }) {
+  const today = useCohortsToday(token);
+
+  if (today.loading) {
+    return (
+      <div className="mb-6">
+        <SectionLabel>Cohorts learning today</SectionLabel>
+        <Card><Spinner text="Checking today's schedule…" /></Card>
+      </div>
+    );
+  }
+
+  if (today.error) {
+    return (
+      <div className="mb-6">
+        <SectionLabel>Cohorts learning today</SectionLabel>
+        <ErrorBanner message={today.error} />
+      </div>
+    );
+  }
+
+  if (today.items.length === 0) {
+    return (
+      <div className="mb-6">
+        <SectionLabel>Cohorts learning today</SectionLabel>
+        <Card><EmptyState title="No classes scheduled today" hint="Nothing on the calendar for today across any cohort." /></Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6">
+      <SectionLabel>Cohorts learning today ({today.items.length})</SectionLabel>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {today.items.map((s) => (
+          <Card key={s.session_id} interactive className="p-4 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-slate-900 font-bold text-[14px] truncate">{s.cohort_name}</p>
+              <p className="text-slate-400 text-xs mt-0.5">
+                {s.tutor || 'No tutor assigned'} · {s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Pill color={s.attendance_taken ? 'emerald' : 'amber'}>
+                {s.attendance_taken ? 'Attendance taken' : 'Not marked yet'}
+              </Pill>
+              <SecondaryButton onClick={() => onViewCohort(s.cohort_id)}>View</SecondaryButton>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CohortAttendanceModal({ cohortId, cohortName, token, onClose }) {
+  const attendance = useCohortAttendance(token);
+
+  useEffect(() => { if (cohortId) attendance.load(cohortId); }, [cohortId]);
+
+  const statusColor = { present: 'emerald', absent: 'rose', late: 'amber' };
+
+  return (
+    <Modal title={cohortName ? `${cohortName} — Attendance` : 'Attendance'} onClose={onClose}>
+      {attendance.loading && <Spinner text="Loading attendance…" />}
+      {attendance.error && <ErrorBanner message={attendance.error} />}
+
+      {attendance.data && (
+        <div>
+          <div className="mb-4 pb-4 border-b border-slate-100">
+            <p className="text-slate-500 text-xs mb-1">
+              {formatDate(attendance.data.session.date)} · {attendance.data.session.start_time?.slice(0, 5)}–{attendance.data.session.end_time?.slice(0, 5)}
+            </p>
+            {attendance.data.session.topics_covered && (
+              <p className="text-slate-700 text-sm"><span className="font-semibold">Focus today:</span> {attendance.data.session.topics_covered}</p>
+            )}
+            <div className="mt-2">
+              <Pill color={attendance.data.attendance_taken ? 'emerald' : 'amber'}>
+                {attendance.data.attendance_taken ? 'Attendance taken' : 'Attendance not taken yet'}
+              </Pill>
+            </div>
+          </div>
+
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {attendance.data.roster.length === 0 && (
+              <p className="text-slate-400 text-sm text-center py-6">No students enrolled in this cohort.</p>
+            )}
+            {attendance.data.roster.map((r) => (
+              <div key={r.application_id} className="flex items-center justify-between px-3 py-2.5 border border-slate-100 rounded-md">
+                <div>
+                  <p className="text-slate-800 text-sm font-medium">{r.student_name}</p>
+                  <p className="text-slate-400 text-xs">{r.student_email}</p>
+                </div>
+                {r.marked ? (
+                  <Pill color={statusColor[r.status] || 'slate'}>{r.status}</Pill>
+                ) : (
+                  <Pill color="slate">Not marked</Pill>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 // ─── Cohorts tab ──────────────────────────────────────────────────────────────
 
 const emptyCohort = { name: '', start_date: '', end_date: '', status: 'upcoming' };
 
-function CohortsTab({ cohorts }) {
+function CohortsTab({ cohorts, token }) {
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(emptyCohort);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
   const [filter, setFilter] = useState('all');
+  const [viewingCohortId, setViewingCohortId] = useState(null);
 
   const openNew = () => { setForm(emptyCohort); setModal('new'); setErr(''); };
   const openEdit = (c) => {
@@ -900,6 +1072,8 @@ function CohortsTab({ cohorts }) {
 
   return (
     <div>
+      <CohortsTodaySection token={token} onViewCohort={setViewingCohortId} />
+
       <PageHeader title="Cohorts" subtitle={`${filtered.length} of ${cohorts.items.length} total`}>
         <div className="flex items-center gap-1.5 flex-wrap">
           {filters.map((f) => (
@@ -929,6 +1103,8 @@ function CohortsTab({ cohorts }) {
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-slate-900 font-bold text-base leading-snug pr-4 tracking-tight">{c.name}</h3>
                 <div className="flex items-center gap-2 shrink-0">
+                  <LinkButton onClick={() => setViewingCohortId(c.id)}>View Cohort</LinkButton>
+                  <span className="text-slate-300">·</span>
                   <LinkButton onClick={() => openEdit(c)}>Edit</LinkButton>
                   <span className="text-slate-300">·</span>
                   <LinkButton danger onClick={() => cohorts.remove(c)}>Delete</LinkButton>
@@ -1015,6 +1191,15 @@ function CohortsTab({ cohorts }) {
             </PrimaryButton>
           </div>
         </Modal>
+      )}
+
+      {viewingCohortId && (
+        <CohortAttendanceModal
+          cohortId={viewingCohortId}
+          cohortName={cohorts.items.find((c) => c.id === viewingCohortId)?.name}
+          token={token}
+          onClose={() => setViewingCohortId(null)}
+        />
       )}
     </div>
   );
@@ -1256,16 +1441,6 @@ function TutorsTab({ tutors, cohorts }) {
 }
 
 // ─── Students tab ───────────────────────────────────────────────────────────
-//
-// Drop this component into backstage/page.jsx (or wherever the other tab
-// components like TutorsTab live). It needs the same shared UI helpers
-// already defined in that file: Card, PageHeader, ErrorBanner, Spinner,
-// EmptyState, Pill, inputClass, API_BASE.
-//
-// Usage in the page shell:
-//   {tab === 'students' && <StudentsTab token={token} tutors={tutors} />}
-//
-// (replace the old `{tab === 'students' && <ComingSoon title="Students" />}`)
 
 function useStudents(token) {
   const [items, setItems] = useState([]);
@@ -2142,9 +2317,6 @@ function PromoCodesSection({ token }) {
               </tbody>
             </table>
           </div>
-          {/* No disable/delete actions yet — AdminPromoCodeListCreateView only
-              supports list + create. Add a detail view on the backend
-              (GET/PATCH/DELETE by id) to enable those here. */}
         </Card>
       )}
 
@@ -2557,7 +2729,7 @@ export default function BackstagePage() {
             {tab === 'exam' && <ExamsTab exams={exams} cohorts={cohorts} courses={courses} />}
             {tab === 'results' && <ResultsTab results={results} exams={exams} applications={applications} />}
 
-            {tab === 'cohorts' && <CohortsTab cohorts={cohorts} />}
+            {tab === 'cohorts' && <CohortsTab cohorts={cohorts} token={token} />}
             {tab === 'tutors' && <TutorsTab tutors={tutors} cohorts={cohorts} />}
             {tab === 'students' && <StudentsTab token={token} tutors={tutors} />}
             {tab === 'staffs' && <ComingSoon title="Staffs" />}
