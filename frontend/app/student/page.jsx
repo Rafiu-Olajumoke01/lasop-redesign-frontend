@@ -180,6 +180,23 @@ function ManagerCard({ title, onClick, icon }) {
   );
 }
 
+// Same visual language as ManagerCard, but non-interactive (no chevron, no
+// onClick) since assigned cohorts aren't a navigation target — just a
+// display of which cohort(s) the student has been placed in.
+function InfoRow({ title, subtitle, icon }) {
+  return (
+    <div className="flex items-center gap-3 bg-white border border-slate-200/80 rounded-md px-4 py-3.5 w-full">
+      <div className="w-9 h-9 rounded-md bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#0057E7] shrink-0">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-slate-800 font-semibold text-[13.5px] truncate">{title}</p>
+        {subtitle && <p className="text-slate-400 text-[11px] truncate">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
 // ─── Icons ──────────────────────────────────────────────────────────────────
 
 function CoursesIcon() {
@@ -227,6 +244,16 @@ function TutorAvatarIcon() {
       <path d="M22 10L12 5 2 10l10 5 10-5z" />
       <path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5" />
       <path d="M22 10v6" />
+    </svg>
+  );
+}
+function CohortIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87" />
+      <path d="M16 3.13a4 4 0 010 7.75" />
     </svg>
   );
 }
@@ -820,6 +847,44 @@ function AssignedTutorCard({ tutor }) {
   );
 }
 
+// ─── Assigned Cohorts Section ───────────────────────────────────────────────
+//
+// One row per enrolled course that already has a cohort assigned
+// (app.cohort_detail, the same object already used to build cohortIds
+// below). Styled like ManagerCard (icon box + label) since that's the look
+// Adejoke wants here — just without the click affordance, since there's no
+// dedicated cohort page to land on yet.
+//
+// ASSUMPTION: showing `cohort_detail.name` as the cohort's display name.
+// If the serializer names this field differently (e.g. `title`,
+// `cohort_name`), swap the one reference below.
+
+function AssignedCohortsSection({ applications }) {
+  const withCohort = applications.filter((a) => a.cohort_detail);
+
+  return (
+    <div className="mb-5">
+      <SectionLabel>Assigned Cohorts</SectionLabel>
+      {withCohort.length === 0 ? (
+        <Card>
+          <EmptyState title="No cohort assigned yet" hint="You'll see it here once you're placed in one." />
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {withCohort.map((a) => (
+            <InfoRow
+              key={a.id}
+              title={a.cohort_detail?.name}
+              subtitle={a.course_detail?.title}
+              icon={<CohortIcon />}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Today's Class Section ──────────────────────────────────────────────────
 //
 // Calls /api/cohorts/my-classes/?course=<id> once per enrolled course
@@ -986,7 +1051,7 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
           View classes & projects →
         </Link>
       </div>
-      
+
       {isPaymentOpen && (
         <PaymentTransfer
           applicationId={app.id}
@@ -1046,6 +1111,8 @@ function OverviewTab({ user, applications, token, onNavigate }) {
       <div className="mb-5">
         <AssignedTutorCard tutor={user?.assigned_tutor_detail} />
       </div>
+
+      <AssignedCohortsSection applications={applications} />
 
       <div className="mb-5">
         <SectionLabel>Quick actions</SectionLabel>
