@@ -1,8 +1,6 @@
 import "./globals.css";
 
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import FloatingWhatsapp from "@/components/shared/FloatingWhatsapp";
+import LayoutChrome from "@/components/layout/LayoutChrome";
 
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 
@@ -26,15 +24,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body  className={`${plusJakarta.variable} ${inter.variable}`}>
-        <Navbar />
-
-        <main>
-          {children}
-          <FloatingWhatsapp />
-        </main>
-        
-        <Footer />
+      <body className={`${plusJakarta.variable} ${inter.variable}`}>
+        <LayoutChrome>{children}</LayoutChrome>
       </body>
     </html>
   );
