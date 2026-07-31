@@ -55,6 +55,8 @@ function PaymentStatusBadge({ status, amountPaid }) {
   return null;
 }
 
+
+
 function ErrorBanner({ message }) {
   if (!message) return null;
   return (
