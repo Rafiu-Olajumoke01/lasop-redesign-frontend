@@ -238,6 +238,14 @@ function ClassworkIcon() {
     </svg>
   );
 }
+function ClockIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
+    </svg>
+  );
+}
 
 function NavIcon({ path }) {
   return (
@@ -738,6 +746,15 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function formatTime(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':');
+  const hour = Number(h);
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${hour12}:${m} ${period}`;
+}
+
 function CertificateCard({ certificate }) {
   const isReady = !!certificate;
 
@@ -800,6 +817,94 @@ function AssignedTutorCard({ tutor }) {
         </p>
       </div>
     </Card>
+  );
+}
+
+// ─── Today's Class Section ──────────────────────────────────────────────────
+//
+// Calls /api/cohorts/my-classes/?course=<id> once per enrolled course
+// (that view resolves the student's application -> cohort internally) and
+// collects the `today` sessions from each response.
+
+function useTodayClasses(token, applications) {
+  const appsWithCourse = applications.filter((a) => a.course);
+  const courseKey = appsWithCourse.map((a) => a.course).join(',');
+
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!token || appsWithCourse.length === 0) { setLoading(false); return; }
+
+    const fetchAll = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const responses = await Promise.all(
+          appsWithCourse.map((app) =>
+            fetch(`${API_BASE}/api/cohorts/my-classes/?course=${app.course}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            }).then((r) => (r.ok ? r.json() : { today: [] }))
+          )
+        );
+        const todaySessions = responses.flatMap((r, i) =>
+          (r.today || []).map((s) => ({ ...s, course_title: appsWithCourse[i]?.course_detail?.title }))
+        );
+        setSessions(todaySessions);
+      } catch {
+        setError("Could not load today's classes.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, courseKey]);
+
+  return { sessions, loading, error };
+}
+
+function TodayClassCard({ session }) {
+  return (
+    <Card interactive className="p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <p className="text-slate-900 font-semibold text-sm tracking-tight truncate">
+            {session.course_title || session.cohort_name}
+          </p>
+          <p className="text-slate-400 text-[11px] mt-0.5">{session.cohort_name}</p>
+        </div>
+        <Pill color="blue">{formatTime(session.start_time)} – {formatTime(session.end_time)}</Pill>
+      </div>
+      {session.topics_covered && (
+        <p className="text-slate-500 text-sm leading-relaxed mt-3 pt-3 border-t border-slate-100">
+          {session.topics_covered}
+        </p>
+      )}
+    </Card>
+  );
+}
+
+function TodayClassSection({ token, applications }) {
+  const { sessions, loading, error } = useTodayClasses(token, applications);
+
+  return (
+    <div className="mb-5">
+      <SectionLabel>Today&rsquo;s Class</SectionLabel>
+      {loading ? (
+        <Card className="p-6"><Spinner text="Loading today's classes…" /></Card>
+      ) : error ? (
+        <ErrorBanner message={error} />
+      ) : sessions.length === 0 ? (
+        <Card><EmptyState title="No class today" hint="Check back on your next class day." /></Card>
+      ) : (
+        <div className="space-y-2.5">
+          {sessions.map((s) => <TodayClassCard key={s.id} session={s} />)}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -900,7 +1005,7 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
 
 // ─── Overview tab ───────────────────────────────────────────────────────────
 
-function OverviewTab({ user, applications, onNavigate }) {
+function OverviewTab({ user, applications, token, onNavigate }) {
   const count = applications.length;
   const onlineCount = applications.filter((a) => a.mode_of_learning === 'online').length;
   const physicalCount = applications.filter((a) => a.mode_of_learning === 'physical').length;
@@ -949,6 +1054,8 @@ function OverviewTab({ user, applications, onNavigate }) {
           <ManagerCard title="Check my certificate" onClick={() => onNavigate('certificate')} icon={<DocumentIcon className="w-4 h-4" />} />
         </div>
       </div>
+
+      <TodayClassSection token={token} applications={applications} />
 
       <div className="mb-5">
         <SectionLabel>At a glance</SectionLabel>
@@ -1332,7 +1439,7 @@ export default function DashboardPage() {
             <ErrorBanner message={error} />
 
             {tab === 'overview' && (
-              <OverviewTab user={user} applications={applications} onNavigate={setTab} />
+              <OverviewTab user={user} applications={applications} token={token} onNavigate={setTab} />
             )}
             {tab === 'courses' && (
               <CoursesTab
