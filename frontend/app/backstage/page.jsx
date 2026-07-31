@@ -2571,9 +2571,9 @@ function Sidebar({ open, onClose, tab, setTab }) {
         />
       )}
       <aside
-        className={`fixed lg:static top-20 lg:top-0 left-0 h-[calc(100vh-5rem)] lg:h-screen w-64 z-50 flex flex-col border-r border-blue-900/40
-          transition-transform duration-200 ease-out
-          ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        className={`fixed lg:static top-0 left-0 h-screen w-64 z-50 flex flex-col border-r border-blue-900/40
+  transition-transform duration-200 ease-out
+  ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{ background: '#152035' }}
       >
         <div className="flex items-center justify-between px-5 pt-6 pb-5 border-b border-blue-900/30">
@@ -2764,7 +2764,7 @@ export default function BackstagePage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50 pt-20">
+    <div className="min-h-screen flex bg-slate-50">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} />
 
       <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
