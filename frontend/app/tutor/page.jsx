@@ -597,7 +597,7 @@ function SessionAttendanceView({ token, session, onBack }) {
   useEffect(() => {
     if (roster.length) {
       const initial = {};
-      roster.forEach((r) => { initial[r.application_id] = statuses[r.application_id] || 'present'; });
+      roster.forEach((r) => { initial[r.application_id] = statuses[r.application_id] || r.status || 'present'; });
       setStatuses((prev) => ({ ...initial, ...prev }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
