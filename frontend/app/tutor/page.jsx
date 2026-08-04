@@ -164,7 +164,22 @@ function useCohortSessions(token, cohortId) {
     await refresh();
   };
 
-  return { sessions, loading, error, refresh, createSession };
+  const stopSession = async (sessionId) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/sessions/${sessionId}/stop/`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Stop session failed:', text);
+      throw new Error('Could not stop the class.');
+    }
+    const updated = await res.json();
+    await refresh();
+    return updated;
+  };
+
+  return { sessions, loading, error, refresh, createSession, stopSession };
 }
 
 // ── Roster + attendance for a single session ─────────────────────────────────
@@ -209,6 +224,38 @@ function useSessionAttendance(token, sessionId) {
   };
 
   return { roster, loading, error, saving, refresh, submitAttendance };
+}
+
+// ── Live elapsed timer, ticks while started_at is set and ended_at isn't ────
+
+function useElapsedTimer(startedAt, endedAt) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!startedAt) { setElapsed(0); return; }
+    const start = new Date(startedAt).getTime();
+
+    const computeElapsed = () => {
+      const end = endedAt ? new Date(endedAt).getTime() : Date.now();
+      setElapsed(Math.max(0, Math.floor((end - start) / 1000)));
+    };
+
+    computeElapsed();
+    if (endedAt) return;
+
+    const interval = setInterval(computeElapsed, 1000);
+    return () => clearInterval(interval);
+  }, [startedAt, endedAt]);
+
+  return elapsed;
+}
+
+function formatElapsed(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -473,16 +520,22 @@ function DashboardTab({ tutor, statsData, cohortsData, setTab }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Cohorts tab — now with class sessions + attendance
+// Cohorts tab — now with class sessions, live timer + attendance
 // ═══════════════════════════════════════════════════════════════════════════
 
-const emptySession = { topics_covered: '', date: '', start_time: '', end_time: '' };
+const emptySession = { title: '', topics_covered: '', date: '', start_time: '', end_time: '' };
 
-function SessionAttendanceView({ token, session, onBack }) {
+function SessionAttendanceView({ token, session, onBack, onStop }) {
   const { roster, loading, error, saving, submitAttendance } = useSessionAttendance(token, session.id);
   const [statuses, setStatuses] = useState({});
   const [saveErr, setSaveErr] = useState('');
   const [saved, setSaved] = useState(false);
+  const [localSession, setLocalSession] = useState(session);
+  const [stopping, setStopping] = useState(false);
+  const [stopErr, setStopErr] = useState('');
+
+  const elapsed = useElapsedTimer(localSession.started_at, localSession.ended_at);
+  const isLive = !!localSession.started_at && !localSession.ended_at;
 
   useEffect(() => {
     if (roster.length) {
@@ -510,6 +563,18 @@ function SessionAttendanceView({ token, session, onBack }) {
     }
   };
 
+  const handleStop = async () => {
+    setStopping(true); setStopErr('');
+    try {
+      const updated = await onStop(localSession.id);
+      setLocalSession(updated);
+    } catch (e) {
+      setStopErr(e.message);
+    } finally {
+      setStopping(false);
+    }
+  };
+
   const statusStyles = {
     present: 'border-emerald-500 bg-emerald-500 text-white',
     late: 'border-amber-500 bg-amber-500 text-white',
@@ -522,16 +587,29 @@ function SessionAttendanceView({ token, session, onBack }) {
         <Icon path={<path d="M15 18l-6-6 6-6" />} size={16} /> Back to sessions
       </button>
       <PageHeader
-        title={session.topics_covered ? session.topics_covered.split('\n')[0] : 'Class session'}
-        subtitle={`${session.date} · ${session.start_time}–${session.end_time}`}
-      />
+        title={localSession.title || (localSession.topics_covered ? localSession.topics_covered.split('\n')[0] : 'Class session')}
+        subtitle={`${localSession.date} · ${localSession.start_time}–${localSession.end_time}`}
+      >
+        {localSession.started_at && (
+          <div className="flex items-center gap-2">
+            <Pill color={isLive ? 'emerald' : 'slate'}>
+              {isLive ? 'Live' : 'Ended'} · {formatElapsed(elapsed)}
+            </Pill>
+            {isLive && (
+              <SecondaryButton onClick={handleStop} disabled={stopping}>
+                {stopping ? 'Stopping…' : 'Stop class'}
+              </SecondaryButton>
+            )}
+          </div>
+        )}
+      </PageHeader>
 
       {saved && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3 mb-4">
           Attendance saved
         </div>
       )}
-      <ErrorBanner message={error || saveErr} />
+      <ErrorBanner message={error || saveErr || stopErr} />
 
       {loading ? (
         <Spinner text="Loading roster…" />
@@ -576,7 +654,7 @@ function SessionAttendanceView({ token, session, onBack }) {
 }
 
 function CohortSessionsView({ token, cohort, onBack }) {
-  const { sessions, loading, error, createSession } = useCohortSessions(token, cohort.id);
+  const { sessions, loading, error, createSession, stopSession } = useCohortSessions(token, cohort.id);
   const [openSession, setOpenSession] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptySession);
@@ -584,11 +662,11 @@ function CohortSessionsView({ token, cohort, onBack }) {
   const [formErr, setFormErr] = useState('');
 
   if (openSession) {
-    return <SessionAttendanceView token={token} session={openSession} onBack={() => setOpenSession(null)} />;
+    return <SessionAttendanceView token={token} session={openSession} onBack={() => setOpenSession(null)} onStop={stopSession} />;
   }
 
   const handleCreate = async () => {
-    if (!form.topics_covered || !form.date || !form.start_time || !form.end_time) {
+    if (!form.title || !form.topics_covered || !form.date || !form.start_time || !form.end_time) {
       setFormErr('Please fill in all fields before creating the session.');
       return;
     }
@@ -629,20 +707,26 @@ function CohortSessionsView({ token, cohort, onBack }) {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sessions.map((s) => (
-            <Card key={s.id} className="p-5 hover:border-slate-300 transition-colors">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-slate-900 font-bold text-[15px]">
-                  {s.topics_covered ? s.topics_covered.split('\n')[0] : 'Untitled session'}
-                </h3>
-                <Pill color="blue">{s.duration_hours}h</Pill>
-              </div>
-              <p className="text-slate-400 text-xs mb-4">{s.date} · {s.start_time}–{s.end_time}</p>
-              <SecondaryButton onClick={() => setOpenSession(s)} className="w-full justify-center">
-                Mark attendance
-              </SecondaryButton>
-            </Card>
-          ))}
+          {sessions.map((s) => {
+            const live = !!s.started_at && !s.ended_at;
+            return (
+              <Card key={s.id} className="p-5 hover:border-slate-300 transition-colors">
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <h3 className="text-slate-900 font-bold text-[15px]">
+                    {s.title || (s.topics_covered ? s.topics_covered.split('\n')[0] : 'Untitled session')}
+                  </h3>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {live && <Pill color="emerald">Live</Pill>}
+                    <Pill color="blue">{s.duration_hours}h</Pill>
+                  </div>
+                </div>
+                <p className="text-slate-400 text-xs mb-4">{s.date} · {s.start_time}–{s.end_time}</p>
+                <SecondaryButton onClick={() => setOpenSession(s)} className="w-full justify-center">
+                  {live ? 'Manage session' : 'Mark attendance'}
+                </SecondaryButton>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -652,7 +736,18 @@ function CohortSessionsView({ token, cohort, onBack }) {
             <h3 className="text-slate-900 font-bold text-base mb-4">New class session</h3>
             {formErr && <ErrorBanner message={formErr} />}
             <div className="space-y-4">
-              <Field label="Topics covered">
+              <Field label="Title of the lesson">
+                <input
+                  type="text"
+                  className={inputClass}
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="e.g. Introduction to HTML Forms"
+                />
+              </Field>
+              <div>
+                <h4 className="text-slate-900 font-bold text-sm mb-1">Lesson of the day</h4>
+                <p className="text-slate-400 text-xs mb-2">At the end of this lesson, students will cover?</p>
                 <textarea
                   className={inputClass}
                   rows={4}
@@ -660,7 +755,7 @@ function CohortSessionsView({ token, cohort, onBack }) {
                   onChange={(e) => setForm({ ...form, topics_covered: e.target.value })}
                   placeholder={"e.g. HTML Tables\nHTML Forms\nHTML Tags"}
                 />
-              </Field>
+              </div>
               <Field label="Date">
                 <input
                   type="date"

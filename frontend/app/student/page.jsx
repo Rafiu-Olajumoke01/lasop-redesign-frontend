@@ -14,7 +14,7 @@ const BANK_DETAILS = {
   accountNumber: '1223017613',
 };
 
-// ─── Shared UI (matches /backstage) ────────────────────────────────────────
+// ─── Shared UI (matches /backstage) ─────────────────────────────────────
 
 function Card({ children, className = '', interactive = false }) {
   return (
