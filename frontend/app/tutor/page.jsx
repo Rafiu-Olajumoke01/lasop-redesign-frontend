@@ -333,6 +333,17 @@ function SecondaryButton({ children, className = '', ...props }) {
   );
 }
 
+function DangerButton({ children, className = '', ...props }) {
+  return (
+    <button
+      {...props}
+      className={`bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm transition-all active:scale-95 ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
 const inputClass =
   'w-full bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 transition';
 
@@ -520,22 +531,68 @@ function DashboardTab({ tutor, statsData, cohortsData, setTab }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Cohorts tab — now with class sessions, live timer + attendance
+// Cohorts tab — sessions split into Today / Past / Future
 // ═══════════════════════════════════════════════════════════════════════════
 
-const emptySession = { title: '', topics_covered: '', date: '', start_time: '', end_time: '' };
+function todayISODate() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
-function SessionAttendanceView({ token, session, onBack, onStop }) {
+function nowTimeString() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function plusOneHour(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  d.setHours(d.getHours() + 1);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+const blankLessonFields = { title: '', topics_covered: '', lesson_outcome: '' };
+const blankScheduleFields = { date: '', start_time: '', end_time: '' };
+
+function SessionCard({ session, onOpen, onStop, stopping }) {
+  const live = !!session.started_at && !session.ended_at;
+  const elapsed = useElapsedTimer(session.started_at, session.ended_at);
+
+  return (
+    <Card className="p-5 hover:border-slate-300 transition-colors">
+      <div className="flex items-start justify-between mb-2 gap-2">
+        <h3 className="text-slate-900 font-bold text-[15px]">
+          {session.title || (session.topics_covered ? session.topics_covered.split('\n')[0] : 'Untitled session')}
+        </h3>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {live && <Pill color="emerald">Live · {formatElapsed(elapsed)}</Pill>}
+          {!live && session.ended_at && <Pill color="slate">Ended</Pill>}
+        </div>
+      </div>
+      <p className="text-slate-400 text-xs mb-4">{session.date}</p>
+      <div className="flex gap-2">
+        <SecondaryButton onClick={() => onOpen(session)} className="flex-1 justify-center">
+          {live ? 'Mark attendance' : 'Open session'}
+        </SecondaryButton>
+        {live && (
+          <DangerButton onClick={() => onStop(session.id)} disabled={stopping} className="flex-1 justify-center">
+            {stopping ? 'Stopping…' : 'Stop class'}
+          </DangerButton>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function SessionAttendanceView({ token, session, onBack }) {
   const { roster, loading, error, saving, submitAttendance } = useSessionAttendance(token, session.id);
   const [statuses, setStatuses] = useState({});
   const [saveErr, setSaveErr] = useState('');
   const [saved, setSaved] = useState(false);
-  const [localSession, setLocalSession] = useState(session);
-  const [stopping, setStopping] = useState(false);
-  const [stopErr, setStopErr] = useState('');
-
-  const elapsed = useElapsedTimer(localSession.started_at, localSession.ended_at);
-  const isLive = !!localSession.started_at && !localSession.ended_at;
 
   useEffect(() => {
     if (roster.length) {
@@ -563,18 +620,6 @@ function SessionAttendanceView({ token, session, onBack, onStop }) {
     }
   };
 
-  const handleStop = async () => {
-    setStopping(true); setStopErr('');
-    try {
-      const updated = await onStop(localSession.id);
-      setLocalSession(updated);
-    } catch (e) {
-      setStopErr(e.message);
-    } finally {
-      setStopping(false);
-    }
-  };
-
   const statusStyles = {
     present: 'border-emerald-500 bg-emerald-500 text-white',
     late: 'border-amber-500 bg-amber-500 text-white',
@@ -587,29 +632,16 @@ function SessionAttendanceView({ token, session, onBack, onStop }) {
         <Icon path={<path d="M15 18l-6-6 6-6" />} size={16} /> Back to sessions
       </button>
       <PageHeader
-        title={localSession.title || (localSession.topics_covered ? localSession.topics_covered.split('\n')[0] : 'Class session')}
-        subtitle={`${localSession.date} · ${localSession.start_time}–${localSession.end_time}`}
-      >
-        {localSession.started_at && (
-          <div className="flex items-center gap-2">
-            <Pill color={isLive ? 'emerald' : 'slate'}>
-              {isLive ? 'Live' : 'Ended'} · {formatElapsed(elapsed)}
-            </Pill>
-            {isLive && (
-              <SecondaryButton onClick={handleStop} disabled={stopping}>
-                {stopping ? 'Stopping…' : 'Stop class'}
-              </SecondaryButton>
-            )}
-          </div>
-        )}
-      </PageHeader>
+        title={session.title || (session.topics_covered ? session.topics_covered.split('\n')[0] : 'Class session')}
+        subtitle={session.date}
+      />
 
       {saved && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3 mb-4">
           Attendance saved
         </div>
       )}
-      <ErrorBanner message={error || saveErr || stopErr} />
+      <ErrorBanner message={error || saveErr} />
 
       {loading ? (
         <Spinner text="Loading roster…" />
@@ -653,28 +685,32 @@ function SessionAttendanceView({ token, session, onBack, onStop }) {
   );
 }
 
-function CohortSessionsView({ token, cohort, onBack }) {
-  const { sessions, loading, error, createSession, stopSession } = useCohortSessions(token, cohort.id);
-  const [openSession, setOpenSession] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState(emptySession);
+function NewSessionModal({ activeTab, onClose, onCreate }) {
+  const isToday = activeTab === 'today';
+  const [form, setForm] = useState(isToday ? { ...blankLessonFields } : { ...blankLessonFields, ...blankScheduleFields });
   const [saving, setSaving] = useState(false);
   const [formErr, setFormErr] = useState('');
 
-  if (openSession) {
-    return <SessionAttendanceView token={token} session={openSession} onBack={() => setOpenSession(null)} onStop={stopSession} />;
-  }
-
   const handleCreate = async () => {
-    if (!form.title || !form.topics_covered || !form.date || !form.start_time || !form.end_time) {
-      setFormErr('Please fill in all fields before creating the session.');
+    if (!form.title || !form.topics_covered || !form.lesson_outcome) {
+      setFormErr('Please fill in all lesson fields before creating the session.');
       return;
     }
+    if (!isToday && (!form.date || !form.start_time || !form.end_time)) {
+      setFormErr('Please fill in date, start time and end time.');
+      return;
+    }
+
+    let payload = { ...form };
+    if (isToday) {
+      const start = nowTimeString();
+      payload = { ...payload, date: todayISODate(), start_time: start, end_time: plusOneHour(start) };
+    }
+
     setSaving(true); setFormErr('');
     try {
-      await createSession(form);
-      setForm(emptySession);
-      setModalOpen(false);
+      await onCreate(payload);
+      onClose();
     } catch (e) {
       setFormErr(e.message);
     } finally {
@@ -683,79 +719,46 @@ function CohortSessionsView({ token, cohort, onBack }) {
   };
 
   return (
-    <div>
-      <button onClick={onBack} className="text-[#0057E7] text-sm font-semibold mb-4 flex items-center gap-1.5 hover:underline">
-        <Icon path={<path d="M15 18l-6-6 6-6" />} size={16} /> Back to cohorts
-      </button>
-      <PageHeader
-        title={cohort.name}
-        subtitle={`${cohort.current_stage_label} · ${cohort.student_count ?? 0} students`}
-      >
-        <PrimaryButton onClick={() => setModalOpen(true)}>+ New session</PrimaryButton>
-      </PageHeader>
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <h3 className="text-slate-900 font-bold text-base mb-1">New class session</h3>
+        <p className="text-slate-400 text-xs mb-4">
+          {isToday ? 'The timer starts the moment you click Create session.' : 'Log a session that already happened, or schedule one ahead.'}
+        </p>
+        {formErr && <ErrorBanner message={formErr} />}
+        <div className="space-y-4">
+          <Field label="Title of the lesson">
+            <input
+              type="text"
+              className={inputClass}
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="e.g. Introduction to HTML Forms"
+            />
+          </Field>
 
-      <ErrorBanner message={error} />
+          <Field label="Lesson of the day">
+            <textarea
+              className={inputClass}
+              rows={4}
+              value={form.topics_covered}
+              onChange={(e) => setForm({ ...form, topics_covered: e.target.value })}
+              placeholder={"e.g. HTML Tables\nHTML Forms\nHTML Tags"}
+            />
+          </Field>
 
-      {loading ? (
-        <Spinner text="Loading sessions…" />
-      ) : sessions.length === 0 ? (
-        <Card>
-          <EmptyState
-            title="No class sessions yet"
-            hint="Create your first session for this cohort to start marking attendance."
-          />
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sessions.map((s) => {
-            const live = !!s.started_at && !s.ended_at;
-            return (
-              <Card key={s.id} className="p-5 hover:border-slate-300 transition-colors">
-                <div className="flex items-start justify-between mb-2 gap-2">
-                  <h3 className="text-slate-900 font-bold text-[15px]">
-                    {s.title || (s.topics_covered ? s.topics_covered.split('\n')[0] : 'Untitled session')}
-                  </h3>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {live && <Pill color="emerald">Live</Pill>}
-                    <Pill color="blue">{s.duration_hours}h</Pill>
-                  </div>
-                </div>
-                <p className="text-slate-400 text-xs mb-4">{s.date} · {s.start_time}–{s.end_time}</p>
-                <SecondaryButton onClick={() => setOpenSession(s)} className="w-full justify-center">
-                  {live ? 'Manage session' : 'Mark attendance'}
-                </SecondaryButton>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+          <Field label="At the end of the lesson?">
+            <textarea
+              className={inputClass}
+              rows={3}
+              value={form.lesson_outcome}
+              onChange={(e) => setForm({ ...form, lesson_outcome: e.target.value })}
+              placeholder="What will students cover by the end of this lesson?"
+            />
+          </Field>
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <h3 className="text-slate-900 font-bold text-base mb-4">New class session</h3>
-            {formErr && <ErrorBanner message={formErr} />}
-            <div className="space-y-4">
-              <Field label="Title of the lesson">
-                <input
-                  type="text"
-                  className={inputClass}
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="e.g. Introduction to HTML Forms"
-                />
-              </Field>
-              <div>
-                <h4 className="text-slate-900 font-bold text-sm mb-1">Lesson of the day</h4>
-                <p className="text-slate-400 text-xs mb-2">At the end of this lesson, students will cover?</p>
-                <textarea
-                  className={inputClass}
-                  rows={4}
-                  value={form.topics_covered}
-                  onChange={(e) => setForm({ ...form, topics_covered: e.target.value })}
-                  placeholder={"e.g. HTML Tables\nHTML Forms\nHTML Tags"}
-                />
-              </div>
+          {!isToday && (
+            <>
               <Field label="Date">
                 <input
                   type="date"
@@ -782,17 +785,119 @@ function CohortSessionsView({ token, cohort, onBack }) {
                   />
                 </Field>
               </div>
-              <div className="flex gap-2 pt-2">
-                <SecondaryButton className="flex-1 justify-center" onClick={() => setModalOpen(false)}>
-                  Cancel
-                </SecondaryButton>
-                <PrimaryButton className="flex-1 justify-center" onClick={handleCreate} disabled={saving}>
-                  {saving ? 'Creating…' : 'Create session'}
-                </PrimaryButton>
-              </div>
-            </div>
+            </>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <SecondaryButton className="flex-1 justify-center" onClick={onClose}>
+              Cancel
+            </SecondaryButton>
+            <PrimaryButton className="flex-1 justify-center" onClick={handleCreate} disabled={saving}>
+              {saving ? 'Creating…' : 'Create session'}
+            </PrimaryButton>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CohortSessionsView({ token, cohort, onBack }) {
+  const { sessions, loading, error, createSession, stopSession } = useCohortSessions(token, cohort.id);
+  const [openSession, setOpenSession] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('today');
+  const [stoppingId, setStoppingId] = useState(null);
+  const [stopErr, setStopErr] = useState('');
+
+  if (openSession) {
+    return <SessionAttendanceView token={token} session={openSession} onBack={() => setOpenSession(null)} />;
+  }
+
+  const today = todayISODate();
+  const filtered = sessions.filter((s) => {
+    if (activeTab === 'today') return s.date === today;
+    if (activeTab === 'past') return s.date < today;
+    return s.date > today;
+  });
+
+  const handleStop = async (sessionId) => {
+    setStoppingId(sessionId); setStopErr('');
+    try {
+      await stopSession(sessionId);
+    } catch (e) {
+      setStopErr(e.message);
+    } finally {
+      setStoppingId(null);
+    }
+  };
+
+  const tabs = [
+    { key: 'today', label: 'Today' },
+    { key: 'past', label: 'Past' },
+    { key: 'future', label: 'Future' },
+  ];
+
+  return (
+    <div>
+      <button onClick={onBack} className="text-[#0057E7] text-sm font-semibold mb-4 flex items-center gap-1.5 hover:underline">
+        <Icon path={<path d="M15 18l-6-6 6-6" />} size={16} /> Back to cohorts
+      </button>
+      <PageHeader
+        title={cohort.name}
+        subtitle={`${cohort.current_stage_label} · ${cohort.student_count ?? 0} students`}
+      >
+        <PrimaryButton onClick={() => setModalOpen(true)}>+ New session</PrimaryButton>
+      </PageHeader>
+
+      <div className="flex items-center gap-1.5 mb-5">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            className={`text-[12px] font-semibold px-3.5 py-1.5 rounded-full border transition ${activeTab === t.key
+              ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+              : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+              }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <ErrorBanner message={error || stopErr} />
+
+      {loading ? (
+        <Spinner text="Loading sessions…" />
+      ) : filtered.length === 0 ? (
+        <Card>
+          <EmptyState
+            title={`No ${activeTab} sessions`}
+            hint={activeTab === 'today'
+              ? 'Create today\u2019s session to start the timer.'
+              : `Sessions in the ${activeTab} will show up here.`}
+          />
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map((s) => (
+            <SessionCard
+              key={s.id}
+              session={s}
+              onOpen={setOpenSession}
+              onStop={handleStop}
+              stopping={stoppingId === s.id}
+            />
+          ))}
+        </div>
+      )}
+
+      {modalOpen && (
+        <NewSessionModal
+          activeTab={activeTab}
+          onClose={() => setModalOpen(false)}
+          onCreate={createSession}
+        />
       )}
     </div>
   );
