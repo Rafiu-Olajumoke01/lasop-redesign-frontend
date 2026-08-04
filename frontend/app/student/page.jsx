@@ -301,11 +301,14 @@ function Sidebar({ open, onClose, tab, setTab, onLogout }) {
           className="fixed inset-0 bg-black/30 z-40 lg:hidden"
         />
       )}
+
       <aside
         className={`fixed lg:static top-0 left-0 h-screen w-64 z-50 flex flex-col border-r border-blue-900/40
-  transition-transform duration-200 ease-out
-  ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+transition-transform duration-200 ease-out
+${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        style={{ background: '#152035' }}
       >
+
         <div className="flex items-center justify-between px-5 pt-6 pb-5 border-b border-blue-900/30">
           <span className="text-slate-400 font-bold text-[11px] uppercase tracking-[0.16em]">Student Panel</span>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors lg:hidden" aria-label="Close menu">
@@ -393,9 +396,8 @@ function StepDots({ step }) {
       {steps.map((s, i) => (
         <span
           key={s}
-          className={`h-1 rounded-full transition-all duration-300 ${
-            i === activeIndex ? 'w-5 bg-[#0057E7]' : i < activeIndex ? 'w-1 bg-[#0057E7]/40' : 'w-1 bg-slate-200'
-          }`}
+          className={`h-1 rounded-full transition-all duration-300 ${i === activeIndex ? 'w-5 bg-[#0057E7]' : i < activeIndex ? 'w-1 bg-[#0057E7]/40' : 'w-1 bg-slate-200'
+            }`}
         />
       ))}
     </div>
@@ -722,11 +724,10 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
                     </div>
                     <button
                       onClick={() => handleCopy(field, value)}
-                      className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-md transition shrink-0 ml-3 ${
-                        copiedField === field
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-blue-50 text-[#0057E7] hover:bg-blue-100'
-                      }`}
+                      className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-md transition shrink-0 ml-3 ${copiedField === field
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-blue-50 text-[#0057E7] hover:bg-blue-100'
+                        }`}
                     >
                       {copiedField === field ? '✓ Copied' : 'Copy'}
                     </button>
@@ -788,9 +789,8 @@ function CertificateCard({ certificate }) {
   return (
     <Card interactive className="p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap">
       <div className="flex items-center gap-3 min-w-0">
-        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
-          isReady ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-300'
-        }`}>
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${isReady ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-300'
+          }`}>
           <DocumentIcon className="w-4.5 h-4.5" />
         </div>
         <div className="min-w-0">
@@ -832,9 +832,8 @@ function AssignedTutorCard({ tutor }) {
 
   return (
     <Card interactive className="p-4 sm:p-5 flex items-center gap-4">
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
-        hasTutor ? 'bg-blue-50 border-blue-200 text-[#0057E7]' : 'bg-slate-50 border-slate-200 text-slate-300'
-      }`}>
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${hasTutor ? 'bg-blue-50 border-blue-200 text-[#0057E7]' : 'bg-slate-50 border-slate-200 text-slate-300'
+        }`}>
         <TutorAvatarIcon />
       </div>
       <div className="min-w-0">
@@ -1108,11 +1107,10 @@ function OverviewTab({ user, applications, token, onNavigate }) {
         </div>
       )}
 
-      <div className="mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 items-start">
         <AssignedTutorCard tutor={user?.assigned_tutor_detail} />
+        <AssignedCohortsSection applications={applications} />
       </div>
-
-      <AssignedCohortsSection applications={applications} />
 
       <div className="mb-5">
         <SectionLabel>Quick actions</SectionLabel>
