@@ -573,7 +573,13 @@ function SessionCard({ session, onOpen, onStop, stopping }) {
           {!live && session.ended_at && <Pill color="slate">Ended</Pill>}
         </div>
       </div>
-      <p className="text-slate-400 text-xs mb-4">{session.date}</p>
+      <p className="text-slate-400 text-xs mb-1">{session.date}</p>
+      {!live && session.started_at && session.ended_at && (
+        <p className="text-slate-500 text-xs font-medium mb-4">
+          Total time spent: {formatElapsed(elapsed)}
+        </p>
+      )}
+      {(live || !session.started_at || !session.ended_at) && <div className="mb-4" />}
       <div className="flex gap-2">
         <SecondaryButton onClick={() => onOpen(session)} className="flex-1 justify-center">
           {!live ? 'Open session' : session.attendance_marked ? 'View/edit attendance' : 'Mark attendance'}
