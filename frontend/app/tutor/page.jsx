@@ -576,7 +576,7 @@ function SessionCard({ session, onOpen, onStop, stopping }) {
       <p className="text-slate-400 text-xs mb-4">{session.date}</p>
       <div className="flex gap-2">
         <SecondaryButton onClick={() => onOpen(session)} className="flex-1 justify-center">
-          {live ? 'Mark attendance' : 'Open session'}
+          {!live ? 'Open session' : session.attendance_marked ? 'View/edit attendance' : 'Mark attendance'}
         </SecondaryButton>
         {live && (
           <DangerButton onClick={() => onStop(session.id)} disabled={stopping} className="flex-1 justify-center">
@@ -593,6 +593,7 @@ function SessionAttendanceView({ token, session, onBack }) {
   const [statuses, setStatuses] = useState({});
   const [saveErr, setSaveErr] = useState('');
   const [saved, setSaved] = useState(false);
+  const locked = !!session.attendance_marked;
 
   useEffect(() => {
     if (roster.length) {
@@ -657,18 +658,24 @@ function SessionAttendanceView({ token, session, onBack }) {
                   <p className="text-slate-400 text-xs">{r.student_email}</p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {['present', 'late', 'absent'].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setStatus(r.application_id, s)}
-                      className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border capitalize transition ${(statuses[r.application_id] || 'present') === s
-                        ? statusStyles[s]
-                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                        }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                  {locked ? (
+                    <span className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border capitalize ${statusStyles[statuses[r.application_id] || 'present']}`}>
+                      {statuses[r.application_id] || 'present'}
+                    </span>
+                  ) : (
+                    ['present', 'late', 'absent'].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setStatus(r.application_id, s)}
+                        className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border capitalize transition ${(statuses[r.application_id] || 'present') === s
+                          ? statusStyles[s]
+                          : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                          }`}
+                      >
+                        {s}
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             ))}
@@ -676,7 +683,7 @@ function SessionAttendanceView({ token, session, onBack }) {
         </Card>
       )}
 
-      {roster.length > 0 && (
+      {roster.length > 0 && !locked && (
         <PrimaryButton className="mt-5" onClick={handleSubmit} disabled={saving}>
           {saving ? 'Saving…' : 'Save attendance'}
         </PrimaryButton>
