@@ -1107,10 +1107,11 @@ function OverviewTab({ user, applications, token, onNavigate }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 items-start">
+      <div className="mb-5">
         <AssignedTutorCard tutor={user?.assigned_tutor_detail} />
-        <AssignedCohortsSection applications={applications} />
       </div>
+
+      <AssignedCohortsSection applications={applications} />
 
       <div className="mb-5">
         <SectionLabel>Quick actions</SectionLabel>
