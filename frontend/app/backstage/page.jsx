@@ -1762,49 +1762,55 @@ function StudentsTab({ token, tutors }) {
 
 // ─── Applicants tab ─────────────────────────────────────────────────────────────
 
-function ApplicationsTab({ applications, token, cohorts }) {
-  const router = useRouter();
-  const [filter, setFilter] = useState('all');
+function useGroupedApplicants(token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/applications/grouped/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load applicants.');
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  return { items, loading, error, refresh };
+}
+
+function getGroupName(student) {
+  const full = `${student.first_name || ''} ${student.last_name || ''}`.trim();
+  return full || student.email;
+}
+
+function ApplicantRow({ group, token, cohorts, onChanged }) {
+  const [open, setOpen] = useState(false);
   const [confirmingId, setConfirmingId] = useState(null);
   const [assigningId, setAssigningId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [actionError, setActionError] = useState('');
-
-  const filtered = useMemo(() => {
-    if (filter === 'all') return applications.items;
-    return applications.items.filter((a) => a.payment?.status === filter);
-  }, [applications.items, filter]);
-
-  const filters = ['all', 'pending', 'awaiting_confirmation', 'paid', 'expired'];
-
-  const handleMarkPaid = async (application) => {
-    setActionError('');
-    setConfirmingId(application.id);
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/applications/${application.id}/payments/admin-confirm/`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({}),
-        }
-      );
-      if (!res.ok) throw new Error('Could not confirm payment. Please try again.');
-      await applications.refresh();
-    } catch (e) {
-      setActionError(e.message);
-    } finally {
-      setConfirmingId(null);
-    }
-  };
 
   const handleAssignCohort = async (application, cohortIdRaw) => {
     setActionError('');
     setAssigningId(application.id);
     try {
-      await applications.save(
-        { cohort: cohortIdRaw === '' ? null : Number(cohortIdRaw) },
-        application
-      );
+      const res = await fetch(`${API_BASE}/api/applications/${application.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ cohort: cohortIdRaw === '' ? null : Number(cohortIdRaw) }),
+      });
+      if (!res.ok) throw new Error('Could not assign cohort.');
+      await onChanged();
     } catch (e) {
       setActionError(e.message);
     } finally {
@@ -1812,193 +1818,132 @@ function ApplicationsTab({ applications, token, cohorts }) {
     }
   };
 
-  const CohortSelect = ({ a }) => (
-    <div onClick={(e) => e.stopPropagation()}>
-      <select
-        className={`${inputClass} text-[12px] py-1.5 w-full sm:w-40 inline-block`}
-        value={a.cohort_detail?.id ?? a.cohort ?? ''}
-        disabled={assigningId === a.id || cohorts.loading}
-        onChange={(e) => handleAssignCohort(a, e.target.value)}
-      >
-        <option value="">Unassigned</option>
-        {cohorts.items.map((c) => (
-          <option key={c.id} value={c.id}>{c.name}</option>
-        ))}
-      </select>
-    </div>
-  );
+  const handleMarkPaid = async (application) => {
+    setActionError('');
+    setConfirmingId(application.id);
+    try {
+      const res = await fetch(`${API_BASE}/api/applications/${application.id}/payments/admin-confirm/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) throw new Error('Could not confirm payment.');
+      await onChanged();
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setConfirmingId(null);
+    }
+  };
+
+  const handleDelete = async (application) => {
+    setActionError('');
+    setDeletingId(application.id);
+    try {
+      const res = await fetch(`${API_BASE}/api/applications/${application.id}/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not remove course.');
+      await onChanged();
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const name = getGroupName(group.student);
 
   return (
-    <div>
-      <PageHeader
-        title="Applicants"
-        subtitle={`${filtered.length} of ${applications.items.length} total`}
+    <Card className="overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50/70 transition text-left"
       >
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {filters.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
-                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
-                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
-                }`}
-            >
-              {f === 'all' ? 'All' : f.replace(/_/g, ' ')}
-            </button>
-          ))}
-        </div>
-      </PageHeader>
-
-      <ErrorBanner message={applications.error || actionError} />
-
-      {applications.loading ? <Spinner text="Loading applications…" /> : filtered.length === 0 ? (
-        <Card><EmptyState title="No applications" hint="Nothing matches this filter yet." /></Card>
-      ) : (
-        <Card className="overflow-hidden">
-          {/* Mobile: stacked cards */}
-          <div className="sm:hidden divide-y divide-slate-100">
-            {filtered.map((a) => {
-              const name = getApplicantName(a);
-              const email = getApplicantEmail(a);
-              const course = getCourseTitle(a);
-              const mode = a.mode_of_learning;
-              const date = formatDate(a.created_at);
-              const canConfirm = a.payment?.status === 'awaiting_confirmation';
-              return (
-                <div
-                  key={a.id}
-                  onClick={() => router.push(`/backstage/applicant/${a.id}`)}
-                  className="p-4 active:bg-slate-50 transition cursor-pointer"
-                >
-                  <div className="flex items-start gap-3 mb-2.5">
-                    {name ? (
-                      <div className="w-8 h-8 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-xs font-bold shrink-0">
-                        {name.charAt(0).toUpperCase()}
-                      </div>
-                    ) : null}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-slate-800 font-semibold text-sm leading-tight truncate">{name || 'Not available'}</p>
-                      {email && <p className="text-slate-400 text-xs truncate">{email}</p>}
-                    </div>
-                    <PaymentPill payment={a.payment} />
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap mb-2">
-                    {course && <span className="text-slate-600 text-xs">{course}</span>}
-                    {mode && <ModePill mode={mode} />}
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
-                    <span>{date || '—'}</span>
-                    <span className="text-slate-800 font-bold text-sm">
-                      {a.payment ? formatMoney(a.payment.confirmed_amount || a.payment.amount) : formatMoney(getCourseFee(a))}
-                    </span>
-                  </div>
-
-                  {a.payment?.status === 'paid' && (
-                    <div className="mb-3">
-                      <CohortSelect a={a} />
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                    {canConfirm && (
-                      <button
-                        onClick={() => handleMarkPaid(a)}
-                        disabled={confirmingId === a.id}
-                        className="flex-1 text-center text-[12px] font-semibold text-emerald-700
-                          border border-emerald-300 bg-emerald-50
-                          px-3 py-2 rounded-md transition disabled:opacity-40"
-                      >
-                        {confirmingId === a.id ? 'Confirming…' : 'Mark as paid'}
-                      </button>
-                    )}
-                    <LinkButton danger onClick={() => applications.remove(a)}>Delete</LinkButton>
-                  </div>
-                </div>
-              );
-            })}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-xs font-bold shrink-0">
+            {name.charAt(0).toUpperCase()}
           </div>
+          <div className="min-w-0">
+            <p className="text-slate-800 font-semibold text-sm truncate">
+              {name} <span className="text-slate-400 font-normal">: {group.student.id}</span>
+            </p>
+            {group.student.email && <p className="text-slate-400 text-xs truncate">{group.student.email}</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-slate-400 text-[12px]">{group.courses.length} course{group.courses.length !== 1 ? 's' : ''}</span>
+          <svg
+            className={`text-slate-400 transition-transform ${open ? 'rotate-90' : ''}`}
+            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+          >
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </div>
+      </button>
 
-          {/* Desktop: table */}
-          <div className="hidden sm:block overflow-x-auto">
+      {open && (
+        <div className="border-t border-slate-200/80">
+          {actionError && <div className="px-5 pt-4"><ErrorBanner message={actionError} /></div>}
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
-                  {['Applicant', 'Course', 'Mode', 'Fee', 'Payment', 'Cohort', 'Date', ''].map((h, i) => (
-                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
-                      {h}
-                    </th>
+                <tr className="border-b border-slate-100 bg-slate-50/50 text-left">
+                  {['Course', 'Mode', 'Fee', 'Payment', 'Cohort', 'Date', ''].map((h, i) => (
+                    <th key={i} className="px-5 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((a) => {
-                  const name = getApplicantName(a);
-                  const email = getApplicantEmail(a);
+                {group.courses.map((a) => {
                   const course = getCourseTitle(a);
-                  const mode = a.mode_of_learning;
-                  const date = formatDate(a.created_at);
+                  const total = getCourseFee(a);
+                  const paid = a.amount_paid;
                   const canConfirm = a.payment?.status === 'awaiting_confirmation';
                   return (
-                    <tr
-                      key={a.id}
-                      onClick={() => router.push(`/backstage/applicant/${a.id}`)}
-                      className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0 cursor-pointer"
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          {name ? (
-                            <>
-                              <div className="w-7 h-7 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
-                                {name.charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <p className="text-slate-800 font-semibold leading-none mb-0.5">{name}</p>
-                                {email && <p className="text-slate-400 text-[11px]">{email}</p>}
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-slate-400 text-xs italic">Not available</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-slate-500 max-w-[180px]">
-                        {course ? <span className="truncate block">{course}</span> : <span className="text-slate-400 italic text-xs">—</span>}
+                    <tr key={a.id} className="border-b border-slate-100 last:border-0">
+                      <td className="px-5 py-4 text-slate-800 font-semibold">{course || '—'}</td>
+                      <td className="px-5 py-4">{a.mode_of_learning ? <ModePill mode={a.mode_of_learning} /> : <span className="text-slate-400 text-xs">—</span>}</td>
+                      <td className="px-5 py-4 text-slate-600 text-xs">
+                        <div>Total: {formatMoney(total)}</div>
+                        <div>Paid: {paid ? formatMoney(paid) : '—'}</div>
+                        <div>Bal: {paid ? formatMoney(total - Number(paid)) : formatMoney(total)}</div>
                       </td>
                       <td className="px-5 py-4">
-                        {mode ? <ModePill mode={mode} /> : <span className="text-slate-400 text-xs">—</span>}
-                      </td>
-                      <td className="px-5 py-4 text-slate-800 font-bold">
-                        {a.payment ? formatMoney(a.payment.confirmed_amount || a.payment.amount) : formatMoney(getCourseFee(a))}
-                      </td>
-                      <td className="px-5 py-4">
-                        <PaymentPill payment={a.payment} />
-                      </td>
-                      <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
-                        {a.payment?.status === 'paid' ? (
-                          <CohortSelect a={a} />
-                        ) : (
-                          <span className="text-slate-400 text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">
-                        {date || '—'}
-                      </td>
-                      <td className="px-5 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        {canConfirm && (
+                        {canConfirm ? (
                           <button
                             onClick={() => handleMarkPaid(a)}
                             disabled={confirmingId === a.id}
-                            className="text-[12px] font-semibold text-emerald-700 hover:text-emerald-800
-                              border border-emerald-300 hover:border-emerald-400 bg-emerald-50
-                              px-3 py-1.5 rounded-md transition disabled:opacity-40 mr-3"
+                            className="text-[12px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 px-3 py-1.5 rounded-md transition disabled:opacity-40"
                           >
                             {confirmingId === a.id ? 'Confirming…' : 'Mark as paid'}
                           </button>
+                        ) : (
+                          <PaymentPill payment={a.payment} />
                         )}
-                        <LinkButton danger onClick={() => applications.remove(a)}>Delete</LinkButton>
+                      </td>
+                      <td className="px-5 py-4">
+                        <select
+                          className={`${inputClass} text-[12px] py-1.5 w-40 inline-block`}
+                          value={a.cohort_detail?.id ?? a.cohort ?? ''}
+                          disabled={assigningId === a.id || cohorts.loading}
+                          onChange={(e) => handleAssignCohort(a, e.target.value)}
+                        >
+                          <option value="">Unassigned</option>
+                          {cohorts.items.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        {a.cohort_detail?.tutor_name && (
+                          <p className="text-slate-400 text-[11px] mt-1">Tutor: {a.cohort_detail.tutor_name}</p>
+                        )}
+                      </td>
+                      <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDate(a.created_at) || '—'}</td>
+                      <td className="px-5 py-4 text-right whitespace-nowrap">
+                        <LinkButton danger onClick={() => handleDelete(a)}>
+                          {deletingId === a.id ? 'Removing…' : 'Delete'}
+                        </LinkButton>
                       </td>
                     </tr>
                   );
@@ -2006,12 +1951,33 @@ function ApplicationsTab({ applications, token, cohorts }) {
               </tbody>
             </table>
           </div>
-        </Card>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ApplicationsTab({ token, cohorts }) {
+  const grouped = useGroupedApplicants(token);
+
+  return (
+    <div>
+      <PageHeader title="Applicants" subtitle={`${grouped.items.length} applicant${grouped.items.length !== 1 ? 's' : ''}`} />
+      <ErrorBanner message={grouped.error} />
+      {grouped.loading ? (
+        <Spinner text="Loading applicants…" />
+      ) : grouped.items.length === 0 ? (
+        <Card><EmptyState title="No applicants" hint="New applicants will show up here." /></Card>
+      ) : (
+        <div className="space-y-3">
+          {grouped.items.map((g) => (
+            <ApplicantRow key={g.student.id} group={g} token={token} cohorts={cohorts} onChanged={grouped.refresh} />
+          ))}
+        </div>
       )}
     </div>
   );
 }
-
 // ─── Exams tab ────────────────────────────────────────────────────────────────
 
 const emptyExam = {
@@ -2806,7 +2772,7 @@ export default function BackstagePage() {
             )}
             {tab === 'syllabus' && <CoursesTab courses={courses} />}
             {tab === 'centers' && <LocationsTab locations={locations} />}
-            {tab === 'applicants' && <ApplicationsTab applications={applications} token={token} cohorts={cohorts} />}
+            {tab === 'applicants' && <ApplicationsTab token={token} cohorts={cohorts} />}
             {tab === 'exam' && <ExamsTab exams={exams} cohorts={cohorts} courses={courses} />}
             {tab === 'results' && <ResultsTab results={results} exams={exams} applications={applications} />}
 
