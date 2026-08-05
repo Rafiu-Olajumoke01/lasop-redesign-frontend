@@ -1040,14 +1040,19 @@ function CohortDetailModal({ cohortId, token, onClose }) {
                 <p className="text-slate-500 text-xs mb-1">
                   {detail.data.today.session.start_time?.slice(0, 5)}–{detail.data.today.session.end_time?.slice(0, 5)}
                 </p>
+                {detail.data.today.session.title && (
+                  <p className="text-slate-900 text-sm font-semibold mb-1">
+                    {detail.data.today.session.title}
+                  </p>
+                )}
                 {detail.data.today.session.topics_covered && (
                   <p className="text-slate-700 text-sm mb-1">
                     <span className="font-semibold">Focus:</span> {detail.data.today.session.topics_covered}
                   </p>
                 )}
-                {detail.data.today.session.project_note && (
+                {detail.data.today.session.lesson_outcome && (
                   <p className="text-slate-700 text-sm mb-2">
-                    <span className="font-semibold">Project:</span> {detail.data.today.session.project_note}
+                    <span className="font-semibold">Outcome:</span> {detail.data.today.session.lesson_outcome}
                   </p>
                 )}
                 <Pill color={detail.data.today.attendance_taken ? 'emerald' : 'amber'}>
@@ -1251,11 +1256,10 @@ function CohortsTab({ cohorts, token }) {
                             : [...f.class_days, code],
                         }));
                       }}
-                      className={`text-[12px] font-medium px-2.5 py-1 rounded-full border transition ${
-                        checked
+                      className={`text-[12px] font-medium px-2.5 py-1 rounded-full border transition ${checked
                           ? 'border-[#0057E7] bg-[#0057E7] text-white'
                           : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                      }`}
+                        }`}
                     >
                       {label}
                     </button>

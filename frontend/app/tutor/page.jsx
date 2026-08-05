@@ -561,7 +561,6 @@ const blankScheduleFields = { date: '', start_time: '', end_time: '' };
 function SessionCard({ session, onOpen, onStop, stopping }) {
   const live = !!session.started_at && !session.ended_at;
   const elapsed = useElapsedTimer(session.started_at, session.ended_at);
-
   return (
     <Card className="p-5 hover:border-slate-300 transition-colors">
       <div className="flex items-start justify-between mb-2 gap-2">
@@ -578,6 +577,12 @@ function SessionCard({ session, onOpen, onStop, stopping }) {
         <p className="text-slate-500 text-xs font-medium mb-4">
           Total time spent: {formatElapsed(elapsed)}
         </p>
+      )}
+      {session.topics_covered && (
+        <p className="text-slate-600 text-xs mb-2 line-clamp-2">{session.topics_covered}</p>
+      )}
+      {session.lesson_outcome && (
+        <p className="text-slate-400 text-xs mb-3 line-clamp-1 italic">Goal: {session.lesson_outcome}</p>
       )}
       {(live || !session.started_at || !session.ended_at) && <div className="mb-4" />}
       <div className="flex gap-2">

@@ -936,7 +936,7 @@ function TodayClassCard({ session }) {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <p className="text-slate-900 font-semibold text-sm tracking-tight truncate">
-            {session.course_title || session.cohort_name}
+            {session.title || session.course_title || session.cohort_name}
           </p>
           <p className="text-slate-400 text-[11px] mt-0.5">{session.cohort_name}</p>
         </div>
@@ -945,6 +945,11 @@ function TodayClassCard({ session }) {
       {session.topics_covered && (
         <p className="text-slate-500 text-sm leading-relaxed mt-3 pt-3 border-t border-slate-100">
           {session.topics_covered}
+        </p>
+      )}
+      {session.lesson_outcome && (
+        <p className="text-slate-400 text-xs leading-relaxed mt-2 italic">
+          By the end: {session.lesson_outcome}
         </p>
       )}
     </Card>
