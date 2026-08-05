@@ -1091,7 +1091,7 @@ function CohortDetailModal({ cohortId, token, onClose }) {
 
 // ─── Cohorts tab ──────────────────────────────────────────────────────────────
 
-const emptyCohort = { name: '', start_date: '', end_date: '', status: 'upcoming' };
+const emptyCohort = { name: '', start_date: '', end_date: '', status: 'upcoming', class_days: [] };
 
 function CohortsTab({ cohorts, token }) {
   const [modal, setModal] = useState(null);
@@ -1108,6 +1108,7 @@ function CohortsTab({ cohorts, token }) {
       start_date: c.start_date || '',
       end_date: c.end_date || '',
       status: c.status,
+      class_days: c.class_days || [],
     });
     setModal(c);
     setErr('');
@@ -1234,16 +1235,33 @@ function CohortsTab({ cohorts, token }) {
               </Field>
             </div>
 
-            <Field label="Status">
-              <select
-                className={inputClass}
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-              >
-                <option value="upcoming">Upcoming</option>
-                <option value="current">Current</option>
-                <option value="completed">Completed</option>
-              </select>
+            <Field label="Class days">
+              <div className="flex flex-wrap gap-1.5">
+                {Object.entries(DAY_LABELS).map(([code, label]) => {
+                  const checked = form.class_days.includes(code);
+                  return (
+                    <button
+                      type="button"
+                      key={code}
+                      onClick={() => {
+                        setForm((f) => ({
+                          ...f,
+                          class_days: checked
+                            ? f.class_days.filter((d) => d !== code)
+                            : [...f.class_days, code],
+                        }));
+                      }}
+                      className={`text-[12px] font-medium px-2.5 py-1 rounded-full border transition ${
+                        checked
+                          ? 'border-[#0057E7] bg-[#0057E7] text-white'
+                          : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
             </Field>
 
             <PrimaryButton className="w-full justify-center" onClick={handleSave} disabled={saving}>
