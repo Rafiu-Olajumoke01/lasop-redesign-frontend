@@ -983,6 +983,7 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
   const isPaymentOpen = openPayment === app.id;
   const paymentStatus = app.payment_status || 'not_started';
   const isPaid = paymentStatus === 'paid';
+  const canPay = paymentStatus === 'not_started';
 
   return (
     <Card interactive className={featured ? 'md:col-span-2 p-5 md:p-6' : 'p-4'}>
@@ -1033,7 +1034,7 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
         </button>
       )}
 
-      {!isPaid && (
+      {canPay && (
         <div className="mt-4 pt-3.5 border-t border-slate-100">
           {isPaymentOpen ? (
             <SecondaryButton onClick={() => setOpenPayment(null)} className="text-slate-500">

@@ -1812,6 +1812,35 @@ function ApplicantRow({ group, token, cohorts, onChanged }) {
   const [assigningId, setAssigningId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [actionError, setActionError] = useState('');
+  const [confirmingDeleteApp, setConfirmingDeleteApp] = useState(false);
+  const [deletingApp, setDeletingApp] = useState(false);
+
+  // Deletes every course/application row belonging to this student in one
+  // go — used by the "Delete application" control on the row header, as
+  // opposed to handleDelete below which removes just one course.
+  const handleDeleteApplication = async () => {
+    setActionError('');
+    setDeletingApp(true);
+    try {
+      const results = await Promise.all(
+        group.courses.map((a) =>
+          fetch(`${API_BASE}/api/applications/${a.id}/`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      );
+      if (results.some((res) => !res.ok)) {
+        throw new Error('Could not delete the full application. Please try again.');
+      }
+      await onChanged();
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setDeletingApp(false);
+      setConfirmingDeleteApp(false);
+    }
+  };
 
   const handleAssignCohort = async (application, cohortIdRaw) => {
     setActionError('');
@@ -1870,11 +1899,11 @@ function ApplicantRow({ group, token, cohorts, onChanged }) {
 
   return (
     <Card className="overflow-hidden">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50/70 transition text-left"
-      >
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50/70 transition">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-3 min-w-0 flex-1 text-left"
+        >
           <div className="w-8 h-8 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-xs font-bold shrink-0">
             {name.charAt(0).toUpperCase()}
           </div>
@@ -1884,17 +1913,46 @@ function ApplicantRow({ group, token, cohorts, onChanged }) {
             </p>
             {group.student.email && <p className="text-slate-400 text-xs truncate">{group.student.email}</p>}
           </div>
-        </div>
+        </button>
+
         <div className="flex items-center gap-3 shrink-0">
           <span className="text-slate-400 text-[12px]">{group.courses.length} course{group.courses.length !== 1 ? 's' : ''}</span>
-          <svg
-            className={`text-slate-400 transition-transform ${open ? 'rotate-90' : ''}`}
-            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
-          >
-            <path d="M9 6l6 6-6 6" />
-          </svg>
+
+          {confirmingDeleteApp ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDeleteApplication}
+                disabled={deletingApp}
+                className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 transition disabled:opacity-50"
+              >
+                {deletingApp ? 'Deleting…' : 'Confirm delete'}
+              </button>
+              <button
+                onClick={() => setConfirmingDeleteApp(false)}
+                className="text-[11px] font-medium text-slate-400 hover:text-slate-600 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmingDeleteApp(true)}
+              className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 transition"
+            >
+              Delete application
+            </button>
+          )}
+
+          <button onClick={() => setOpen((v) => !v)} aria-label="Toggle details">
+            <svg
+              className={`text-slate-400 transition-transform ${open ? 'rotate-90' : ''}`}
+              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+            >
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </button>
         </div>
-      </button>
+      </div>
 
       {open && (
         <div className="border-t border-slate-200/80">
