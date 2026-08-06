@@ -646,7 +646,7 @@ function OverviewStatCard({ label, value, icon }) {
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
-function OverviewTab({ courses, locations, applications, dashboardStats, tutors, onNavigate }) {
+function OverviewTab({ courses, locations, applications, dashboardStats, tutors, token, onNavigate }) {
   const pending = applications.items.filter((a) =>
     ['pending', 'awaiting_confirmation'].includes(a.payment?.status)
   ).length;
@@ -654,9 +654,13 @@ function OverviewTab({ courses, locations, applications, dashboardStats, tutors,
   const currentCohorts = dashboardStats.stats?.cohorts?.current ?? 0;
   const completedCohorts = dashboardStats.stats?.cohorts?.completed ?? 0;
 
+  const [viewingCohortId, setViewingCohortId] = useState(null);
+
   return (
     <div>
       <ErrorBanner message={dashboardStats.error} />
+
+      <CohortsTodaySection token={token} onViewCohort={setViewingCohortId} />
 
       <div className="mb-5">
         <SectionLabel>Quick actions</SectionLabel>
@@ -686,9 +690,18 @@ function OverviewTab({ courses, locations, applications, dashboardStats, tutors,
           <OverviewStatCard label="Graduates" value={0} icon={<GradCapIcon />} />
         </div>
       </div>
+
+      {viewingCohortId && (
+        <CohortDetailModal
+          cohortId={viewingCohortId}
+          token={token}
+          onClose={() => setViewingCohortId(null)}
+        />
+      )}
     </div>
   );
 }
+
 
 // ─── Courses (Syllabus) tab ────────────────────────────────────────────────────
 
@@ -1257,8 +1270,8 @@ function CohortsTab({ cohorts, token }) {
                         }));
                       }}
                       className={`text-[12px] font-medium px-2.5 py-1 rounded-full border transition ${checked
-                          ? 'border-[#0057E7] bg-[#0057E7] text-white'
-                          : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                        ? 'border-[#0057E7] bg-[#0057E7] text-white'
+                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
                         }`}
                     >
                       {label}
@@ -2767,6 +2780,7 @@ export default function BackstagePage() {
                 applications={applications}
                 dashboardStats={dashboardStats}
                 tutors={tutors}
+                token={token}
                 onNavigate={handleOverviewNavigate}
               />
             )}
