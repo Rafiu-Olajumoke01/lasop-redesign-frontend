@@ -1072,9 +1072,81 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
   );
 }
 
+// ─── Pay Now (Overview) ─────────────────────────────────────────────────────
+
+
+function PayNowCard({ app, token, openPayment, setOpenPayment, onPaymentUpdate }) {
+  const isPaymentOpen = openPayment === app.id;
+
+  return (
+    <Card interactive className="p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border bg-amber-50 border-amber-200 text-amber-600">
+          <WalletIcon />
+        </div>
+        <div className="min-w-0">
+          <p className="text-slate-900 font-semibold text-sm tracking-tight truncate">{app.course_detail?.title}</p>
+          <p className="text-slate-400 text-[11px] mt-0.5">
+            ₦{Number(app.course_detail?.fee).toLocaleString()} · Payment pending
+          </p>
+        </div>
+      </div>
+
+      {isPaymentOpen ? (
+        <SecondaryButton onClick={() => setOpenPayment(null)} className="shrink-0">
+          Cancel
+        </SecondaryButton>
+      ) : (
+        <PrimaryButton onClick={() => setOpenPayment(app.id)} className="shrink-0">
+          Pay Now
+        </PrimaryButton>
+      )}
+
+      {isPaymentOpen && (
+        <PaymentTransfer
+          applicationId={app.id}
+          authToken={token}
+          totalFee={Number(app.course_detail?.fee) || 0}
+          onClose={() => setOpenPayment(null)}
+          onSubmitted={() => {
+            onPaymentUpdate(app.id, 'in_review');
+            setOpenPayment(null);
+          }}
+        />
+      )}
+    </Card>
+  );
+}
+
+function PayNowSection({ applications, token, openPayment, setOpenPayment, onPaymentUpdate }) {
+  const unpaidApps = applications.filter(
+    (a) => !a.payment_status || a.payment_status === 'not_started'
+  );
+
+  if (unpaidApps.length === 0) return null;
+
+  return (
+    <div className="mb-5">
+      <SectionLabel>Complete your payment</SectionLabel>
+      <div className="space-y-2.5">
+        {unpaidApps.map((app) => (
+          <PayNowCard
+            key={app.id}
+            app={app}
+            token={token}
+            openPayment={openPayment}
+            setOpenPayment={setOpenPayment}
+            onPaymentUpdate={onPaymentUpdate}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Overview tab ───────────────────────────────────────────────────────────
 
-function OverviewTab({ user, applications, token, onNavigate }) {
+function OverviewTab({ user, applications, token, openPayment, setOpenPayment, onNavigate, onPaymentUpdate }) {
   const count = applications.length;
   const onlineCount = applications.filter((a) => a.mode_of_learning === 'online').length;
   const physicalCount = applications.filter((a) => a.mode_of_learning === 'physical').length;
@@ -1111,6 +1183,14 @@ function OverviewTab({ user, applications, token, onNavigate }) {
           {paidCount > 0 && <Pill color="emerald">{paidCount} paid</Pill>}
         </div>
       )}
+
+      <PayNowSection
+        applications={applications}
+        token={token}
+        openPayment={openPayment}
+        setOpenPayment={setOpenPayment}
+        onPaymentUpdate={onPaymentUpdate}
+      />
 
       <div className="mb-5">
         <AssignedTutorCard tutor={user?.assigned_tutor_detail} />
@@ -1510,7 +1590,15 @@ export default function DashboardPage() {
             <ErrorBanner message={error} />
 
             {tab === 'overview' && (
-              <OverviewTab user={user} applications={applications} token={token} onNavigate={setTab} />
+              <OverviewTab
+                user={user}
+                applications={applications}
+                token={token}
+                openPayment={openPayment}
+                setOpenPayment={setOpenPayment}
+                onNavigate={setTab}
+                onPaymentUpdate={handlePaymentUpdate}
+              />
             )}
             {tab === 'courses' && (
               <CoursesTab
