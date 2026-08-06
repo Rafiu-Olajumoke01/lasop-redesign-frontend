@@ -1806,18 +1806,16 @@ function getGroupName(student) {
   return full || student.email;
 }
 
-function ApplicantRow({ group, token, cohorts, onChanged }) {
+function ApplicantRow({ group, token, cohorts, tutors, onChanged }) {
   const [open, setOpen] = useState(false);
   const [confirmingId, setConfirmingId] = useState(null);
   const [assigningId, setAssigningId] = useState(null);
+  const [assigningTutorId, setAssigningTutorId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [actionError, setActionError] = useState('');
   const [confirmingDeleteApp, setConfirmingDeleteApp] = useState(false);
   const [deletingApp, setDeletingApp] = useState(false);
 
-  // Deletes every course/application row belonging to this student in one
-  // go — used by the "Delete application" control on the row header, as
-  // opposed to handleDelete below which removes just one course.
   const handleDeleteApplication = async () => {
     setActionError('');
     setDeletingApp(true);
@@ -1857,6 +1855,24 @@ function ApplicantRow({ group, token, cohorts, onChanged }) {
       setActionError(e.message);
     } finally {
       setAssigningId(null);
+    }
+  };
+
+  const handleAssignTutor = async (application, tutorIdRaw) => {
+    setActionError('');
+    setAssigningTutorId(application.id);
+    try {
+      const res = await fetch(`${API_BASE}/api/applications/${application.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ tutor: tutorIdRaw === '' ? null : Number(tutorIdRaw) }),
+      });
+      if (!res.ok) throw new Error('Could not assign tutor.');
+      await onChanged();
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setAssigningTutorId(null);
     }
   };
 
@@ -1961,7 +1977,7 @@ function ApplicantRow({ group, token, cohorts, onChanged }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/50 text-left">
-                  {['Course', 'Mode', 'Fee', 'Payment', 'Cohort', 'Date', ''].map((h, i) => (
+                  {['Course', 'Mode', 'Fee', 'Payment', 'Cohort', 'Tutor', 'Date', ''].map((h, i) => (
                     <th key={i} className="px-5 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -2006,9 +2022,19 @@ function ApplicantRow({ group, token, cohorts, onChanged }) {
                             <option key={c.id} value={c.id}>{c.name}</option>
                           ))}
                         </select>
-                        {a.cohort_detail?.tutor_name && (
-                          <p className="text-slate-400 text-[11px] mt-1">Tutor: {a.cohort_detail.tutor_name}</p>
-                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        <select
+                          className={`${inputClass} text-[12px] py-1.5 w-40 inline-block`}
+                          value={a.tutor_detail?.id ?? a.tutor ?? ''}
+                          disabled={assigningTutorId === a.id || tutors.loading}
+                          onChange={(e) => handleAssignTutor(a, e.target.value)}
+                        >
+                          <option value="">Unassigned</option>
+                          {tutors.items.map((t) => (
+                            <option key={t.id} value={t.id}>{getTutorLabel(t)}</option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDate(a.created_at) || '—'}</td>
                       <td className="px-5 py-4 text-right whitespace-nowrap">
@@ -2028,7 +2054,7 @@ function ApplicantRow({ group, token, cohorts, onChanged }) {
   );
 }
 
-function ApplicationsTab({ token, cohorts }) {
+function ApplicationsTab({ token, cohorts, tutors }) {
   const grouped = useGroupedApplicants(token);
 
   return (
@@ -2042,13 +2068,15 @@ function ApplicationsTab({ token, cohorts }) {
       ) : (
         <div className="space-y-3">
           {grouped.items.map((g) => (
-            <ApplicantRow key={g.student.id} group={g} token={token} cohorts={cohorts} onChanged={grouped.refresh} />
+            <ApplicantRow key={g.student.id} group={g} token={token} cohorts={cohorts} tutors={tutors} onChanged={grouped.refresh} />
           ))}
         </div>
       )}
     </div>
   );
 }
+
+
 // ─── Exams tab ────────────────────────────────────────────────────────────────
 
 const emptyExam = {
@@ -2844,10 +2872,9 @@ export default function BackstagePage() {
             )}
             {tab === 'syllabus' && <CoursesTab courses={courses} />}
             {tab === 'centers' && <LocationsTab locations={locations} />}
-            {tab === 'applicants' && <ApplicationsTab token={token} cohorts={cohorts} />}
+            {tab === 'applicants' && <ApplicationsTab token={token} cohorts={cohorts} tutors={tutors} />}
             {tab === 'exam' && <ExamsTab exams={exams} cohorts={cohorts} courses={courses} />}
             {tab === 'results' && <ResultsTab results={results} exams={exams} applications={applications} />}
-
             {tab === 'cohorts' && <CohortsTab cohorts={cohorts} token={token} />}
             {tab === 'tutors' && <TutorsTab tutors={tutors} cohorts={cohorts} />}
             {tab === 'students' && <StudentsTab token={token} tutors={tutors} />}
