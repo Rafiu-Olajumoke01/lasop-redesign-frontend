@@ -227,7 +227,7 @@ function CertificatePanel({ studentId, certificate, token, onUploaded }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              
+              <a
                 href={certificate.file}
                 target="_blank"
                 rel="noopener noreferrer"
