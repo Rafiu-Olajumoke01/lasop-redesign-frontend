@@ -326,6 +326,7 @@ function CertificatePanel({ studentId, certificate, token, onUploaded }) {
 // ─── Course applications panel ─────────────────────────────────────────────
 
 function CourseApplicationsPanel({ studentId, token }) {
+  const router = useRouter();
   const [applications, setApplications] = useState([]);
   const [cohorts, setCohorts] = useState([]);
   const [tutors, setTutors] = useState([]);
@@ -450,19 +451,32 @@ function CourseApplicationsPanel({ studentId, token }) {
             const paid = a.amount_paid;
             return (
               <div key={a.id}>
-                <button
-                  onClick={() => setOpenId(isOpen ? null : a.id)}
-                  className="w-full flex items-center justify-between px-6 sm:px-7 py-4 hover:bg-slate-50/70 transition text-left"
-                >
-                  <div className="min-w-0">
+                <div className="w-full flex items-center justify-between px-6 sm:px-7 py-4 hover:bg-slate-50/70 transition">
+                  <button
+                    onClick={() => setOpenId(isOpen ? null : a.id)}
+                    className="flex-1 min-w-0 text-left"
+                  >
                     <p className="text-slate-800 font-semibold text-sm truncate">{course || '—'}</p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <ModePill mode={a.mode_of_learning} />
                       <PaymentPill payment={a.payment} />
                     </div>
+                  </button>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/backstage/students/${studentId}/courses/${a.id}`);
+                      }}
+                      className="text-[12px] font-semibold text-[#0057E7] hover:text-[#0A66FF] transition hover:underline underline-offset-2"
+                    >
+                      View full details
+                    </button>
+                    <button onClick={() => setOpenId(isOpen ? null : a.id)} aria-label="Toggle details">
+                      <ChevronIcon open={isOpen} />
+                    </button>
                   </div>
-                  <ChevronIcon open={isOpen} />
-                </button>
+                </div>
 
                 {isOpen && (
                   <div className="px-6 sm:px-7 pb-6">
