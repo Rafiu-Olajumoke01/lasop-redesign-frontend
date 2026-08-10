@@ -342,7 +342,7 @@ function CourseApplicationsPanel({ studentId, token }) {
     setError('');
     try {
       const [appsRes, cohortsRes, tutorsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/applications/grouped/`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/applications/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/cohorts/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/tutors/`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
@@ -355,11 +355,11 @@ function CourseApplicationsPanel({ studentId, token }) {
       const cohortsData = await cohortsRes.json();
       const tutorsData = await tutorsRes.json();
 
-      const group = (Array.isArray(appsData) ? appsData : []).find(
-        (g) => Number(g.student.id) === Number(studentId)
+      const studentApps = (Array.isArray(appsData) ? appsData : []).filter(
+        (a) => Number(a.student) === Number(studentId)
       );
 
-      setApplications(group ? group.courses : []);
+      setApplications(studentApps);
       setCohorts(Array.isArray(cohortsData) ? cohortsData : cohortsData.results || []);
       setTutors(Array.isArray(tutorsData) ? tutorsData : tutorsData.results || []);
     } catch (e) {
