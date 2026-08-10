@@ -178,7 +178,7 @@ export default function CourseDetailPage() {
     );
   }
 
-  const { cohort, attendance, timeline, tutor_id } = data;
+  const { cohort, attendance, timeline, tutor_id, student_name } = data;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -192,8 +192,8 @@ export default function CourseDetailPage() {
             <BackArrow />
           </button>
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Course details</p>
-            <p className="text-slate-800 font-semibold text-sm truncate">{data.course_title || '—'}</p>
+            <p className="text-slate-800 font-semibold text-sm truncate">{student_name || 'Unknown student'}</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 truncate">{data.course_title || 'Course details'}</p>
           </div>
         </div>
       </header>
