@@ -178,7 +178,7 @@ export default function CourseDetailPage() {
     );
   }
 
-  const { cohort, attendance, timeline } = data;
+  const { cohort, attendance, timeline, tutor_id } = data;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -240,7 +240,7 @@ export default function CourseDetailPage() {
               <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-[0.1em]">Tutor</label>
               <select
                 className={inputClass}
-                defaultValue=""
+                value={tutor_id ?? ''}
                 disabled={savingTutor}
                 onChange={(e) => handleAssignTutor(e.target.value)}
               >
