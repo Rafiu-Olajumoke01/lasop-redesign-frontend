@@ -18,6 +18,11 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function getStudentName(s) {
+  const full = `${s?.first_name || ''} ${s?.last_name || ''}`.trim();
+  return full || s?.email || 'Student';
+}
+
 const inputClass =
   'w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 ' +
   'outline-none rounded-md px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 transition';
@@ -48,6 +53,7 @@ export default function CourseDetailPage() {
   const [token, setToken] = useState('');
   const [authChecked, setAuthChecked] = useState(false);
   const [data, setData] = useState(null);
+  const [studentName, setStudentName] = useState('');
   const [cohorts, setCohorts] = useState([]);
   const [tutors, setTutors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,12 +89,13 @@ export default function CourseDetailPage() {
     setLoading(true);
     setError('');
     try {
-      const [analyticsRes, cohortsRes, tutorsRes] = await Promise.all([
+      const [analyticsRes, cohortsRes, tutorsRes, studentRes] = await Promise.all([
         fetch(`${API_BASE}/api/cohorts/applications/${applicationId}/analytics/`, {
           headers: { Authorization: `Bearer ${t}` },
         }),
         fetch(`${API_BASE}/api/cohorts/`, { headers: { Authorization: `Bearer ${t}` } }),
         fetch(`${API_BASE}/api/tutors/`, { headers: { Authorization: `Bearer ${t}` } }),
+        fetch(`${API_BASE}/api/users/students/${studentId}/`, { headers: { Authorization: `Bearer ${t}` } }),
       ]);
 
       if (!analyticsRes.ok) throw new Error('Could not load course details.');
@@ -102,12 +109,17 @@ export default function CourseDetailPage() {
       setData(analyticsData);
       setCohorts(Array.isArray(cohortsData) ? cohortsData : cohortsData.results || []);
       setTutors(Array.isArray(tutorsData) ? tutorsData : tutorsData.results || []);
+
+      if (studentRes.ok) {
+        const studentData = await studentRes.json();
+        setStudentName(getStudentName(studentData));
+      }
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [applicationId]);
+  }, [applicationId, studentId]);
 
   useEffect(() => {
     if (authChecked && token) loadAll(token);
@@ -178,7 +190,7 @@ export default function CourseDetailPage() {
     );
   }
 
-  const { cohort, attendance, timeline, tutor_id, student_name } = data;
+  const { cohort, attendance, timeline, tutor_id } = data;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -192,7 +204,7 @@ export default function CourseDetailPage() {
             <BackArrow />
           </button>
           <div className="min-w-0">
-            <p className="text-slate-800 font-semibold text-sm truncate">{student_name || 'Unknown student'}</p>
+            <p className="text-slate-800 font-semibold text-sm truncate">{studentName || 'Unknown student'}</p>
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 truncate">{data.course_title || 'Course details'}</p>
           </div>
         </div>
