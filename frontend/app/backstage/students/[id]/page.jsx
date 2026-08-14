@@ -714,7 +714,6 @@ export default function StudentDetailPage() {
             />
           </div>
         </div>
-
         <CourseApplicationsPanel studentId={studentId} token={token} />
       </div>
     </div>
