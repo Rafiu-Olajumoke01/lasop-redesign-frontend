@@ -65,9 +65,10 @@ export default function StudentProjects() {
           {studentProjects.map((project) => (
             <div
               key={project.id}
-              className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-200 flex flex-col"
+              className="rounded-xl overflow-hidden flex flex-col border border-white/10 hover:border-indigo-400/40 transition-colors duration-200"
+              style={{ backgroundColor: "#0F2143" }}
             >
-              <div className="relative w-full aspect-video bg-gray-100 shrink-0">
+              <div className="relative w-full aspect-video bg-black/20 shrink-0">
                 <Image
                   src={project.image}
                   alt={project.title}
@@ -77,19 +78,19 @@ export default function StudentProjects() {
               </div>
 
               <div className="p-4 flex flex-col flex-1">
-                <span className="text-xs font-medium text-indigo-600 mb-1">
+                <span className="text-xs font-medium text-indigo-400 mb-1">
                   {project.cohort}
                 </span>
 
-                <h3 className="text-base font-semibold text-gray-900 mb-1 leading-snug">
+                <h3 className="text-base font-semibold text-white mb-1 leading-snug">
                   {project.title}
                 </h3>
 
-                <p className="text-sm text-gray-500 mb-2">
+                <p className="text-sm text-gray-400 mb-2">
                   by {project.studentName}
                 </p>
 
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed flex-1">
+                <p className="text-sm text-gray-300 mb-4 leading-relaxed flex-1">
                   {project.description}
                 </p>
 
@@ -97,19 +98,19 @@ export default function StudentProjects() {
                   {project.techStack.map((tech) => (
                     <span
                       key={tech}
-                      className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full"
+                      className="text-xs bg-white/10 text-gray-200 px-2 py-1 rounded-full"
                     >
                       {tech}
                     </span>
                   ))}
                 </div>
 
-                <div className="flex items-center gap-4 text-sm font-medium mt-auto pt-3 border-t border-gray-100">
+                <div className="flex items-center gap-4 text-sm font-medium mt-auto pt-3 border-t border-white/10">
                   <a
                     href={project.liveLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-indigo-600 hover:underline"
+                    className="text-indigo-400 hover:text-indigo-300 hover:underline"
                   >
                     Live Demo
                   </a>
@@ -117,7 +118,7 @@ export default function StudentProjects() {
                     href={project.githubLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-500 hover:underline"
+                    className="text-gray-400 hover:text-gray-300 hover:underline"
                   >
                     GitHub
                   </a>
