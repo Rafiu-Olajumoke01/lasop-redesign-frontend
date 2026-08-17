@@ -9,8 +9,6 @@ const studentProjects = [
     gradient: "linear-gradient(135deg, #4F46E5, #7C3AED)",
     description: "A Kanban-style task manager built for small teams to track projects in real time.",
     techStack: ["React", "Django REST", "PostgreSQL"],
-    liveLink: "https://taskflow-demo.vercel.app",
-    githubLink: "https://github.com/chiamaka/taskflow",
   },
   {
     id: 2,
@@ -20,8 +18,6 @@ const studentProjects = [
     gradient: "linear-gradient(135deg, #0EA5E9, #06B6D4)",
     description: "A platform connecting patients with nearby clinics for appointment booking.",
     techStack: ["Next.js", "Django", "Tailwind"],
-    liveLink: "https://medicare-connect-demo.vercel.app",
-    githubLink: "https://github.com/tundebakare/medicare-connect",
   },
   {
     id: 3,
@@ -31,8 +27,6 @@ const studentProjects = [
     gradient: "linear-gradient(135deg, #10B981, #059669)",
     description: "A full online store with cart, checkout, and admin inventory management.",
     techStack: ["React", "Django REST", "Stripe"],
-    liveLink: "https://shopease-demo.vercel.app",
-    githubLink: "https://github.com/ifeoma/shopease",
   },
   {
     id: 4,
@@ -42,8 +36,6 @@ const studentProjects = [
     gradient: "linear-gradient(135deg, #F59E0B, #EA580C)",
     description: "A digital attendance tracker for schools with real-time reporting for admins.",
     techStack: ["Next.js", "Django", "Chart.js"],
-    liveLink: "https://edutrack-demo.vercel.app",
-    githubLink: "https://github.com/segunadeyemi/edutrack",
   },
 ];
 
@@ -93,7 +85,7 @@ export default function StudentProjects() {
                   {project.description}
                 </p>
 
-                <div className="flex flex-wrap gap-1.5 mb-4">
+                <div className="flex flex-wrap gap-1.5 mt-auto">
                   {project.techStack.map((tech) => (
                     <span
                       key={tech}
@@ -102,25 +94,6 @@ export default function StudentProjects() {
                       {tech}
                     </span>
                   ))}
-                </div>
-
-                <div className="flex items-center gap-4 text-sm font-medium mt-auto pt-3 border-t border-white/10">
-                  <a
-                    href={project.liveLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-indigo-400 hover:text-indigo-300 hover:underline"
-                  >
-                    Live Demo
-                  </a>
-                  <a
-                    href={project.githubLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-gray-400 hover:text-gray-300 hover:underline"
-                  >
-                    GitHub
-                  </a>
                 </div>
               </div>
             </div>
