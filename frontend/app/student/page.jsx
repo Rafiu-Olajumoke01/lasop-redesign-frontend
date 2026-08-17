@@ -273,6 +273,14 @@ function ClockIcon() {
     </svg>
   );
 }
+function CapstoneIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 15a4 4 0 100-8 4 4 0 000 8z" />
+      <path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" />
+    </svg>
+  );
+}
 
 function NavIcon({ path }) {
   return (
@@ -977,6 +985,110 @@ function TodayClassSection({ token, applications }) {
   );
 }
 
+// ─── Capstone Projects Section ──────────────────────────────────────────────
+//
+// Calls /api/cohorts/my-capstone-projects/?course=<id> once per enrolled
+// course (that view resolves the student's application -> cohort
+// internally, same pattern as useTodayClasses) and collects the flat list
+// of capstone projects from each response.
+
+function useCapstoneProjects(token, applications) {
+  const appsWithCourse = applications.filter((a) => a.course);
+  const courseKey = appsWithCourse.map((a) => a.course).join(',');
+
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!token || appsWithCourse.length === 0) { setLoading(false); return; }
+
+    const fetchAll = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const responses = await Promise.all(
+          appsWithCourse.map((app) =>
+            fetch(`${API_BASE}/api/cohorts/my-capstone-projects/?course=${app.course}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            }).then((r) => (r.ok ? r.json() : []))
+          )
+        );
+        const allProjects = responses.flatMap((r, i) =>
+          (r || []).map((p) => ({ ...p, course_title: appsWithCourse[i]?.course_detail?.title }))
+        );
+        setProjects(allProjects);
+      } catch {
+        setError('Could not load capstone projects.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, courseKey]);
+
+  return { projects, loading, error };
+}
+
+function CapstoneProjectCard({ project }) {
+  return (
+    <Card interactive className="p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <p className="text-slate-900 font-semibold text-sm tracking-tight truncate">
+            {project.title}
+          </p>
+          <p className="text-slate-400 text-[11px] mt-0.5">{project.cohort_name}</p>
+        </div>
+        <Pill color="blue">{project.stage_label}</Pill>
+      </div>
+      {project.description && (
+        <p className="text-slate-500 text-sm leading-relaxed mt-3 pt-3 border-t border-slate-100">
+          {project.description}
+        </p>
+      )}
+      <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-100 flex-wrap">
+        {project.due_date && (
+          <p className="text-slate-400 text-xs">Due {formatDate(project.due_date)}</p>
+        )}
+        {project.attachment && (
+          <a
+            href={project.attachment}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition"
+          >
+            View attachment →
+          </a>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function CapstoneProjectsSection({ token, applications }) {
+  const { projects, loading, error } = useCapstoneProjects(token, applications);
+
+  return (
+    <div className="mb-5">
+      <SectionLabel>Capstone Projects</SectionLabel>
+      {loading ? (
+        <Card className="p-6"><Spinner text="Loading capstone projects…" /></Card>
+      ) : error ? (
+        <ErrorBanner message={error} />
+      ) : projects.length === 0 ? (
+        <Card><EmptyState title="No capstone projects yet" hint="Your tutor's posted projects will show up here." /></Card>
+      ) : (
+        <div className="space-y-2.5">
+          {projects.map((p) => <CapstoneProjectCard key={p.id} project={p} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Course Card ──────────────────────────────────────────────────────────────
 
 function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemove, onPaymentUpdate }) {
@@ -1208,6 +1320,8 @@ function OverviewTab({ user, applications, token, openPayment, setOpenPayment, o
       </div>
 
       <TodayClassSection token={token} applications={applications} />
+
+      <CapstoneProjectsSection token={token} applications={applications} />
 
       <div className="mb-5">
         <SectionLabel>At a glance</SectionLabel>
