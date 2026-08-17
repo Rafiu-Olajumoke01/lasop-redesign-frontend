@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 
 const studentProjects = [
@@ -7,7 +6,7 @@ const studentProjects = [
     title: "TaskFlow - Team Productivity App",
     studentName: "Chiamaka Okoro",
     cohort: "Full-Stack Cohort 4",
-    image: "/images/projects/taskflow.png",
+    gradient: "linear-gradient(135deg, #4F46E5, #7C3AED)",
     description: "A Kanban-style task manager built for small teams to track projects in real time.",
     techStack: ["React", "Django REST", "PostgreSQL"],
     liveLink: "https://taskflow-demo.vercel.app",
@@ -18,7 +17,7 @@ const studentProjects = [
     title: "MediCare Connect",
     studentName: "Tunde Bakare",
     cohort: "Full-Stack Cohort 4",
-    image: "/images/projects/medicare-connect.png",
+    gradient: "linear-gradient(135deg, #0EA5E9, #06B6D4)",
     description: "A platform connecting patients with nearby clinics for appointment booking.",
     techStack: ["Next.js", "Django", "Tailwind"],
     liveLink: "https://medicare-connect-demo.vercel.app",
@@ -29,7 +28,7 @@ const studentProjects = [
     title: "ShopEase - E-commerce Storefront",
     studentName: "Ifeoma Nwachukwu",
     cohort: "Full-Stack Cohort 3",
-    image: "/images/projects/shopease.png",
+    gradient: "linear-gradient(135deg, #10B981, #059669)",
     description: "A full online store with cart, checkout, and admin inventory management.",
     techStack: ["React", "Django REST", "Stripe"],
     liveLink: "https://shopease-demo.vercel.app",
@@ -40,7 +39,7 @@ const studentProjects = [
     title: "EduTrack - Attendance System",
     studentName: "Segun Adeyemi",
     cohort: "Full-Stack Cohort 3",
-    image: "/images/projects/edutrack.png",
+    gradient: "linear-gradient(135deg, #F59E0B, #EA580C)",
     description: "A digital attendance tracker for schools with real-time reporting for admins.",
     techStack: ["Next.js", "Django", "Chart.js"],
     liveLink: "https://edutrack-demo.vercel.app",
@@ -68,13 +67,13 @@ export default function StudentProjects() {
               className="rounded-xl overflow-hidden flex flex-col border border-white/10 hover:border-indigo-400/40 transition-colors duration-200"
               style={{ backgroundColor: "#0F2143" }}
             >
-              <div className="relative w-full aspect-video bg-black/20 shrink-0">
-                <Image
-                  src={project.image}
-                  alt={project.title}
-                  fill
-                  className="object-cover"
-                />
+              <div
+                className="relative w-full aspect-video shrink-0 flex items-center justify-center"
+                style={{ background: project.gradient }}
+              >
+                <span className="text-white/90 font-semibold text-lg tracking-wide">
+                  {project.title}
+                </span>
               </div>
 
               <div className="p-4 flex flex-col flex-1">
