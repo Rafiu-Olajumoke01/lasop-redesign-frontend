@@ -50,13 +50,13 @@ const studentProjects = [
 
 export default function StudentProjects() {
   return (
-    <section className="w-full bg-white py-16 px-4 md:px-10">
+    <section className="w-full py-16 px-4 md:px-10" style={{ backgroundColor: "#08162F" }}>
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+          <h2 className="text-2xl md:text-3xl font-bold text-white">
             What Our Students Have Built
           </h2>
-          <p className="text-gray-500 mt-2 max-w-xl mx-auto">
+          <p className="text-gray-300 mt-2 max-w-xl mx-auto">
             Real projects, built by real students, during their time at LASOP.
           </p>
         </div>
@@ -65,9 +65,9 @@ export default function StudentProjects() {
           {studentProjects.map((project) => (
             <div
               key={project.id}
-              className="border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col"
+              className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-200 flex flex-col"
             >
-              <div className="relative w-full h-40">
+              <div className="relative w-full aspect-video bg-gray-100 shrink-0">
                 <Image
                   src={project.image}
                   alt={project.title}
@@ -81,7 +81,7 @@ export default function StudentProjects() {
                   {project.cohort}
                 </span>
 
-                <h3 className="text-base font-semibold text-gray-900 mb-1">
+                <h3 className="text-base font-semibold text-gray-900 mb-1 leading-snug">
                   {project.title}
                 </h3>
 
@@ -89,11 +89,11 @@ export default function StudentProjects() {
                   by {project.studentName}
                 </p>
 
-                <p className="text-sm text-gray-600 mb-3 flex-1">
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed flex-1">
                   {project.description}
                 </p>
 
-                <div className="flex flex-wrap gap-1 mb-3">
+                <div className="flex flex-wrap gap-1.5 mb-4">
                   {project.techStack.map((tech) => (
                     <span
                       key={tech}
@@ -104,7 +104,7 @@ export default function StudentProjects() {
                   ))}
                 </div>
 
-                <div className="flex gap-3 text-sm font-medium mt-auto">
+                <div className="flex items-center gap-4 text-sm font-medium mt-auto pt-3 border-t border-gray-100">
                   <a
                     href={project.liveLink}
                     target="_blank"
