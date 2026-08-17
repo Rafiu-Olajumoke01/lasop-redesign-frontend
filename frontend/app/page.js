@@ -4,6 +4,7 @@ import WhyChooseUs from "@/components/home/WhyChooseUs";
 // import FeaturedPrograms from "@/components/home/FeaturedPrograms";
 import About from "@/components/home/About";
 import LearnStudyWork from "@/components/home/LearnStudyWork";
+import StudentProjects from "@/components/home/StudentProjects";
 import SuccessStories from "@/components/home/SuccessStories";
 import CTA from "@/components/home/CTA";
 
@@ -15,6 +16,7 @@ export default function Home() {
       <WhyChooseUs /> 
       <About />
       <LearnStudyWork />  
+      <StudentProjects />
       <SuccessStories /> 
       <CTA /> 
       {/* <FeaturedPrograms />  */} 
