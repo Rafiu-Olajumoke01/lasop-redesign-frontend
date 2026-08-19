@@ -121,6 +121,45 @@ function useTutorCohorts(token) {
   return { cohorts, loading, error };
 }
 
+// ── Students assigned to this tutor, across all cohorts ─────────────────────
+
+function normalizeStudent(raw) {
+  return {
+    student_id: raw.student_id ?? raw.id ?? raw.user_id,
+    student_name: raw.student_name ?? raw.name ?? `${raw.first_name || ''} ${raw.last_name || ''}`.trim(),
+    student_email: raw.student_email ?? raw.email ?? '',
+    cohort_id: raw.cohort_id ?? raw.cohort ?? raw.cohort_detail?.id ?? 'unassigned',
+    cohort_name: raw.cohort_name ?? raw.cohort_detail?.name ?? 'Unassigned',
+  };
+}
+
+function useTutorStudents(token) {
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/tutor/students/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load your students.');
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data.results || [];
+      setStudents(list.map(normalizeStudent));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  return { students, loading, error, refresh };
+}
+
 // ── Class sessions for a given cohort (tutor's own) ─────────────────────────
 
 function useCohortSessions(token, cohortId) {
@@ -412,6 +451,7 @@ const ICONS = {
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" /> },
   { key: 'cohorts', label: 'Cohorts', icon: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M8 2v4M16 2v4M3 10h18" /></> },
+  { key: 'students', label: 'Students', icon: <><circle cx="9" cy="8" r="3" /><path d="M2 20c0-3.2 3.2-5.5 7-5.5s7 2.3 7 5.5" /><circle cx="17" cy="8.5" r="2.3" /><path d="M16.5 13c2.3.4 3.7 1.9 3.7 3.8" /></> },
   { key: 'messages', label: 'Message', icon: <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" /> },
   { key: 'queries', label: 'Queries', icon: <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><path d="M12 9v4M12 17h.01" /></> },
   { key: 'settings', label: 'Settings', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></> },
@@ -965,9 +1005,73 @@ function CohortsTab({ token, cohorts, loading, error }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════+++
+// ═══════════════════════════════════════════════════════════════════════════
+// Students tab — every student assigned to this tutor, grouped by cohort.
+// Clicking a student opens the same AssessmentModal used from the roster,
+// so the assessment lands on the student's dashboard either way.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function StudentsTab({ token, studentsData }) {
+  const { students, loading, error } = studentsData;
+  const [assessmentStudent, setAssessmentStudent] = useState(null);
+
+  const grouped = students.reduce((acc, s) => {
+    if (!acc[s.cohort_id]) acc[s.cohort_id] = { cohort_name: s.cohort_name, students: [] };
+    acc[s.cohort_id].students.push(s);
+    return acc;
+  }, {});
+  const groups = Object.values(grouped);
+
+  return (
+    <div>
+      <PageHeader title="Students" subtitle={`${students.length} student${students.length !== 1 ? 's' : ''} across your cohorts`} />
+      <ErrorBanner message={error} />
+
+      {loading ? (
+        <Spinner text="Loading your students…" />
+      ) : groups.length === 0 ? (
+        <Card><EmptyState title="No students yet" hint="Students in your assigned cohorts will show up here." /></Card>
+      ) : (
+        <div className="space-y-6">
+          {groups.map((g, i) => (
+            <div key={i}>
+              <h3 className="text-slate-900 font-bold text-sm mb-3">{g.cohort_name}</h3>
+              <Card className="overflow-hidden">
+                <div className="divide-y divide-slate-100">
+                  {g.students.map((s) => (
+                    <button
+                      key={s.student_id}
+                      onClick={() => setAssessmentStudent(s)}
+                      className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors text-left"
+                    >
+                      <div>
+                        <p className="text-slate-800 font-semibold text-sm">{s.student_name}</p>
+                        <p className="text-slate-400 text-xs">{s.student_email}</p>
+                      </div>
+                      <span className="text-[#0057E7] text-xs font-semibold shrink-0">Leave assessment</span>
+                    </button>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {assessmentStudent && (
+        <AssessmentModal
+          token={token}
+          student={assessmentStudent}
+          onClose={() => setAssessmentStudent(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Settings tab
-// ══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
 
 function SettingsTab({ tutor, updateProfile }) {
   const [bio, setBio] = useState(tutor.bio || '');
@@ -1347,6 +1451,7 @@ export default function TutorPortalPage() {
   const profileData = useTutorProfile(token);
   const statsData = useTutorStats(token);
   const cohortsData = useTutorCohorts(token);
+  const studentsData = useTutorStudents(token);
 
   const currentLabel = NAV.find((n) => n.key === tab)?.label || 'Dashboard';
 
@@ -1387,6 +1492,9 @@ export default function TutorPortalPage() {
             )}
             {tab === 'cohorts' && (
               <CohortsTab token={token} cohorts={cohortsData.cohorts} loading={cohortsData.loading} error={cohortsData.error} />
+            )}
+            {tab === 'students' && (
+              <StudentsTab token={token} studentsData={studentsData} />
             )}
             {tab === 'messages' && <MessageTab />}
             {tab === 'queries' && (
