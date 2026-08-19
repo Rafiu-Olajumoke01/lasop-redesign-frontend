@@ -294,6 +294,7 @@ const NAV = [
   { key: 'overview', label: 'Overview', icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z" /> },
   { key: 'courses', label: 'My Courses', icon: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></> },
   { key: 'classwork', label: 'Classwork', icon: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6M9 13h6M9 17h6" /></> },
+  { key: 'assessments', label: 'Assessments', icon: <><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></> },
   { key: 'certificate', label: 'Certificate', icon: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></> },
   { key: 'payments', label: 'Payments', icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></> },
 ];
@@ -1603,6 +1604,134 @@ function ClassworkTab({ token, cohortIds }) {
   );
 }
 
+// ─── Assessments tab ─────────────────────────────────────────────────────
+
+function useStudentAssessments(token) {
+  const [assessments, setAssessments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    if (!token) return;
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/assessments/mine/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load your assessments.');
+      setAssessments(await res.json());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const respond = async (assessmentId, text) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/assessments/${assessmentId}/respond/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ student_response: text }),
+    });
+    if (!res.ok) throw new Error('Could not save your response.');
+    await refresh();
+  };
+
+  return { assessments, loading, error, refresh, respond };
+}
+
+function AssessmentCard({ assessment, onRespond }) {
+  const [responseText, setResponseText] = useState(assessment.student_response || '');
+  const [editing, setEditing] = useState(!assessment.student_response);
+  const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState('');
+
+  const handleSave = async () => {
+    setSaving(true); setSaveErr('');
+    try {
+      await onRespond(assessment.id, responseText.trim());
+      setEditing(false);
+    } catch (e) {
+      setSaveErr(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card interactive className="p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+        <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold">
+          {assessment.author_name}
+        </p>
+        <p className="text-slate-400 text-[11px]">{formatDate(assessment.created_at)}</p>
+      </div>
+      <p className="text-slate-800 text-sm leading-relaxed">{assessment.content}</p>
+
+      <div className="mt-4 pt-3.5 border-t border-slate-100">
+        {editing ? (
+          <div className="space-y-2.5">
+            {saveErr && <ErrorBanner message={saveErr} />}
+            <textarea
+              value={responseText}
+              onChange={(e) => setResponseText(e.target.value)}
+              rows={3}
+              placeholder="Optional — reply to your tutor here…"
+              className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15
+                rounded-lg px-3.5 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400"
+            />
+            <div className="flex items-center gap-2">
+              <PrimaryButton onClick={handleSave} disabled={saving || !responseText.trim()}>
+                {saving ? 'Saving…' : 'Send response'}
+              </PrimaryButton>
+              {assessment.student_response && (
+                <SecondaryButton onClick={() => { setEditing(false); setResponseText(assessment.student_response); }}>
+                  Cancel
+                </SecondaryButton>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">Your response</p>
+            <p className="text-slate-600 text-sm mb-2.5">{assessment.student_response}</p>
+            <button
+              onClick={() => setEditing(true)}
+              className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition"
+            >
+              Edit response
+            </button>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function AssessmentsTab({ token }) {
+  const { assessments, loading, error, respond } = useStudentAssessments(token);
+
+  return (
+    <div>
+      <PageHeader title="Assessments" subtitle={assessments.length > 0 ? `${assessments.length} total` : undefined} />
+      <ErrorBanner message={error} />
+      {loading ? (
+        <Spinner text="Loading your assessments…" />
+      ) : assessments.length === 0 ? (
+        <Card><EmptyState title="No assessments yet" hint="Feedback from your tutor will show up here." /></Card>
+      ) : (
+        <div className="space-y-3">
+          {assessments.map((a) => (
+            <AssessmentCard key={a.id} assessment={a} onRespond={respond} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Page shell ────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -1726,6 +1855,7 @@ export default function DashboardPage() {
               />
             )}
             {tab === 'classwork' && <ClassworkTab token={token} cohortIds={cohortIds} />}
+            {tab === 'assessments' && <AssessmentsTab token={token} />}
             {tab === 'certificate' && <CertificateTab certificate={user?.certificate} />}
             {tab === 'payments' && <PaymentsTab applications={applications} />}
           </div>

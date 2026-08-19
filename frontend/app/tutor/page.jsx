@@ -602,6 +602,7 @@ function SessionCard({ session, onOpen, onStop, stopping }) {
 function SessionAttendanceView({ token, session, onBack }) {
   const { roster, loading, error, saving, submitAttendance } = useSessionAttendance(token, session.id);
   const [statuses, setStatuses] = useState({});
+  const [assessmentStudent, setAssessmentStudent] = useState(null);
   const [saveErr, setSaveErr] = useState('');
   const [saved, setSaved] = useState(false);
   const locked = !!session.attendance_marked;
@@ -669,6 +670,7 @@ function SessionAttendanceView({ token, session, onBack }) {
                   <p className="text-slate-400 text-xs">{r.student_email}</p>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <SecondaryButton onClick={() => setAssessmentStudent(r)}>Leave Assessment</SecondaryButton>
                   {locked ? (
                     <span className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border capitalize ${statusStyles[statuses[r.application_id] || 'present']}`}>
                       {statuses[r.application_id] || 'present'}
@@ -698,6 +700,14 @@ function SessionAttendanceView({ token, session, onBack }) {
         <PrimaryButton className="mt-5" onClick={handleSubmit} disabled={saving}>
           {saving ? 'Saving…' : 'Save attendance'}
         </PrimaryButton>
+      )}
+
+      {assessmentStudent && (
+        <AssessmentModal
+          token={token}
+          student={assessmentStudent}
+          onClose={() => setAssessmentStudent(null)}
+        />
       )}
     </div>
   );
@@ -955,9 +965,9 @@ function CohortsTab({ token, cohorts, loading, error }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════+++
 // Settings tab
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════
 
 function SettingsTab({ tutor, updateProfile }) {
   const [bio, setBio] = useState(tutor.bio || '');
@@ -1173,6 +1183,127 @@ function TopBar({ onMenuClick, title, tutor }) {
         </span>
       </div>
     </header>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Assessments — hook + modal
+// ═══════════════════════════════════════════════════════════════════════════
+
+function useStudentAssessments(token, studentId) {
+  const [assessments, setAssessments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    if (!studentId) return;
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/assessments/student/${studentId}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load assessments.');
+      setAssessments(await res.json());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, studentId]);
+
+  useEffect(() => { if (token && studentId) refresh(); }, [token, studentId, refresh]);
+
+  const postAssessment = async (content) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/assessments/tutor/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ student: studentId, content }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Assessment post failed:', text);
+      throw new Error('Could not post assessment.');
+    }
+    await refresh();
+  };
+
+  return { assessments, loading, error, refresh, postAssessment };
+}
+
+function AssessmentModal({ token, student, onClose }) {
+  const { assessments, loading, error, postAssessment } = useStudentAssessments(token, student.student_id);
+  const [content, setContent] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [postErr, setPostErr] = useState('');
+
+  const handlePost = async () => {
+    if (!content.trim()) {
+      setPostErr('Write something before posting.');
+      return;
+    }
+    setPosting(true); setPostErr('');
+    try {
+      await postAssessment(content.trim());
+      setContent('');
+    } catch (e) {
+      setPostErr(e.message);
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
+        <div className="flex items-start justify-between mb-1">
+          <h3 className="text-slate-900 font-bold text-base">Assessments</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <p className="text-slate-400 text-xs mb-4">{student.student_name}</p>
+
+        {postErr && <ErrorBanner message={postErr} />}
+
+        <div className="mb-5">
+          <textarea
+            className={inputClass}
+            rows={3}
+            placeholder="Leave feedback for this student…"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+          />
+          <PrimaryButton className="mt-2" onClick={handlePost} disabled={posting}>
+            {posting ? 'Posting…' : 'Post assessment'}
+          </PrimaryButton>
+        </div>
+
+        <div className="border-t border-slate-100 pt-4">
+          <p className="text-slate-500 font-semibold text-xs uppercase tracking-widest mb-3">Past assessments</p>
+          {error && <ErrorBanner message={error} />}
+          {loading ? (
+            <Spinner text="Loading…" />
+          ) : assessments.length === 0 ? (
+            <p className="text-slate-400 text-sm italic">No assessments yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {assessments.map((a) => (
+                <div key={a.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+                  <p className="text-slate-700 text-sm mb-1">{a.content}</p>
+                  <p className="text-slate-400 text-[11px]">{a.author_name} · {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  {a.student_response && (
+                    <div className="mt-2 pt-2 border-t border-slate-200">
+                      <p className="text-slate-600 text-sm">{a.student_response}</p>
+                      <p className="text-slate-400 text-[11px] mt-1">Student's response</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
