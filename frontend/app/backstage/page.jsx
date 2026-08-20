@@ -495,6 +495,155 @@ function usePromoCodes(token) {
   return { items, loading, error, refresh, create };
 }
 
+// ─── Student Projects hook ─────────────────────────────────────────────────
+
+function useAdminStudentProjects(token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/projects/admin/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load student projects.');
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  const toggleFeatured = async (projectId) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/projects/admin/${projectId}/toggle-featured/`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Could not update featured status.');
+    await refresh();
+  };
+
+  return { items, loading, error, refresh, toggleFeatured };
+}
+
+// ─── Student Projects tab ──────────────────────────────────────────────────
+
+function getProjectStudentName(p) {
+  const s = p.student_detail || p.student || {};
+  const full = `${s.first_name || ''} ${s.last_name || ''}`.trim();
+  return full || s.email || 'Unknown student';
+}
+
+function AdminProjectsTab({ token }) {
+  const projects = useAdminStudentProjects(token);
+  const [togglingId, setTogglingId] = useState(null);
+  const [actionError, setActionError] = useState('');
+  const [filter, setFilter] = useState('submitted');
+
+  const filtered = useMemo(() => {
+    if (filter === 'all') return projects.items;
+    return projects.items.filter((p) => p.status === filter);
+  }, [projects.items, filter]);
+
+  const handleToggleFeatured = async (p) => {
+    setActionError('');
+    setTogglingId(p.id);
+    try {
+      await projects.toggleFeatured(p.id);
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const filters = ['submitted', 'draft', 'all'];
+
+  return (
+    <div>
+      <PageHeader title="Student Projects" subtitle={`${filtered.length} of ${projects.items.length} total`}>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {filters.map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                }`}
+            >
+              {f === 'all' ? 'All' : f}
+            </button>
+          ))}
+        </div>
+      </PageHeader>
+
+      <ErrorBanner message={projects.error || actionError} />
+
+      {projects.loading ? (
+        <Spinner text="Loading student projects…" />
+      ) : filtered.length === 0 ? (
+        <Card><EmptyState title="No projects" hint="Nothing matches this filter yet." /></Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map((p) => (
+            <Card key={p.id} interactive className="p-5">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="min-w-0">
+                  <h3 className="text-slate-900 font-bold text-[15px] leading-tight tracking-tight truncate">{p.title}</h3>
+                  <p className="text-slate-400 text-xs mt-0.5">{getProjectStudentName(p)}</p>
+                </div>
+                <Pill color={p.status === 'submitted' ? 'emerald' : 'slate'}>
+                  {p.status === 'submitted' ? 'Submitted' : 'Draft'}
+                </Pill>
+              </div>
+
+              {p.tech_stack && <p className="text-slate-400 text-[11px] mb-2">{p.tech_stack}</p>}
+
+              {p.description && (
+                <p className="text-slate-500 text-sm leading-relaxed mb-3 line-clamp-3">{p.description}</p>
+              )}
+
+              <div className="flex items-center gap-4 mb-3">
+                {p.repo_url && (
+                  <a href={p.repo_url} target="_blank" rel="noopener noreferrer" className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition">
+                    Code →
+                  </a>
+                )}
+                {p.live_url && (
+                  <a href={p.live_url} target="_blank" rel="noopener noreferrer" className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition">
+                    Live →
+                  </a>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <span className="text-slate-400 text-[11px]">{formatDate(p.created_at) || '—'}</span>
+                <button
+                  onClick={() => handleToggleFeatured(p)}
+                  disabled={togglingId === p.id}
+                  className={`text-[12px] font-semibold px-3 py-1.5 rounded-md border transition disabled:opacity-40 ${p.is_featured
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                    : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                >
+                  {togglingId === p.id ? 'Saving…' : p.is_featured ? '★ Featured' : 'Feature on homepage'}
+                </button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Overview icons ─────────────────────────────────────────────────────────
 
 function PersonIcon() {
@@ -2640,6 +2789,7 @@ const NAV = [
   { key: 'syllabus', label: 'Syllabus', icon: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></> },
   { key: 'exam', label: 'Exam', icon: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></> },
   { key: 'results', label: 'Results', icon: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M9 8h6M9 12h6M9 16h4" /></> },
+  { key: 'projects', label: 'Projects', icon: <><path d="M12 15a4 4 0 100-8 4 4 0 000 8z" /><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" /></> },
   { key: 'queries', label: 'Queries', icon: <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><path d="M12 9v4M12 17h.01" /></> },
   { key: 'messages', label: 'Messages', icon: <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" /> },
   { key: 'postjob', label: 'Post Job', icon: <><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" /></> },
@@ -2875,6 +3025,7 @@ export default function BackstagePage() {
             {tab === 'applicants' && <ApplicationsTab token={token} cohorts={cohorts} tutors={tutors} />}
             {tab === 'exam' && <ExamsTab exams={exams} cohorts={cohorts} courses={courses} />}
             {tab === 'results' && <ResultsTab results={results} exams={exams} applications={applications} />}
+            {tab === 'projects' && <AdminProjectsTab token={token} />}
             {tab === 'cohorts' && <CohortsTab cohorts={cohorts} token={token} />}
             {tab === 'tutors' && <TutorsTab tutors={tutors} cohorts={cohorts} />}
             {tab === 'students' && <StudentsTab token={token} tutors={tutors} />}
