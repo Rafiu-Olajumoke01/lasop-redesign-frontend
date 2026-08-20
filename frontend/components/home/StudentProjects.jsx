@@ -112,12 +112,12 @@ export default function StudentProjects() {
         )}
 
         <div className="text-center mt-10">
-          <Link
+          {/* <Link
             href="/student-projects"
             className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
           >
             See More Projects
-          </Link>
+          </Link> */}
         </div>
       </div>
     </section>
