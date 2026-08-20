@@ -1922,19 +1922,19 @@ function NewProjectModal({ token, onClose, onCreated }) {
           <ErrorBanner message={error} />
 
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Project title"
-            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400" />
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
 
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What did you build?"
-            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400" />
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
 
           <input type="text" value={techStack} onChange={(e) => setTechStack(e.target.value)} placeholder="Tech stack (e.g. Django, Next.js)"
-            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400" />
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
 
           <input type="url" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="Repo URL (optional)"
-            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400" />
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
 
           <input type="url" value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} placeholder="Live URL (optional)"
-            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400" />
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
 
           <div>
             <p className="text-slate-500 text-[12px] font-medium mb-1.5">Cover image (optional)</p>
