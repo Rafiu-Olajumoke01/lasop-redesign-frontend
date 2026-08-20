@@ -297,6 +297,7 @@ const NAV = [
   { key: 'assessments', label: 'Assessments', icon: <><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></> },
   { key: 'certificate', label: 'Certificate', icon: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></> },
   { key: 'payments', label: 'Payments', icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></> },
+  { key: 'projects', label: 'Projects', icon: <><path d="M12 15a4 4 0 100-8 4 4 0 000 8z" /><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" /></> },
 ];
 
 // ─── Sidebar ────────────────────────────────────────────────────────────────
@@ -1642,6 +1643,51 @@ function useStudentAssessments(token) {
   return { assessments, loading, error, refresh, respond };
 }
 
+function useStudentProjects(token) {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    if (!token) return;
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/projects/mine/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load your projects.');
+      setProjects(await res.json());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const createProject = async (formData) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/projects/mine/`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }, // no Content-Type — browser sets it for FormData
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Could not save your project.');
+    await refresh();
+  };
+
+  const submitProject = async (projectId) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/projects/mine/${projectId}/submit/`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Could not submit your project.');
+    await refresh();
+  };
+
+  return { projects, loading, error, refresh, createProject, submitProject };
+}
+
 function AssessmentCard({ assessment, onRespond }) {
   const [responseText, setResponseText] = useState(assessment.student_response || '');
   const [editing, setEditing] = useState(!assessment.student_response);
@@ -1707,6 +1753,206 @@ function AssessmentCard({ assessment, onRespond }) {
         )}
       </div>
     </Card>
+  );
+}
+
+function ProjectCard({ project, onSubmit }) {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await onSubmit(project.id);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Card interactive className="p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <p className="text-slate-900 font-semibold text-sm tracking-tight truncate">
+            {project.title}
+          </p>
+          {project.tech_stack && (
+            <p className="text-slate-400 text-[11px] mt-0.5">{project.tech_stack}</p>
+          )}
+        </div>
+        <Pill color={project.status === 'submitted' ? 'emerald' : 'slate'}>
+          {project.status === 'submitted' ? 'Submitted' : 'Draft'}
+        </Pill>
+      </div>
+
+      {project.description && (
+        <p className="text-slate-500 text-sm leading-relaxed mt-3 pt-3 border-t border-slate-100">
+          {project.description}
+        </p>
+      )}
+
+      <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-100 flex-wrap">
+        <div className="flex items-center gap-4">
+          {project.repo_url && (
+            <a href={project.repo_url} target="_blank" rel="noopener noreferrer"
+              className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition">
+              Code →
+            </a>
+          )}
+          {project.live_url && (
+            <a href={project.live_url} target="_blank" rel="noopener noreferrer"
+              className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition">
+              Live →
+            </a>
+          )}
+        </div>
+
+        {project.status === 'draft' && (
+          <SecondaryButton onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Submitting…' : 'Submit'}
+          </SecondaryButton>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function ProjectsTab({ token }) {
+  const { projects, loading, error, refresh, submitProject } = useStudentProjects(token);
+  const [showModal, setShowModal] = useState(false);
+
+  return (
+    <div>
+      <PageHeader title="Projects" subtitle={projects.length > 0 ? `${projects.length} total` : undefined}>
+        <PrimaryButton onClick={() => setShowModal(true)}>+ New Project</PrimaryButton>
+      </PageHeader>
+
+      <ErrorBanner message={error} />
+
+      {loading ? (
+        <Spinner text="Loading your projects…" />
+      ) : projects.length === 0 ? (
+        <Card><EmptyState title="No projects yet" hint="Post your first project to show it off." /></Card>
+      ) : (
+        <div className="space-y-3">
+          {projects.map((p) => (
+            <ProjectCard key={p.id} project={p} onSubmit={submitProject} />
+          ))}
+        </div>
+      )}
+
+      {showModal && (
+        <NewProjectModal
+          token={token}
+          onClose={() => setShowModal(false)}
+          onCreated={refresh}
+        />
+      )}
+    </div>
+  );
+}
+
+function NewProjectModal({ token, onClose, onCreated }) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [techStack, setTechStack] = useState('');
+  const [repoUrl, setRepoUrl] = useState('');
+  const [liveUrl, setLiveUrl] = useState('');
+  const [coverImage, setCoverImage] = useState(null);
+  const [attachment, setAttachment] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    const handleKey = (e) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', handleKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
+
+  const handleSubmit = async () => {
+    if (!title.trim() || !description.trim()) {
+      setError('Title and description are required.');
+      return;
+    }
+    setLoading(true); setError('');
+    try {
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      if (techStack) formData.append('tech_stack', techStack);
+      if (repoUrl) formData.append('repo_url', repoUrl);
+      if (liveUrl) formData.append('live_url', liveUrl);
+      if (coverImage) formData.append('cover_image', coverImage);
+      if (attachment) formData.append('attachment', attachment);
+
+      const res = await fetch(`${API_BASE}/api/cohorts/projects/mine/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Could not save your project.');
+      onCreated();
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+      <div className="relative w-full max-w-[480px] bg-white border border-slate-200 rounded-xl shadow-2xl ring-1 ring-black/5 overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-slate-200/80">
+          <p className="text-slate-900 text-[15px] font-bold tracking-tight">New Project</p>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shrink-0 text-sm">✕</button>
+        </div>
+
+        <div className="px-5 sm:px-6 pt-4 pb-6 space-y-3.5">
+          <ErrorBanner message={error} />
+
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Project title"
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400" />
+
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What did you build?"
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400" />
+
+          <input type="text" value={techStack} onChange={(e) => setTechStack(e.target.value)} placeholder="Tech stack (e.g. Django, Next.js)"
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400" />
+
+          <input type="url" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="Repo URL (optional)"
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400" />
+
+          <input type="url" value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} placeholder="Live URL (optional)"
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm outline-none transition placeholder:text-slate-400" />
+
+          <div>
+            <p className="text-slate-500 text-[12px] font-medium mb-1.5">Cover image (optional)</p>
+            <input type="file" accept="image/*" onChange={(e) => setCoverImage(e.target.files[0])} className="text-sm" />
+          </div>
+
+          <div>
+            <p className="text-slate-500 text-[12px] font-medium mb-1.5">Attachment (optional)</p>
+            <input type="file" onChange={(e) => setAttachment(e.target.files[0])} className="text-sm" />
+          </div>
+
+          <PrimaryButton onClick={handleSubmit} disabled={loading} className="w-full justify-center mt-2">
+            {loading ? 'Saving…' : 'Save Project'}
+          </PrimaryButton>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1857,6 +2103,7 @@ export default function DashboardPage() {
             {tab === 'classwork' && <ClassworkTab token={token} cohortIds={cohortIds} />}
             {tab === 'assessments' && <AssessmentsTab token={token} />}
             {tab === 'certificate' && <CertificateTab certificate={user?.certificate} />}
+            {tab === 'projects' && <ProjectsTab token={token} />}
             {tab === 'payments' && <PaymentsTab applications={applications} />}
           </div>
         </div>
