@@ -1753,7 +1753,7 @@ function StudentsTab({ token, tutors }) {
   const [savingId, setSavingId] = useState(null);
   const [actionError, setActionError] = useState('');
   const [filter, setFilter] = useState('all');
-  const [subTab, setSubTab] = useState('list');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const filtered = useMemo(() => {
     if (filter === 'assigned') return students.items.filter((s) => s.assigned_tutor_detail);
@@ -1803,23 +1803,40 @@ function StudentsTab({ token, tutors }) {
 
   return (
     <div>
-      <div className="flex items-center gap-1.5 mb-5 border-b border-slate-200 pb-3">
-        {[
-          { key: 'list', label: 'List' },
-          { key: 'assessment', label: 'Assessment' },
-          { key: 'projects', label: 'Projects' },
-        ].map((s) => (
-          <button
-            key={s.key}
-            onClick={() => setSubTab(s.key)}
-            className={`text-[13px] font-semibold px-4 py-2 rounded-md transition ${subTab === s.key
-              ? 'bg-[#0057E7] text-white shadow-sm'
-              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
-              }`}
+      <div className="relative inline-block mb-5">
+        <button
+          onClick={() => setDropdownOpen((v) => !v)}
+          className="flex items-center gap-2 text-lg font-bold text-slate-900 hover:text-[#0057E7] transition"
+        >
+          {subTab === 'list' ? 'Students · List' : subTab === 'assessment' ? 'Students · Assessment' : 'Students · Projects'}
+          <svg
+            className={`text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
+            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
           >
-            {s.label}
-          </button>
-        ))}
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+
+        {dropdownOpen && (
+          <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-200 rounded-md shadow-lg z-20 overflow-hidden">
+            {[
+              { key: 'list', label: 'List' },
+              { key: 'assessment', label: 'Assessment' },
+              { key: 'projects', label: 'Projects' },
+            ].map((s) => (
+              <button
+                key={s.key}
+                onClick={() => { setSubTab(s.key); setDropdownOpen(false); }}
+                className={`block w-full text-left px-4 py-2.5 text-sm transition ${subTab === s.key
+                  ? 'text-[#0057E7] font-semibold bg-blue-50'
+                  : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
             {subTab === 'list' && (
         <div>
