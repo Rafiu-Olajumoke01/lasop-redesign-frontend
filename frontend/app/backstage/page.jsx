@@ -496,6 +496,38 @@ function usePromoCodes(token) {
 }
 
 // ─── Student Projects hook ─────────────────────────────────────────────────
+function useAdminAssessments(token, { cohort, year, month, today } = {}) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const params = new URLSearchParams();
+      if (cohort) params.set('cohort', cohort);
+      if (today) params.set('today', 'true');
+      else {
+        if (year) params.set('year', year);
+        if (month) params.set('month', month);
+      }
+      const res = await fetch(`${API_BASE}/api/cohorts/assessments/admin/?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load assessments.');
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, cohort, year, month, today]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  return { items, loading, error, refresh };
+}
 
 function useAdminStudentProjects(token) {
   const [items, setItems] = useState([]);
@@ -538,6 +570,114 @@ function getProjectStudentName(p) {
   const s = p.student_detail || p.student || {};
   const full = `${s.first_name || ''} ${s.last_name || ''}`.trim();
   return full || s.email || 'Unknown student';
+}
+function AdminAssessmentTab({ token, cohortLookup }) {
+  const [cohortFilter, setCohortFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [todayOnly, setTodayOnly] = useState(false);
+
+  const assessments = useAdminAssessments(token, {
+    cohort: cohortFilter, year: yearFilter, month: monthFilter, today: todayOnly,
+  });
+
+  return (
+    <div>
+      <PageHeader title="Assessment" subtitle={`${assessments.items.length} total`}>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <select
+            className={`${inputClass} text-[12px] py-1.5 w-auto inline-block`}
+            value={cohortFilter}
+            onChange={(e) => setCohortFilter(e.target.value)}
+          >
+            <option value="">All cohorts</option>
+            {cohortLookup.cohorts.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+
+          <select
+            className={`${inputClass} text-[12px] py-1.5 w-auto inline-block`}
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value)}
+          >
+            <option value="">All years</option>
+            {Array.from(
+              new Set(
+                cohortLookup.cohorts.filter((c) => c.start_date).map((c) => new Date(c.start_date).getFullYear())
+              )
+            ).sort((a, b) => a - b).map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+
+          <select
+            className={`${inputClass} text-[12px] py-1.5 w-auto inline-block`}
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+          >
+            <option value="">All months</option>
+            {MONTH_NAMES.map((name, i) => (
+              <option key={i} value={i + 1}>{name}</option>
+            ))}
+          </select>
+
+          <button
+            onClick={() => setTodayOnly((v) => !v)}
+            className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${todayOnly
+              ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+              : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+              }`}
+          >
+            Today
+          </button>
+
+          {(cohortFilter || yearFilter || monthFilter || todayOnly) && (
+            <button
+              onClick={() => { setCohortFilter(''); setYearFilter(''); setMonthFilter(''); setTodayOnly(false); }}
+              className="text-[12px] font-semibold text-slate-400 hover:text-slate-600 transition px-2"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </PageHeader>
+
+      <ErrorBanner message={assessments.error} />
+
+      {assessments.loading ? (
+        <Spinner text="Loading assessments…" />
+      ) : assessments.items.length === 0 ? (
+        <Card><EmptyState title="No assessments" hint="Nothing matches this filter yet." /></Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
+                  {['Student', 'Author', 'Cohort', 'Remark', 'Student response', 'Date'].map((h, i) => (
+                    <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {assessments.items.map((a) => (
+                  <tr key={a.id} className="border-b border-slate-100 last:border-0">
+                    <td className="px-5 py-4 text-slate-800 font-semibold">{a.student_name}</td>
+                    <td className="px-5 py-4 text-slate-500">{a.author_name}</td>
+                    <td className="px-5 py-4 text-slate-500">{a.cohort_name || '—'}</td>
+                    <td className="px-5 py-4 text-slate-600 max-w-xs truncate">{a.content}</td>
+                    <td className="px-5 py-4 text-slate-500 max-w-xs truncate">{a.student_response || '—'}</td>
+                    <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDate(a.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
 }
 
 function AdminProjectsTab({ token }) {
@@ -2069,9 +2209,9 @@ function StudentsTab({ token, tutors, subTab }) {
           )}
         </div>
       )}
-
+      
       {subTab === 'assessment' && (
-        <ComingSoon title="Assessment" />
+        <AdminAssessmentTab token={token} cohortLookup={cohortLookup} />
       )}
 
       {subTab === 'projects' && (
