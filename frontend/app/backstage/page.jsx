@@ -1752,7 +1752,8 @@ function StudentsTab({ token, tutors }) {
   const students = useStudents(token);
   const [savingId, setSavingId] = useState(null);
   const [actionError, setActionError] = useState('');
-  const [filter, setFilter] = useState('all'); // all | assigned | unassigned
+  const [filter, setFilter] = useState('all');
+  const [subTab, setSubTab] = useState('list');
 
   const filtered = useMemo(() => {
     if (filter === 'assigned') return students.items.filter((s) => s.assigned_tutor_detail);
@@ -1802,7 +1803,27 @@ function StudentsTab({ token, tutors }) {
 
   return (
     <div>
-      <PageHeader
+      <div className="flex items-center gap-1.5 mb-5 border-b border-slate-200 pb-3">
+        {[
+          { key: 'list', label: 'List' },
+          { key: 'assessment', label: 'Assessment' },
+          { key: 'projects', label: 'Projects' },
+        ].map((s) => (
+          <button
+            key={s.key}
+            onClick={() => setSubTab(s.key)}
+            className={`text-[13px] font-semibold px-4 py-2 rounded-md transition ${subTab === s.key
+              ? 'bg-[#0057E7] text-white shadow-sm'
+              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+              }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+            {subTab === 'list' && (
+        <div>
+        <PageHeader
         title="Students"
         subtitle={`${filtered.length} of ${students.items.length} total`}
       >
@@ -1918,9 +1939,20 @@ function StudentsTab({ token, tutors }) {
           </div>
         </Card>
       )}
+        </div>
+      )}
+
+      {subTab === 'assessment' && (
+        <ComingSoon title="Assessment" />
+      )}
+
+      {subTab === 'projects' && (
+        <AdminProjectsTab token={token} />
+      )}
     </div>
   );
 }
+
 
 // ─── Applicants tab ─────────────────────────────────────────────────────────────
 
@@ -3029,6 +3061,7 @@ export default function BackstagePage() {
             {tab === 'cohorts' && <CohortsTab cohorts={cohorts} token={token} />}
             {tab === 'tutors' && <TutorsTab tutors={tutors} cohorts={cohorts} />}
             {tab === 'students' && <StudentsTab token={token} tutors={tutors} />}
+
             {tab === 'staffs' && <ComingSoon title="Staffs" />}
             {tab === 'finances' && <FinancesTab applications={applications} token={token} />}
             {tab === 'queries' && <ComingSoon title="Queries" />}
