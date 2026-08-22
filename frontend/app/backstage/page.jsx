@@ -1684,6 +1684,46 @@ function TutorsTab({ tutors, cohorts }) {
 }
 
 // ─── Students tab ───────────────────────────────────────────────────────────
+function useApplicationsCohortMap(token) {
+  const [map, setMap] = useState({}); // studentId -> cohort_detail
+  const [cohorts, setCohorts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/applications/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const apps = Array.isArray(data) ? data : data.results || [];
+
+        const studentToCohort = {};
+        const cohortSet = new Map();
+
+        apps.forEach((a) => {
+          const studentId = a.student_detail?.id ?? a.student;
+          const cohort = a.cohort_detail;
+          if (studentId && cohort) {
+            // Keep the most recently created application's cohort per student
+            studentToCohort[studentId] = cohort;
+            cohortSet.set(cohort.id, cohort);
+          }
+        });
+
+        setMap(studentToCohort);
+        setCohorts(Array.from(cohortSet.values()));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  return { map, cohorts, loading };
+}
 
 function useStudents(token) {
   const [items, setItems] = useState([]);
@@ -1746,20 +1786,59 @@ function getTutorLabel(t) {
   if (!u) return 'Unnamed tutor';
   return `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
 }
-
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function StudentsTab({ token, tutors, subTab }) {
   const router = useRouter();
   const students = useStudents(token);
+  const cohortLookup = useApplicationsCohortMap(token);
   const [savingId, setSavingId] = useState(null);
   const [actionError, setActionError] = useState('');
   const [filter, setFilter] = useState('all');
+  const [cohortFilter, setCohortFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [todayOnly, setTodayOnly] = useState(false);
 
 
-  const filtered = useMemo(() => {
-    if (filter === 'assigned') return students.items.filter((s) => s.assigned_tutor_detail);
-    if (filter === 'unassigned') return students.items.filter((s) => !s.assigned_tutor_detail);
-    return students.items;
-  }, [students.items, filter]);
+   const filtered = useMemo(() => {
+    let list = students.items;
+
+    if (filter === 'assigned') list = list.filter((s) => s.assigned_tutor_detail);
+    if (filter === 'unassigned') list = list.filter((s) => !s.assigned_tutor_detail);
+
+    if (cohortFilter) {
+      list = list.filter((s) => cohortLookup.map[s.id]?.id === Number(cohortFilter));
+    }
+
+    if (yearFilter) {
+      list = list.filter((s) => {
+        const cohort = cohortLookup.map[s.id];
+        if (!cohort?.start_date) return false;
+        return new Date(cohort.start_date).getFullYear() === Number(yearFilter);
+      });
+    }
+
+    if (monthFilter) {
+      list = list.filter((s) => {
+        const cohort = cohortLookup.map[s.id];
+        if (!cohort?.start_date) return false;
+        return new Date(cohort.start_date).getMonth() + 1 === Number(monthFilter);
+      });
+    }
+
+    if (todayOnly) {
+      const now = new Date();
+      list = list.filter((s) => {
+        const cohort = cohortLookup.map[s.id];
+        if (!cohort?.start_date || !cohort?.end_date) return false;
+        const start = new Date(cohort.start_date);
+        const end = new Date(cohort.end_date);
+        return start <= now && now <= end;
+      });
+    }
+
+    return list;
+  }, [students.items, filter, cohortFilter, yearFilter, monthFilter, todayOnly, cohortLookup.map]);
 
   const handleAssign = async (studentId, tutorIdRaw) => {
     const tutorId = tutorIdRaw === '' ? null : Number(tutorIdRaw);
@@ -1822,6 +1901,73 @@ function StudentsTab({ token, tutors, subTab }) {
                   {f.label}
                 </button>
               ))}
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <select
+                className={`${inputClass} text-[12px] py-1.5 w-auto inline-block`}
+                value={cohortFilter}
+                onChange={(e) => setCohortFilter(e.target.value)}
+              >
+                <option value="">All cohorts</option>
+                {cohortLookup.cohorts.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              <select
+                className={`${inputClass} text-[12px] py-1.5 w-auto inline-block`}
+                value={yearFilter}
+                onChange={(e) => setYearFilter(e.target.value)}
+              >
+                <option value="">All years</option>
+                {Array.from(
+                  new Set(
+                    cohortLookup.cohorts
+                      .filter((c) => c.start_date)
+                      .map((c) => new Date(c.start_date).getFullYear())
+                  )
+                )
+                  .sort((a, b) => a - b)
+                  .map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+              </select>
+
+              <select
+                className={`${inputClass} text-[12px] py-1.5 w-auto inline-block`}
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+              >
+                <option value="">All months</option>
+                {MONTH_NAMES.map((name, i) => (
+                  <option key={i} value={i + 1}>{name}</option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => setTodayOnly((v) => !v)}
+                className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${todayOnly
+                  ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                  : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                  }`}
+              >
+                Today
+              </button>
+
+              {(cohortFilter || yearFilter || monthFilter || todayOnly) && (
+                <button
+                  onClick={() => {
+                    setCohortFilter('');
+                    setYearFilter('');
+                    setMonthFilter('');
+                    setTodayOnly(false);
+                  }}
+                  className="text-[12px] font-semibold text-slate-400 hover:text-slate-600 transition px-2"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </PageHeader>
 
