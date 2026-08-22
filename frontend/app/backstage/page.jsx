@@ -1753,6 +1753,7 @@ function StudentsTab({ token, tutors }) {
   const [savingId, setSavingId] = useState(null);
   const [actionError, setActionError] = useState('');
   const [filter, setFilter] = useState('all');
+  const [subTab, setSubTab] = useState('list');
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const filtered = useMemo(() => {
