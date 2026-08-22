@@ -1747,14 +1747,13 @@ function getTutorLabel(t) {
   return `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
 }
 
-function StudentsTab({ token, tutors }) {
+function StudentsTab({ token, tutors, subTab }) {
   const router = useRouter();
   const students = useStudents(token);
   const [savingId, setSavingId] = useState(null);
   const [actionError, setActionError] = useState('');
   const [filter, setFilter] = useState('all');
-  const [subTab, setSubTab] = useState('list');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+
 
   const filtered = useMemo(() => {
     if (filter === 'assigned') return students.items.filter((s) => s.assigned_tutor_detail);
@@ -1804,159 +1803,124 @@ function StudentsTab({ token, tutors }) {
 
   return (
     <div>
-      <div className="relative inline-block mb-5">
-        <button
-          onClick={() => setDropdownOpen((v) => !v)}
-          className="flex items-center gap-2 text-lg font-bold text-slate-900 hover:text-[#0057E7] transition"
-        >
-          {subTab === 'list' ? 'Students · List' : subTab === 'assessment' ? 'Students · Assessment' : 'Students · Projects'}
-          <svg
-            className={`text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
-            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </button>
-
-        {dropdownOpen && (
-          <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-200 rounded-md shadow-lg z-20 overflow-hidden">
-            {[
-              { key: 'list', label: 'List' },
-              { key: 'assessment', label: 'Assessment' },
-              { key: 'projects', label: 'Projects' },
-            ].map((s) => (
-              <button
-                key={s.key}
-                onClick={() => { setSubTab(s.key); setDropdownOpen(false); }}
-                className={`block w-full text-left px-4 py-2.5 text-sm transition ${subTab === s.key
-                  ? 'text-[#0057E7] font-semibold bg-blue-50'
-                  : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-            {subTab === 'list' && (
+      {subTab === 'list' && (
         <div>
-        <PageHeader
-        title="Students"
-        subtitle={`${filtered.length} of ${students.items.length} total`}
-      >
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {filters.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f.key
-                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
-                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
-                }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </PageHeader>
+          <PageHeader
+            title="Students"
+            subtitle={`${filtered.length} of ${students.items.length} total`}
+          >
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {filters.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f.key
+                    ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                    : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                    }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </PageHeader>
 
-      <ErrorBanner message={students.error || actionError} />
+          <ErrorBanner message={students.error || actionError} />
 
-      {students.loading ? (
-        <Spinner text="Loading students…" />
-      ) : filtered.length === 0 ? (
-        <Card><EmptyState title="No students" hint="Nothing matches this filter yet." /></Card>
-      ) : (
-        <Card className="overflow-hidden">
-          {/* Mobile: stacked cards */}
-          <div className="sm:hidden divide-y divide-slate-100">
-            {filtered.map((s) => (
-              <div
-                key={s.id}
-                onClick={() => router.push(`/backstage/students/${s.id}`)}
-                className="p-4 active:bg-slate-50 transition cursor-pointer"
-              >
-                <div className="flex items-center gap-3 mb-2.5">
-                  <div className="w-8 h-8 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-xs font-bold shrink-0">
-                    {getStudentName(s).charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-slate-800 font-semibold text-sm leading-tight truncate">{getStudentName(s)}</p>
-                    <p className="text-slate-400 text-xs truncate">{s.email}</p>
-                  </div>
-                  {s.assigned_tutor_detail ? (
-                    <Pill color="blue">{s.assigned_tutor_detail.name}</Pill>
-                  ) : (
-                    <Pill color="rose">Unassigned</Pill>
-                  )}
-                </div>
-                <p className="text-slate-500 text-xs mb-3">{s.phone_number || 'No phone number'}</p>
-                <TutorSelect s={s} />
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop: table */}
-          <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
-                  {['Student', 'Email', 'Phone', 'Tutor', ''].map((h, i) => (
-                    <th
-                      key={i}
-                      className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
+          {students.loading ? (
+            <Spinner text="Loading students…" />
+          ) : filtered.length === 0 ? (
+            <Card><EmptyState title="No students" hint="Nothing matches this filter yet." /></Card>
+          ) : (
+            <Card className="overflow-hidden">
+              {/* Mobile: stacked cards */}
+              <div className="sm:hidden divide-y divide-slate-100">
                 {filtered.map((s) => (
-                  <tr
+                  <div
                     key={s.id}
                     onClick={() => router.push(`/backstage/students/${s.id}`)}
-                    className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0 cursor-pointer"
+                    className="p-4 active:bg-slate-50 transition cursor-pointer"
                   >
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
-                          {getStudentName(s).charAt(0).toUpperCase()}
-                        </div>
-                        <p className="text-slate-800 font-semibold leading-none">{getStudentName(s)}</p>
+                    <div className="flex items-center gap-3 mb-2.5">
+                      <div className="w-8 h-8 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {getStudentName(s).charAt(0).toUpperCase()}
                       </div>
-                    </td>
-                    <td className="px-5 py-4 text-slate-500">{s.email}</td>
-                    <td className="px-5 py-4 text-slate-500">{s.phone_number || '—'}</td>
-                    <td className="px-5 py-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-slate-800 font-semibold text-sm leading-tight truncate">{getStudentName(s)}</p>
+                        <p className="text-slate-400 text-xs truncate">{s.email}</p>
+                      </div>
                       {s.assigned_tutor_detail ? (
                         <Pill color="blue">{s.assigned_tutor_detail.name}</Pill>
                       ) : (
                         <Pill color="rose">Unassigned</Pill>
                       )}
-                    </td>
-                    <td className="px-5 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <select
-                        className={`${inputClass} text-[12px] py-1.5 w-44 inline-block`}
-                        value={s.assigned_tutor_detail?.id ?? ''}
-                        disabled={savingId === s.id || tutors.loading}
-                        onChange={(e) => handleAssign(s.id, e.target.value)}
-                      >
-                        <option value="">Unassigned</option>
-                        {tutors.items.map((t) => (
-                          <option key={t.id} value={t.id}>{getTutorLabel(t)}</option>
-                        ))}
-                      </select>
-                      {savingId === s.id && <span className="text-slate-400 text-[11px] ml-2">Saving…</span>}
-                    </td>
-                  </tr>
+                    </div>
+                    <p className="text-slate-500 text-xs mb-3">{s.phone_number || 'No phone number'}</p>
+                    <TutorSelect s={s} />
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
+              </div>
+
+              {/* Desktop: table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
+                      {['Student', 'Email', 'Phone', 'Tutor', ''].map((h, i) => (
+                        <th
+                          key={i}
+                          className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap"
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((s) => (
+                      <tr
+                        key={s.id}
+                        onClick={() => router.push(`/backstage/students/${s.id}`)}
+                        className="border-b border-slate-100 hover:bg-slate-50/70 transition last:border-0 cursor-pointer"
+                      >
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-full bg-[#0057E7] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+                              {getStudentName(s).charAt(0).toUpperCase()}
+                            </div>
+                            <p className="text-slate-800 font-semibold leading-none">{getStudentName(s)}</p>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-slate-500">{s.email}</td>
+                        <td className="px-5 py-4 text-slate-500">{s.phone_number || '—'}</td>
+                        <td className="px-5 py-4">
+                          {s.assigned_tutor_detail ? (
+                            <Pill color="blue">{s.assigned_tutor_detail.name}</Pill>
+                          ) : (
+                            <Pill color="rose">Unassigned</Pill>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            className={`${inputClass} text-[12px] py-1.5 w-44 inline-block`}
+                            value={s.assigned_tutor_detail?.id ?? ''}
+                            disabled={savingId === s.id || tutors.loading}
+                            onChange={(e) => handleAssign(s.id, e.target.value)}
+                          >
+                            <option value="">Unassigned</option>
+                            {tutors.items.map((t) => (
+                              <option key={t.id} value={t.id}>{getTutorLabel(t)}</option>
+                            ))}
+                          </select>
+                          {savingId === s.id && <span className="text-slate-400 text-[11px] ml-2">Saving…</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
@@ -2848,7 +2812,8 @@ const NAV = [
 
 // ─── Sidebar drawer ────────────────────────────────────────────────────────────
 
-function Sidebar({ open, onClose, tab, setTab }) {
+function Sidebar({ open, onClose, tab, setTab, studentsSubTab, setStudentsSubTab }) {
+  const [studentsExpanded, setStudentsExpanded] = useState(false);
   return (
     <>
       {open && (
@@ -2877,22 +2842,75 @@ function Sidebar({ open, onClose, tab, setTab }) {
           style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent' }}
         >
           {NAV.map((item) => {
-            const active = tab === item.key;
-            return (
+  const active = tab === item.key;
+
+  if (item.key === 'students') {
+    return (
+      <div key={item.key}>
+        <button
+          onClick={() => {
+            setTab('students');
+            setStudentsExpanded((v) => !v);
+          }}
+          className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-all duration-150 ${active
+            ? 'bg-white text-[#0057E7] font-semibold shadow-sm'
+            : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
+            }`}
+        >
+          {active && <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[#0057E7]" />}
+          <NavIcon path={item.icon} />
+          <span className="flex-1 text-left">{item.label}</span>
+          <svg
+            className={`transition-transform ${studentsExpanded ? 'rotate-180' : ''}`}
+            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+
+        {studentsExpanded && (
+          <div className="ml-8 mt-0.5 space-y-0.5">
+            {[
+              { key: 'list', label: 'List' },
+              { key: 'assessment', label: 'Assessment' },
+              { key: 'projects', label: 'Projects' },
+            ].map((sub) => (
               <button
-                key={item.key}
-                onClick={() => { setTab(item.key); onClose(); }}
-                className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-all duration-150 ${active
-                  ? 'bg-white text-[#0057E7] font-semibold shadow-sm'
-                  : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
+                key={sub.key}
+                onClick={() => {
+                  setTab('students');
+                  setStudentsSubTab(sub.key);
+                  onClose();
+                }}
+                className={`w-full text-left text-[12.5px] px-3 py-1.5 rounded-md transition ${studentsSubTab === sub.key && tab === 'students'
+                  ? 'text-white font-semibold bg-white/[0.12]'
+                  : 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
                   }`}
               >
-                {active && <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[#0057E7]" />}
-                <NavIcon path={item.icon} />
-                {item.label}
+                {sub.label}
               </button>
-            );
-          })}
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      key={item.key}
+      onClick={() => { setTab(item.key); onClose(); }}
+      className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-all duration-150 ${active
+        ? 'bg-white text-[#0057E7] font-semibold shadow-sm'
+        : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
+        }`}
+    >
+      {active && <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[#0057E7]" />}
+      <NavIcon path={item.icon} />
+      {item.label}
+    </button>
+  );
+})}
         </nav>
 
         <div className="px-2.5 pb-5 pt-2 border-t border-blue-900/30">
@@ -2976,6 +2994,7 @@ export default function BackstagePage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [tab, setTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [studentsSubTab, setStudentsSubTab] = useState('list');
 
   useEffect(() => {
     const t = localStorage.getItem('access');
@@ -3052,8 +3071,14 @@ export default function BackstagePage() {
 
   return (
     <div className="min-h-screen flex bg-slate-50">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} />
-
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        tab={tab}
+        setTab={setTab}
+        studentsSubTab={studentsSubTab}
+        setStudentsSubTab={setStudentsSubTab}
+      />
       <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
         <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} dateLabel={tab === 'overview' ? 'June 2026' : null} />
 
@@ -3078,7 +3103,7 @@ export default function BackstagePage() {
             {tab === 'projects' && <AdminProjectsTab token={token} />}
             {tab === 'cohorts' && <CohortsTab cohorts={cohorts} token={token} />}
             {tab === 'tutors' && <TutorsTab tutors={tutors} cohorts={cohorts} />}
-            {tab === 'students' && <StudentsTab token={token} tutors={tutors} />}
+            {tab === 'students' && <StudentsTab token={token} tutors={tutors} subTab={studentsSubTab} />}
 
             {tab === 'staffs' && <ComingSoon title="Staffs" />}
             {tab === 'finances' && <FinancesTab applications={applications} token={token} />}
