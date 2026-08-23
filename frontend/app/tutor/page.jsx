@@ -1011,7 +1011,7 @@ function CohortsTab({ token, cohorts, loading, error }) {
 // so the assessment lands on the student's dashboard either way.
 // ═══════════════════════════════════════════════════════════════════════════
 
-function StudentsTab({ token, studentsData }) {
+function MyStudentsSubTab({ token, studentsData }) {
   const { students, loading, error } = studentsData;
   const [assessmentStudent, setAssessmentStudent] = useState(null);
 
@@ -1024,7 +1024,7 @@ function StudentsTab({ token, studentsData }) {
 
   return (
     <div>
-      <PageHeader title="Students" subtitle={`${students.length} student${students.length !== 1 ? 's' : ''} across your cohorts`} />
+      <PageHeader title="My Students" subtitle={`${students.length} student${students.length !== 1 ? 's' : ''} across your cohorts`} />
       <ErrorBanner message={error} />
 
       {loading ? (
@@ -1063,6 +1063,317 @@ function StudentsTab({ token, studentsData }) {
           token={token}
           student={assessmentStudent}
           onClose={() => setAssessmentStudent(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function StudentsTab({ token, studentsData, cohortsData, subTab }) {
+  return (
+    <div>
+      {subTab === 'my_students' && <MyStudentsSubTab token={token} studentsData={studentsData} />}
+      {subTab === 'projects' && <ProjectsTab token={token} cohorts={cohortsData.cohorts} />}
+    </div>
+  );
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Projects sub-tab — post a monthly project brief to a cohort, and rate
+// student submissions against briefs already posted.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function useTutorCapstoneProjects(token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/capstone-projects/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load your posted projects.');
+      setItems(await res.json());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  const postProject = async (payload) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/capstone-projects/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Post project failed:', text);
+      throw new Error('Could not post the project.');
+    }
+    await refresh();
+  };
+
+  return { items, loading, error, refresh, postProject };
+}
+
+function useTutorClassProjects(token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/class-projects/tutor/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load student submissions.');
+      setItems(await res.json());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  const rateSubmission = async (submissionId, rating, feedback) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/class-projects/tutor/${submissionId}/rate/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ tutor_rating: rating, tutor_feedback: feedback }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Rate submission failed:', text);
+      throw new Error('Could not save the rating.');
+    }
+    await refresh();
+  };
+
+  return { items, loading, error, refresh, rateSubmission };
+}
+
+function PostProjectForm({ token, cohorts, onPosted }) {
+  const [cohortId, setCohortId] = useState('');
+  const [stage, setStage] = useState('stage_1');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const { postProject } = useTutorCapstoneProjects(token);
+
+  const handlePost = async () => {
+    if (!cohortId || !title.trim() || !description.trim()) {
+      setErr('Cohort, title, and description are required.');
+      return;
+    }
+    setSaving(true); setErr('');
+    try {
+      await postProject({
+        cohort: Number(cohortId),
+        stage,
+        title: title.trim(),
+        description: description.trim(),
+        ...(dueDate ? { due_date: dueDate } : {}),
+      });
+      setTitle(''); setDescription(''); setDueDate('');
+      onPosted();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="p-5">
+      <h3 className="text-slate-900 font-bold text-sm mb-4">Post a monthly project</h3>
+      {err && <ErrorBanner message={err} />}
+      <div className="space-y-4">
+        <Field label="Cohort">
+          <select className={inputClass} value={cohortId} onChange={(e) => setCohortId(e.target.value)}>
+            <option value="">Select cohort</option>
+            {cohorts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </Field>
+        <Field label="Stage">
+          <select className={inputClass} value={stage} onChange={(e) => setStage(e.target.value)}>
+            <option value="stage_1">Month 1</option>
+            <option value="stage_2">Month 2</option>
+            <option value="stage_3">Month 3</option>
+          </select>
+        </Field>
+        <Field label="Title">
+          <input type="text" className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Build a Calculator App" />
+        </Field>
+        <Field label="Description / brief">
+          <textarea className={inputClass} rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What should students build?" />
+        </Field>
+        <Field label="Due date (optional)">
+          <input type="date" className={inputClass} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+        </Field>
+        <PrimaryButton onClick={handlePost} disabled={saving} className="w-full justify-center">
+          {saving ? 'Posting…' : 'Post project'}
+        </PrimaryButton>
+      </div>
+    </Card>
+  );
+}
+
+function RateSubmissionModal({ submission, onClose, onRate }) {
+  const [rating, setRating] = useState(submission.tutor_rating || 0);
+  const [feedback, setFeedback] = useState(submission.tutor_feedback || '');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const handleSave = async () => {
+    setSaving(true); setErr('');
+    try {
+      await onRate(submission.id, rating, feedback);
+      onClose();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+        <h3 className="text-slate-900 font-bold text-base mb-1">{submission.title}</h3>
+        <p className="text-slate-400 text-xs mb-4">{submission.student_name}</p>
+        {err && <ErrorBanner message={err} />}
+        <div className="space-y-4">
+          <Field label="Rating (1–5)">
+            <div className="flex items-center gap-1.5">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} onClick={() => setRating(n)} className={n <= rating ? 'text-amber-400 text-2xl' : 'text-slate-200 text-2xl'}>★</button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Feedback">
+            <textarea className={inputClass} rows={3} value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="Leave feedback for the student…" />
+          </Field>
+          <div className="flex gap-2 pt-2">
+            <SecondaryButton className="flex-1 justify-center" onClick={onClose}>Cancel</SecondaryButton>
+            <PrimaryButton className="flex-1 justify-center" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : 'Save rating'}
+            </PrimaryButton>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProjectsTab({ token, cohorts }) {
+  const [subTab, setSubTab] = useState('post');
+  const briefsData = useTutorCapstoneProjects(token);
+  const submissionsData = useTutorClassProjects(token);
+  const [ratingSubmission, setRatingSubmission] = useState(null);
+
+  const subTabs = [
+    { key: 'post', label: 'Post Project' },
+    { key: 'submissions', label: 'Submissions' },
+  ];
+
+  return (
+    <div>
+      <PageHeader title="Projects" subtitle="Post monthly projects and rate student submissions">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {subTabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setSubTab(t.key)}
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${subTab === t.key
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </PageHeader>
+
+      {subTab === 'post' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <PostProjectForm token={token} cohorts={cohorts} onPosted={briefsData.refresh} />
+
+          <div>
+            <h3 className="text-slate-900 font-bold text-sm mb-3">Previously posted</h3>
+            <ErrorBanner message={briefsData.error} />
+            {briefsData.loading ? (
+              <Spinner text="Loading…" />
+            ) : briefsData.items.length === 0 ? (
+              <Card><EmptyState title="No projects posted yet" hint="Projects you post will show up here." /></Card>
+            ) : (
+              <div className="space-y-3">
+                {briefsData.items.map((p) => (
+                  <Card key={p.id} className="p-4">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-slate-900 font-semibold text-sm">{p.title}</p>
+                      <Pill color="blue">{p.stage_label}</Pill>
+                    </div>
+                    <p className="text-slate-400 text-xs">{p.cohort_name}</p>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {subTab === 'submissions' && (
+        <div>
+          <ErrorBanner message={submissionsData.error} />
+          {submissionsData.loading ? (
+            <Spinner text="Loading submissions…" />
+          ) : submissionsData.items.length === 0 ? (
+            <Card><EmptyState title="No submissions yet" hint="Student submissions against your posted projects will show up here." /></Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {submissionsData.items.map((s) => (
+                <Card key={s.id} className="p-5">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <p className="text-slate-900 font-bold text-[15px]">{s.title}</p>
+                      <p className="text-slate-400 text-xs mt-0.5">{s.student_name} · {s.capstone_project_title}</p>
+                    </div>
+                    {s.tutor_rating != null ? (
+                      <Pill color="emerald">{s.tutor_rating}/5</Pill>
+                    ) : (
+                      <Pill color="amber">Unrated</Pill>
+                    )}
+                  </div>
+                  {s.description && <p className="text-slate-500 text-xs mb-3 line-clamp-2">{s.description}</p>}
+                  <SecondaryButton onClick={() => setRatingSubmission(s)} className="w-full justify-center">
+                    {s.tutor_rating != null ? 'Edit rating' : 'Rate submission'}
+                  </SecondaryButton>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {ratingSubmission && (
+        <RateSubmissionModal
+          submission={ratingSubmission}
+          onClose={() => setRatingSubmission(null)}
+          onRate={submissionsData.rateSubmission}
         />
       )}
     </div>
@@ -1209,7 +1520,9 @@ function ProfileTab({ tutor }) {
 // Sidebar + top bar
 // ═══════════════════════════════════════════════════════════════════════════
 
-function Sidebar({ open, onClose, tab, setTab }) {
+function Sidebar({ open, onClose, tab, setTab, studentsSubTab, setStudentsSubTab }) {
+  const [studentsExpanded, setStudentsExpanded] = useState(false);
+
   return (
     <>
       {open && <div onClick={onClose} className="fixed inset-0 bg-black/30 z-40 lg:hidden" />}
@@ -1235,6 +1548,54 @@ ${open ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         <nav className="flex-1 px-2.5 pt-3 space-y-0.5 overflow-y-auto pb-4">
           {NAV.map((item) => {
             const active = tab === item.key;
+
+            if (item.key === 'students') {
+              return (
+                <div key={item.key}>
+                  <button
+                    onClick={() => {
+                      setTab('students');
+                      setStudentsExpanded((v) => !v);
+                    }}
+                    className={`w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-colors ${active ? 'bg-white text-[#0057E7] font-semibold' : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'}`}
+                  >
+                    <Icon path={item.icon} size={18} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    <svg
+                      className={`transition-transform ${studentsExpanded ? 'rotate-180' : ''}`}
+                      width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+
+                  {studentsExpanded && (
+                    <div className="ml-8 mt-0.5 space-y-0.5">
+                      {[
+                        { key: 'my_students', label: 'My Students' },
+                        { key: 'projects', label: 'Projects' },
+                      ].map((sub) => (
+                        <button
+                          key={sub.key}
+                          onClick={() => {
+                            setTab('students');
+                            setStudentsSubTab(sub.key);
+                            onClose();
+                          }}
+                          className={`w-full text-left text-[12.5px] px-3 py-1.5 rounded-md transition ${studentsSubTab === sub.key && tab === 'students'
+                            ? 'text-white font-semibold bg-white/[0.12]'
+                            : 'text-slate-400 hover:bg-white/10 hover:text-white'
+                            }`}
+                        >
+                          {sub.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <button
                 key={item.key}
@@ -1421,6 +1782,7 @@ export default function TutorPortalPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [tab, setTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [studentsSubTab, setStudentsSubTab] = useState('my_students');
 
   useEffect(() => {
     const t = localStorage.getItem('access');
@@ -1482,7 +1844,14 @@ export default function TutorPortalPage() {
 
   return (
     <div className="min-h-screen flex bg-slate-50">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} />
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        tab={tab}
+        setTab={setTab}
+        studentsSubTab={studentsSubTab}
+        setStudentsSubTab={setStudentsSubTab}
+      />
       <div className="flex-1 flex flex-col min-h-screen">
         <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} tutor={tutor} />
         <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto pb-24">
@@ -1494,7 +1863,7 @@ export default function TutorPortalPage() {
               <CohortsTab token={token} cohorts={cohortsData.cohorts} loading={cohortsData.loading} error={cohortsData.error} />
             )}
             {tab === 'students' && (
-              <StudentsTab token={token} studentsData={studentsData} />
+              <StudentsTab token={token} studentsData={studentsData} cohortsData={cohortsData} subTab={studentsSubTab} />
             )}
             {tab === 'messages' && <MessageTab />}
             {tab === 'queries' && (

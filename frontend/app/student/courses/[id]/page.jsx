@@ -1,9 +1,8 @@
 'use client';
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 // ─── Shared UI (matches /student dashboard) ────────────────────────────────
@@ -66,6 +65,29 @@ function ErrorBanner({ message }) {
   );
 }
 
+function PrimaryButton({ children, className = '', ...props }) {
+  return (
+    <button
+      {...props}
+      className={`bg-[#0057E7] hover:bg-[#0A66FF] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-md
+        shadow-sm hover:shadow-md transition-all duration-150 active:scale-[0.97] ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SecondaryButton({ children, className = '', ...props }) {
+  return (
+    <button
+      {...props}
+      className={`bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-medium px-4 py-2.5
+        rounded-md border border-slate-200 transition-all duration-150 active:scale-[0.97] ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
 function PageHeader({ title, subtitle, children }) {
   return (
     <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
@@ -177,14 +199,258 @@ function ClassesSection({ classes }) {
 
 // ─── Projects Section (placeholder — backend not built yet) ───────────────
 
-function ProjectsSection() {
+// ─── Projects Section ────────────────────────────────────────────────────
+
+function useCohortCapstoneProjects(token, courseId) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!token || !courseId) return;
+    (async () => {
+      setLoading(true); setError('');
+      try {
+        const res = await fetch(`${API_BASE}/api/cohorts/my-cohort-capstone-projects/?course=${courseId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Could not load this month\'s projects.');
+        setItems(await res.json());
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token, courseId]);
+
+  return { items, loading, error };
+}
+
+function useMyClassProjects(token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    if (!token) return;
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/class-projects/mine/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load your submissions.');
+      setItems(await res.json());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { items, loading, error, refresh };
+}
+
+function AttemptProjectModal({ capstoneProject, token, onClose, onSubmitted }) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [techStack, setTechStack] = useState('');
+  const [repoUrl, setRepoUrl] = useState('');
+  const [liveUrl, setLiveUrl] = useState('');
+  const [coverImage, setCoverImage] = useState(null);
+  const [attachment, setAttachment] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    const handleKey = (e) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', handleKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
+
+  const handleSubmit = async () => {
+    if (!title.trim() || !description.trim()) {
+      setError('Title and description are required.');
+      return;
+    }
+    setLoading(true); setError('');
+    try {
+      const formData = new FormData();
+      formData.append('capstone_project', capstoneProject.id);
+      formData.append('title', title);
+      formData.append('description', description);
+      if (techStack) formData.append('tech_stack', techStack);
+      if (repoUrl) formData.append('repo_url', repoUrl);
+      if (liveUrl) formData.append('live_url', liveUrl);
+      if (coverImage) formData.append('cover_image', coverImage);
+      if (attachment) formData.append('attachment', attachment);
+
+      const res = await fetch(`${API_BASE}/api/cohorts/class-projects/mine/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Could not submit your project.');
+      onSubmitted();
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+      <div className="relative w-full max-w-[480px] bg-white border border-slate-200 rounded-xl shadow-2xl ring-1 ring-black/5 overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 sm:px-6 pt-5 pb-4 border-b border-slate-200/80">
+          <div>
+            <p className="text-slate-900 text-[15px] font-bold tracking-tight">Attempt Project</p>
+            <p className="text-slate-400 text-[11px] mt-0.5">{capstoneProject.title}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shrink-0 text-sm">✕</button>
+        </div>
+
+        <div className="px-5 sm:px-6 pt-4 pb-6 space-y-3.5">
+          <ErrorBanner message={error} />
+
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Project title"
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
+
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What did you build?"
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
+
+          <input type="text" value={techStack} onChange={(e) => setTechStack(e.target.value)} placeholder="Tech stack (e.g. Django, Next.js)"
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
+
+          <input type="url" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="Repo URL (optional)"
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
+
+          <input type="url" value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} placeholder="Live URL (optional)"
+            className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
+
+          <div>
+            <p className="text-slate-500 text-[12px] font-medium mb-1.5">Cover image (optional)</p>
+            <input type="file" accept="image/*" onChange={(e) => setCoverImage(e.target.files[0])} className="text-sm" />
+          </div>
+
+          <div>
+            <p className="text-slate-500 text-[12px] font-medium mb-1.5">Attachment (optional)</p>
+            <input type="file" onChange={(e) => setAttachment(e.target.files[0])} className="text-sm" />
+          </div>
+
+          <PrimaryButton onClick={handleSubmit} disabled={loading} className="w-full justify-center mt-2">
+            {loading ? 'Submitting…' : 'Submit Project'}
+          </PrimaryButton>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function CapstoneProjectCard({ capstoneProject, mySubmissions, token, onOpenAttempt }) {
+  const submissionsForThis = mySubmissions.filter((s) => s.capstone_project === capstoneProject.id);
+
   return (
-    <Card>
-      <EmptyState
-        title="Projects coming soon"
-        hint="This month's project and your Capstone project will show up here once we build that piece."
-      />
+    <Card interactive className="p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <p className="text-slate-900 font-semibold text-sm tracking-tight">{capstoneProject.title}</p>
+          <p className="text-slate-400 text-[11px] mt-0.5">{capstoneProject.stage_label}</p>
+        </div>
+        {capstoneProject.due_date && <Pill color="blue">Due {formatDate(capstoneProject.due_date)}</Pill>}
+      </div>
+
+      {capstoneProject.description && (
+        <p className="text-slate-500 text-sm leading-relaxed mt-3 pt-3 border-t border-slate-100">
+          {capstoneProject.description}
+        </p>
+      )}
+
+      <div className="mt-3 pt-3 border-t border-slate-100">
+        <PrimaryButton onClick={() => onOpenAttempt(capstoneProject)}>
+          Attempt Project
+        </PrimaryButton>
+      </div>
+
+      {submissionsForThis.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-slate-100 space-y-2.5">
+          <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold">Your submissions</p>
+          {submissionsForThis.map((s) => (
+            <div key={s.id} className="bg-slate-50 border border-slate-200 rounded-md px-3.5 py-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-slate-800 text-sm font-semibold">{s.title}</p>
+                {s.tutor_rating != null ? (
+                  <Pill color="emerald">Rated {s.tutor_rating}/5</Pill>
+                ) : (
+                  <Pill color="amber">Awaiting review</Pill>
+                )}
+              </div>
+              {s.tutor_feedback && (
+                <p className="text-slate-500 text-xs mt-1.5">{s.tutor_feedback}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </Card>
+  );
+}
+
+function ProjectsSection({ token, courseId }) {
+  const briefs = useCohortCapstoneProjects(token, courseId);
+  const submissions = useMyClassProjects(token);
+  const [attemptingBrief, setAttemptingBrief] = useState(null);
+
+  if (briefs.loading) {
+    return <Spinner text="Loading projects…" />;
+  }
+
+  return (
+    <div>
+      <ErrorBanner message={briefs.error || submissions.error} />
+
+      {briefs.items.length === 0 ? (
+        <Card>
+          <EmptyState title="No projects posted yet" hint="This month's project will show up here once your tutor posts one." />
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {briefs.items.map((cp) => (
+            <CapstoneProjectCard
+              key={cp.id}
+              capstoneProject={cp}
+              mySubmissions={submissions.items}
+              token={token}
+              onOpenAttempt={setAttemptingBrief}
+            />
+          ))}
+        </div>
+      )}
+
+      {attemptingBrief && (
+        <AttemptProjectModal
+          capstoneProject={attemptingBrief}
+          token={token}
+          onClose={() => setAttemptingBrief(null)}
+          onSubmitted={submissions.refresh}
+        />
+      )}
+    </div>
   );
 }
 
@@ -280,7 +546,7 @@ export default function CourseDetailPage() {
         </PageHeader>
 
         {subTab === 'classes' && <ClassesSection classes={classes} />}
-        {subTab === 'projects' && <ProjectsSection />}
+        {subTab === 'projects' && <ProjectsSection token={token} courseId={courseId} />}
       </div>
     </div>
   );

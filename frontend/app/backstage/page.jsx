@@ -564,6 +564,41 @@ function useAdminStudentProjects(token) {
   return { items, loading, error, refresh, toggleFeatured };
 }
 
+function useAdminClassProjects(token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/class-projects/admin/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load monthly projects.');
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  const toggleFeatured = async (submissionId) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/class-projects/admin/${submissionId}/toggle-featured/`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Could not update featured status.');
+    await refresh();
+  };
+
+  return { items, loading, error, refresh, toggleFeatured };
+}
+
 // ─── Student Projects tab ──────────────────────────────────────────────────
 
 function getProjectStudentName(p) {
@@ -680,7 +715,7 @@ function AdminAssessmentTab({ token, cohortLookup }) {
   );
 }
 
-function AdminProjectsTab({ token }) {
+function AdminCapstoneProjectsSubTab({ token }) {
   const projects = useAdminStudentProjects(token);
   const [togglingId, setTogglingId] = useState(null);
   const [actionError, setActionError] = useState('');
@@ -707,7 +742,7 @@ function AdminProjectsTab({ token }) {
 
   return (
     <div>
-      <PageHeader title="Student Projects" subtitle={`${filtered.length} of ${projects.items.length} total`}>
+      <PageHeader subtitle={`${filtered.length} of ${projects.items.length} total`}>
         <div className="flex items-center gap-1.5 flex-wrap">
           {filters.map((f) => (
             <button
@@ -780,6 +815,127 @@ function AdminProjectsTab({ token }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function AdminClassProjectsSubTab({ token }) {
+  const submissions = useAdminClassProjects(token);
+  const [togglingId, setTogglingId] = useState(null);
+  const [actionError, setActionError] = useState('');
+
+  const handleToggleFeatured = async (s) => {
+    setActionError('');
+    setTogglingId(s.id);
+    try {
+      await submissions.toggleFeatured(s.id);
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  return (
+    <div>
+      <PageHeader subtitle={`${submissions.items.length} total`} />
+
+      <ErrorBanner message={submissions.error || actionError} />
+
+      {submissions.loading ? (
+        <Spinner text="Loading monthly projects…" />
+      ) : submissions.items.length === 0 ? (
+        <Card><EmptyState title="No submissions yet" hint="Student submissions against tutor-posted monthly projects will show up here." /></Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {submissions.items.map((s) => (
+            <Card key={s.id} interactive className="p-5">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="min-w-0">
+                  <h3 className="text-slate-900 font-bold text-[15px] leading-tight tracking-tight truncate">{s.title}</h3>
+                  <p className="text-slate-400 text-xs mt-0.5">{s.student_name} · {s.capstone_project_title}</p>
+                  <p className="text-slate-400 text-[11px] mt-0.5">{s.cohort_name}</p>
+                </div>
+                {s.tutor_rating != null ? (
+                  <Pill color="emerald">{s.tutor_rating}/5</Pill>
+                ) : (
+                  <Pill color="amber">Unrated</Pill>
+                )}
+              </div>
+
+              {s.tech_stack && <p className="text-slate-400 text-[11px] mb-2">{s.tech_stack}</p>}
+
+              {s.description && (
+                <p className="text-slate-500 text-sm leading-relaxed mb-3 line-clamp-3">{s.description}</p>
+              )}
+
+              {s.tutor_feedback && (
+                <p className="text-slate-500 text-xs italic mb-3 pt-3 border-t border-slate-100">"{s.tutor_feedback}"</p>
+              )}
+
+              <div className="flex items-center gap-4 mb-3">
+                {s.repo_url && (
+                  <a href={s.repo_url} target="_blank" rel="noopener noreferrer" className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition">
+                    Code →
+                  </a>
+                )}
+                {s.live_url && (
+                  <a href={s.live_url} target="_blank" rel="noopener noreferrer" className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition">
+                    Live →
+                  </a>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <span className="text-slate-400 text-[11px]">{formatDate(s.submitted_at) || '—'}</span>
+                <button
+                  onClick={() => handleToggleFeatured(s)}
+                  disabled={togglingId === s.id}
+                  className={`text-[12px] font-semibold px-3 py-1.5 rounded-md border transition disabled:opacity-40 ${s.is_featured
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                    : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                >
+                  {togglingId === s.id ? 'Saving…' : s.is_featured ? '★ Featured' : 'Feature on homepage'}
+                </button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminProjectsTab({ token }) {
+  const [projectType, setProjectType] = useState('capstone');
+
+  const types = [
+    { key: 'capstone', label: 'End-of-Program' },
+    { key: 'monthly', label: 'Monthly' },
+  ];
+
+  return (
+    <div>
+      <PageHeader title="Student Projects">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {types.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setProjectType(t.key)}
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${projectType === t.key
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </PageHeader>
+
+      {projectType === 'capstone' && <AdminCapstoneProjectsSubTab token={token} />}
+      {projectType === 'monthly' && <AdminClassProjectsSubTab token={token} />}
     </div>
   );
 }
@@ -1940,7 +2096,7 @@ function StudentsTab({ token, tutors, subTab }) {
   const [todayOnly, setTodayOnly] = useState(false);
 
 
-   const filtered = useMemo(() => {
+  const filtered = useMemo(() => {
     let list = students.items;
 
     if (filter === 'assigned') list = list.filter((s) => s.assigned_tutor_detail);
@@ -2209,7 +2365,7 @@ function StudentsTab({ token, tutors, subTab }) {
           )}
         </div>
       )}
-      
+
       {subTab === 'assessment' && (
         <AdminAssessmentTab token={token} cohortLookup={cohortLookup} />
       )}
@@ -3128,75 +3284,75 @@ function Sidebar({ open, onClose, tab, setTab, studentsSubTab, setStudentsSubTab
           style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent' }}
         >
           {NAV.map((item) => {
-  const active = tab === item.key;
+            const active = tab === item.key;
 
-  if (item.key === 'students') {
-    return (
-      <div key={item.key}>
-        <button
-          onClick={() => {
-            setTab('students');
-            setStudentsExpanded((v) => !v);
-          }}
-          className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-all duration-150 ${active
-            ? 'bg-white text-[#0057E7] font-semibold shadow-sm'
-            : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
-            }`}
-        >
-          {active && <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[#0057E7]" />}
-          <NavIcon path={item.icon} />
-          <span className="flex-1 text-left">{item.label}</span>
-          <svg
-            className={`transition-transform ${studentsExpanded ? 'rotate-180' : ''}`}
-            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </button>
+            if (item.key === 'students') {
+              return (
+                <div key={item.key}>
+                  <button
+                    onClick={() => {
+                      setTab('students');
+                      setStudentsExpanded((v) => !v);
+                    }}
+                    className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-all duration-150 ${active
+                      ? 'bg-white text-[#0057E7] font-semibold shadow-sm'
+                      : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
+                      }`}
+                  >
+                    {active && <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[#0057E7]" />}
+                    <NavIcon path={item.icon} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    <svg
+                      className={`transition-transform ${studentsExpanded ? 'rotate-180' : ''}`}
+                      width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
 
-        {studentsExpanded && (
-          <div className="ml-8 mt-0.5 space-y-0.5">
-            {[
-              { key: 'list', label: 'List' },
-              { key: 'assessment', label: 'Assessment' },
-              { key: 'projects', label: 'Projects' },
-            ].map((sub) => (
+                  {studentsExpanded && (
+                    <div className="ml-8 mt-0.5 space-y-0.5">
+                      {[
+                        { key: 'list', label: 'List' },
+                        { key: 'assessment', label: 'Assessment' },
+                        { key: 'projects', label: 'Projects' },
+                      ].map((sub) => (
+                        <button
+                          key={sub.key}
+                          onClick={() => {
+                            setTab('students');
+                            setStudentsSubTab(sub.key);
+                            onClose();
+                          }}
+                          className={`w-full text-left text-[12.5px] px-3 py-1.5 rounded-md transition ${studentsSubTab === sub.key && tab === 'students'
+                            ? 'text-white font-semibold bg-white/[0.12]'
+                            : 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
+                            }`}
+                        >
+                          {sub.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
               <button
-                key={sub.key}
-                onClick={() => {
-                  setTab('students');
-                  setStudentsSubTab(sub.key);
-                  onClose();
-                }}
-                className={`w-full text-left text-[12.5px] px-3 py-1.5 rounded-md transition ${studentsSubTab === sub.key && tab === 'students'
-                  ? 'text-white font-semibold bg-white/[0.12]'
-                  : 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
+                key={item.key}
+                onClick={() => { setTab(item.key); onClose(); }}
+                className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-all duration-150 ${active
+                  ? 'bg-white text-[#0057E7] font-semibold shadow-sm'
+                  : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
                   }`}
               >
-                {sub.label}
+                {active && <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[#0057E7]" />}
+                <NavIcon path={item.icon} />
+                {item.label}
               </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <button
-      key={item.key}
-      onClick={() => { setTab(item.key); onClose(); }}
-      className={`relative w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md transition-all duration-150 ${active
-        ? 'bg-white text-[#0057E7] font-semibold shadow-sm'
-        : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
-        }`}
-    >
-      {active && <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-[#0057E7]" />}
-      <NavIcon path={item.icon} />
-      {item.label}
-    </button>
-  );
-})}
+            );
+          })}
         </nav>
 
         <div className="px-2.5 pb-5 pt-2 border-t border-blue-900/30">
