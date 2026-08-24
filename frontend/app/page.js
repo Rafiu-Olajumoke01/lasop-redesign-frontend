@@ -12,11 +12,11 @@ export default function Home() {
   return (
     <>
       <Hero />
+      <StudentProjects />
       <TrustStrip />
       <WhyChooseUs /> 
       <About />
       <LearnStudyWork />  
-      <StudentProjects />
       <SuccessStories /> 
       <CTA /> 
       {/* <FeaturedPrograms />  */} 
