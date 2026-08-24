@@ -302,8 +302,6 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
         if (value instanceof File) {
           formData.append(key, value);
         } else if (key === 'cohorts' && Array.isArray(value)) {
-          // Many-to-many relationship fields need each ID sent as its own
-          // entry, not one JSON string, or Django rejects it.
           value.forEach((id) => formData.append('cohorts', id));
         } else if (Array.isArray(value) || typeof value === 'object') {
           formData.append(key, JSON.stringify(value));
@@ -333,7 +331,7 @@ function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }
           .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
           .join(' | ');
       } catch {
-        console.error(`${label} save failed (raw response):`, rawText); // <-- full Django traceback lands here
+        console.error(`${label} save failed (raw response):`, rawText);
         details = `HTTP ${res.status} — check browser console for full error`;
       }
       throw new Error(details || 'Save failed. Check the fields and try again.');
@@ -380,10 +378,6 @@ function useDashboardStats(token) {
 }
 
 // ─── Cohorts: today + attendance hooks ─────────────────────────────────────
-//
-// Wired to AdminCohortsTodayView (GET /api/cohorts/today/) and
-// AdminCohortAttendanceView (GET /api/cohorts/<id>/admin-attendance/).
-// Both require an admin/staff JWT — same pattern as useDashboardStats.
 
 function useCohortsToday(token) {
   const [items, setItems] = useState([]);
@@ -436,14 +430,6 @@ function useCohortDetail(token) {
 }
 
 // ─── Promo codes hook ───────────────────────────────────────────────────────
-//
-// Wired to AdminPromoCodeListCreateView (GET/POST /promo-codes/) — this view
-// only supports list + create right now, so there's no toggle-active or
-// delete here yet. Add a detail view (GET/PATCH/DELETE by id) on the backend
-// and wire those in when ready.
-// Confirmed from payments/urls.py: this app's urls are included at /api/
-// directly (not /api/payments/) — matches the existing admin-confirm call
-// at /api/applications/<id>/payments/admin-confirm/ used elsewhere in this file.
 
 const PROMO_BASE = '/api/promo-codes/';
 
@@ -605,7 +591,16 @@ function useAdminClassProjects(token) {
     await refresh();
   };
 
-  return { items, loading, error, refresh, toggleFeatured };
+  const deleteSubmission = async (submissionId) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/class-projects/admin/${submissionId}/`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Could not delete submission.');
+    setItems((prev) => prev.filter((s) => s.id !== submissionId));
+  };
+
+  return { items, loading, error, refresh, toggleFeatured, deleteSubmission };
 }
 
 // ─── Student Projects tab ──────────────────────────────────────────────────
@@ -727,6 +722,8 @@ function AdminAssessmentTab({ token, cohortLookup }) {
 function AdminCapstoneProjectsSubTab({ token }) {
   const projects = useAdminStudentProjects(token);
   const [togglingId, setTogglingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
   const [actionError, setActionError] = useState('');
   const [filter, setFilter] = useState('submitted');
 
@@ -744,6 +741,19 @@ function AdminCapstoneProjectsSubTab({ token }) {
       setActionError(e.message);
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  const handleDelete = async (p) => {
+    setActionError('');
+    setDeletingId(p.id);
+    try {
+      await projects.deleteProject(p.id);
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setDeletingId(null);
+      setConfirmingDeleteId(null);
     }
   };
 
@@ -807,18 +817,46 @@ function AdminCapstoneProjectsSubTab({ token }) {
                 )}
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                <span className="text-slate-400 text-[11px]">{formatDate(p.created_at) || '—'}</span>
-                <button
-                  onClick={() => handleToggleFeatured(p)}
-                  disabled={togglingId === p.id}
-                  className={`text-[12px] font-semibold px-3 py-1.5 rounded-md border transition disabled:opacity-40 ${p.is_featured
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                    : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                    }`}
-                >
-                  {togglingId === p.id ? 'Saving…' : p.is_featured ? '★ Featured' : 'Feature on homepage'}
-                </button>
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
+                <span className="text-slate-400 text-[11px] shrink-0">{formatDate(p.created_at) || '—'}</span>
+
+                <div className="flex items-center gap-2">
+                  {confirmingDeleteId === p.id ? (
+                    <>
+                      <button
+                        onClick={() => handleDelete(p)}
+                        disabled={deletingId === p.id}
+                        className="text-[12px] font-semibold text-rose-600 hover:text-rose-700 transition disabled:opacity-50"
+                      >
+                        {deletingId === p.id ? 'Deleting…' : 'Confirm'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmingDeleteId(null)}
+                        className="text-[12px] font-medium text-slate-400 hover:text-slate-600 transition"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmingDeleteId(p.id)}
+                      className="text-[12px] font-semibold text-rose-500 hover:text-rose-600 transition"
+                    >
+                      Delete
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => handleToggleFeatured(p)}
+                    disabled={togglingId === p.id}
+                    className={`text-[12px] font-semibold px-3 py-1.5 rounded-md border transition disabled:opacity-40 ${p.is_featured
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                      : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                      }`}
+                  >
+                    {togglingId === p.id ? 'Saving…' : p.is_featured ? '★ Featured' : 'Feature on homepage'}
+                  </button>
+                </div>
               </div>
             </Card>
           ))}
@@ -831,6 +869,8 @@ function AdminCapstoneProjectsSubTab({ token }) {
 function AdminClassProjectsSubTab({ token }) {
   const submissions = useAdminClassProjects(token);
   const [togglingId, setTogglingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
   const [actionError, setActionError] = useState('');
 
   const handleToggleFeatured = async (s) => {
@@ -842,6 +882,19 @@ function AdminClassProjectsSubTab({ token }) {
       setActionError(e.message);
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  const handleDelete = async (s) => {
+    setActionError('');
+    setDeletingId(s.id);
+    try {
+      await submissions.deleteSubmission(s.id);
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setDeletingId(null);
+      setConfirmingDeleteId(null);
     }
   };
 
@@ -895,18 +948,46 @@ function AdminClassProjectsSubTab({ token }) {
                 )}
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                <span className="text-slate-400 text-[11px]">{formatDate(s.submitted_at) || '—'}</span>
-                <button
-                  onClick={() => handleToggleFeatured(s)}
-                  disabled={togglingId === s.id}
-                  className={`text-[12px] font-semibold px-3 py-1.5 rounded-md border transition disabled:opacity-40 ${s.is_featured
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                    : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                    }`}
-                >
-                  {togglingId === s.id ? 'Saving…' : s.is_featured ? '★ Featured' : 'Feature on homepage'}
-                </button>
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
+                <span className="text-slate-400 text-[11px] shrink-0">{formatDate(s.submitted_at) || '—'}</span>
+
+                <div className="flex items-center gap-2">
+                  {confirmingDeleteId === s.id ? (
+                    <>
+                      <button
+                        onClick={() => handleDelete(s)}
+                        disabled={deletingId === s.id}
+                        className="text-[12px] font-semibold text-rose-600 hover:text-rose-700 transition disabled:opacity-50"
+                      >
+                        {deletingId === s.id ? 'Deleting…' : 'Confirm'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmingDeleteId(null)}
+                        className="text-[12px] font-medium text-slate-400 hover:text-slate-600 transition"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmingDeleteId(s.id)}
+                      className="text-[12px] font-semibold text-rose-500 hover:text-rose-600 transition"
+                    >
+                      Delete
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => handleToggleFeatured(s)}
+                    disabled={togglingId === s.id}
+                    className={`text-[12px] font-semibold px-3 py-1.5 rounded-md border transition disabled:opacity-40 ${s.is_featured
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                      : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                      }`}
+                  >
+                    {togglingId === s.id ? 'Saving…' : s.is_featured ? '★ Featured' : 'Feature on homepage'}
+                  </button>
+                </div>
               </div>
             </Card>
           ))}
@@ -1135,7 +1216,6 @@ function OverviewTab({ courses, locations, applications, dashboardStats, tutors,
       <div>
         <SectionLabel>Totals</SectionLabel>
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-          {/* Students/Graduates show 0 until backend provides real counts */}
           <OverviewStatCard label="Students" value={0} icon={<GroupIcon />} />
           <OverviewStatCard label="Tutors" value={tutors.loading ? '—' : tutors.items.length} icon={<TutorIcon />} />
           <OverviewStatCard label="Centers" value={locations.items.length} icon={<BuildingIcon />} />
@@ -1767,7 +1847,7 @@ const emptyTutorEdit = {
 };
 
 function TutorsTab({ tutors, cohorts }) {
-  const [modal, setModal] = useState(null); // 'new' | tutor object | null
+  const [modal, setModal] = useState(null);
   const [form, setForm] = useState(emptyTutorCreate);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -1990,7 +2070,7 @@ function TutorsTab({ tutors, cohorts }) {
 
 // ─── Students tab ───────────────────────────────────────────────────────────
 function useApplicationsCohortMap(token) {
-  const [map, setMap] = useState({}); // studentId -> cohort_detail
+  const [map, setMap] = useState({});
   const [cohorts, setCohorts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -2013,7 +2093,6 @@ function useApplicationsCohortMap(token) {
           const studentId = a.student_detail?.id ?? a.student;
           const cohort = a.cohort_detail;
           if (studentId && cohort) {
-            // Keep the most recently created application's cohort per student
             studentToCohort[studentId] = cohort;
             cohortSet.set(cohort.id, cohort);
           }
@@ -2284,7 +2363,6 @@ function StudentsTab({ token, tutors, subTab }) {
             <Card><EmptyState title="No students" hint="Nothing matches this filter yet." /></Card>
           ) : (
             <Card className="overflow-hidden">
-              {/* Mobile: stacked cards */}
               <div className="sm:hidden divide-y divide-slate-100">
                 {filtered.map((s) => (
                   <div
@@ -2312,7 +2390,6 @@ function StudentsTab({ token, tutors, subTab }) {
                 ))}
               </div>
 
-              {/* Desktop: table */}
               <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -2842,8 +2919,6 @@ function ResultsTab({ results, exams, applications }) {
   const [err, setErr] = useState('');
   const [filter, setFilter] = useState('all');
 
-  // No dedicated "list students" endpoint exists yet, so we derive the
-  // student picker from applications data (deduped by student id).
   const students = useMemo(() => {
     const map = new Map();
     applications.items.forEach((a) => {
@@ -2999,7 +3074,7 @@ const emptyPromoForm = { code: '', discount_percent: '' };
 
 function PromoCodesSection({ token }) {
   const promos = usePromoCodes(token);
-  const [modal, setModal] = useState(null); // 'new' | null
+  const [modal, setModal] = useState(null);
   const [form, setForm] = useState(emptyPromoForm);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -3501,10 +3576,8 @@ export default function BackstagePage() {
   const dashboardStats = useDashboardStats(token);
 
   const handleOverviewNavigate = (target) => {
-    // "Manage guests" and "Manage blog" don't have pages yet — route them
-    // to placeholder tabs until those are built.
     if (target === 'guests') setTab('students');
-    if (target === 'blog') setTab('postjob'); // TODO: point this at a real Blog manager once it exists
+    if (target === 'blog') setTab('postjob');
   };
 
   const currentLabel = NAV.find((n) => n.key === tab)?.label || 'Overview';
