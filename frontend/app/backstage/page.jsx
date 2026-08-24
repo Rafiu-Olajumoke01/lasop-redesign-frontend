@@ -561,7 +561,16 @@ function useAdminStudentProjects(token) {
     await refresh();
   };
 
-  return { items, loading, error, refresh, toggleFeatured };
+  const deleteProject = async (projectId) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/projects/admin/${projectId}/`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Could not delete project.');
+    setItems((prev) => prev.filter((p) => p.id !== projectId));
+  };
+
+  return { items, loading, error, refresh, toggleFeatured, deleteProject };
 }
 
 function useAdminClassProjects(token) {
