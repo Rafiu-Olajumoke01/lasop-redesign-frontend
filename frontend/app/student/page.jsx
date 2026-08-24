@@ -180,9 +180,6 @@ function ManagerCard({ title, onClick, icon }) {
   );
 }
 
-// Same visual language as ManagerCard, but non-interactive (no chevron, no
-// onClick) since assigned cohorts aren't a navigation target — just a
-// display of which cohort(s) the student has been placed in.
 function InfoRow({ title, subtitle, icon }) {
   return (
     <div className="flex items-center gap-3 bg-white border border-slate-200/80 rounded-md px-4 py-3.5 w-full">
@@ -857,16 +854,6 @@ function AssignedTutorCard({ tutor }) {
 }
 
 // ─── Assigned Cohorts Section ───────────────────────────────────────────────
-//
-// One row per enrolled course that already has a cohort assigned
-// (app.cohort_detail, the same object already used to build cohortIds
-// below). Styled like ManagerCard (icon box + label) since that's the look
-// Adejoke wants here — just without the click affordance, since there's no
-// dedicated cohort page to land on yet.
-//
-// ASSUMPTION: showing `cohort_detail.name` as the cohort's display name.
-// If the serializer names this field differently (e.g. `title`,
-// `cohort_name`), swap the one reference below.
 
 function AssignedCohortsSection({ applications }) {
   const withCohort = applications.filter((a) => a.cohort_detail);
@@ -895,10 +882,6 @@ function AssignedCohortsSection({ applications }) {
 }
 
 // ─── Today's Class Section ──────────────────────────────────────────────────
-//
-// Calls /api/cohorts/my-classes/?course=<id> once per enrolled course
-// (that view resolves the student's application -> cohort internally) and
-// collects the `today` sessions from each response.
 
 function useTodayClasses(token, applications) {
   const appsWithCourse = applications.filter((a) => a.course);
@@ -988,11 +971,6 @@ function TodayClassSection({ token, applications }) {
 }
 
 // ─── Capstone Projects Section ──────────────────────────────────────────────
-//
-// Calls /api/cohorts/my-capstone-projects/?course=<id> once per enrolled
-// course (that view resolves the student's application -> cohort
-// internally, same pattern as useTodayClasses) and collects the flat list
-// of capstone projects from each response.
 
 function useCapstoneProjects(token, applications) {
   const appsWithCourse = applications.filter((a) => a.course);
@@ -1188,7 +1166,6 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
 }
 
 // ─── Pay Now (Overview) ─────────────────────────────────────────────────────
-
 
 function PayNowCard({ app, token, openPayment, setOpenPayment, onPaymentUpdate }) {
   const isPaymentOpen = openPayment === app.id;
@@ -1451,9 +1428,6 @@ function PaymentsTab({ applications }) {
 }
 
 // ─── Classwork tab ────────────────────────────────────────────────────────────
-//
-// Merges exams (labelled "Classwork" for students) with the student's own
-// results. A classwork item with no matching result yet shows as "Pending".
 
 function useClasswork(token, cohortIds) {
   const [classwork, setClasswork] = useState([]);
@@ -1775,6 +1749,9 @@ function ProjectCard({ project, onSubmit }) {
           <p className="text-slate-900 font-semibold text-sm tracking-tight truncate">
             {project.title}
           </p>
+          {project.project_type && (
+            <p className="text-slate-400 text-[11px] mt-0.5 capitalize">{project.project_type}</p>
+          )}
           {project.tech_stack && (
             <p className="text-slate-400 text-[11px] mt-0.5">{project.tech_stack}</p>
           )}
@@ -1853,6 +1830,7 @@ function ProjectsTab({ token }) {
 
 function NewProjectModal({ token, onClose, onCreated }) {
   const [title, setTitle] = useState('');
+  const [projectType, setProjectType] = useState('capstone');
   const [description, setDescription] = useState('');
   const [techStack, setTechStack] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
@@ -1884,6 +1862,7 @@ function NewProjectModal({ token, onClose, onCreated }) {
     try {
       const formData = new FormData();
       formData.append('title', title);
+      formData.append('project_type', projectType);
       formData.append('description', description);
       if (techStack) formData.append('tech_stack', techStack);
       if (repoUrl) formData.append('repo_url', repoUrl);
@@ -1923,6 +1902,34 @@ function NewProjectModal({ token, onClose, onCreated }) {
 
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Project title"
             className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
+
+          <div>
+            <p className="text-slate-500 text-[12px] font-medium mb-1.5">Project type</p>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                <input
+                  type="radio"
+                  name="project_type"
+                  value="capstone"
+                  checked={projectType === 'capstone'}
+                  onChange={() => setProjectType('capstone')}
+                  className="accent-[#0057E7]"
+                />
+                Capstone
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                <input
+                  type="radio"
+                  name="project_type"
+                  value="monthly"
+                  checked={projectType === 'monthly'}
+                  onChange={() => setProjectType('monthly')}
+                  className="accent-[#0057E7]"
+                />
+                Monthly
+              </label>
+            </div>
+          </div>
 
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What did you build?"
             className="w-full bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400" />
@@ -2053,8 +2060,6 @@ export default function DashboardPage() {
   const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`;
   const currentLabel = NAV.find((n) => n.key === tab)?.label || 'Overview';
 
-  // Cohort IDs the student belongs to, derived from their applications —
-  // used to fetch classwork scoped to the right cohort(s).
   const cohortIds = useMemo(
     () => [...new Set(applications.map((a) => a.cohort_detail?.id).filter(Boolean))],
     [applications]
