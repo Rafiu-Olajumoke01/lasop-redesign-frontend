@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import GuardianGateModal from './../../components/GuardianGateModal';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -298,6 +299,8 @@ const NAV = [
 ];
 
 // ─── Sidebar ────────────────────────────────────────────────────────────────
+// NOTE: Sidebar does NOT receive user/token/setUser as props, and does not
+// need to — the guardian gate modal lives in DashboardPage below, not here.
 
 function Sidebar({ open, onClose, tab, setTab, onLogout }) {
   return (
@@ -458,14 +461,6 @@ function PromoCodeBox({ onApply, applying, appliedCode, discountPercent, promoEr
 }
 
 // ─── Payment Transfer Modal (Manual Bank Transfer Flow) ────────────────────
-//
-// Rendered via createPortal straight into document.body. Without this, the
-// modal was mounting nested inside <Card interactive> in CourseCard — and
-// Card's hover:-translate-y-[1px] transform makes that Card a CSS
-// "containing block" for any position:fixed descendant while hovered, so
-// the modal was getting trapped/squished inside the small course card
-// instead of covering the screen. Same fix pattern already used in
-// ApplyModal.jsx.
 
 function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmitted }) {
   const [step, setStep] = useState('choose');
@@ -704,7 +699,6 @@ function PaymentTransfer({ applicationId, authToken, totalFee, onClose, onSubmit
 
           {step === 'bank_details' && (
             <div className="space-y-4">
-              {/* Promo code — only offered for full payment, since discount applies to the course fee */}
               {paymentType === 'full' && (
                 <PromoCodeBox
                   onApply={handleApplyPromo}
@@ -2125,6 +2119,8 @@ function AssessmentsTab({ token }) {
 }
 
 // ─── Page shell ────────────────────────────────────────────────────────────
+// This is the ONLY place GuardianGateModal is rendered — it needs user,
+// token, and setUser, all of which are declared as state right below.
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -2214,6 +2210,10 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen flex bg-slate-50">
+      {user && !(user.guardian_name && user.guardian_email) && (
+        <GuardianGateModal user={user} token={token} onUserUpdate={setUser} />
+      )}
+
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} onLogout={handleLogout} />
 
       <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
