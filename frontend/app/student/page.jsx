@@ -809,7 +809,7 @@ function CertificateCard({ certificate }) {
       </div>
 
       {isReady ? (
-        <a
+        
           href={certificate.file}
           target="_blank"
           rel="noopener noreferrer"
@@ -1160,7 +1160,7 @@ function CapstoneProjectCard({ project }) {
           <p className="text-slate-400 text-xs">Due {formatDate(project.due_date)}</p>
         )}
         {project.attachment && (
-          <a
+          
             href={project.attachment}
             target="_blank"
             rel="noopener noreferrer"
@@ -2209,14 +2209,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="h-screen flex bg-slate-50 overflow-hidden">
       {user && !(user.guardian_name && user.guardian_email) && (
         <GuardianGateModal user={user} token={token} onUserUpdate={setUser} />
       )}
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} onLogout={handleLogout} />
 
-      <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden lg:ml-0">
         <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} initials={initials} />
 
         <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto pb-24">
