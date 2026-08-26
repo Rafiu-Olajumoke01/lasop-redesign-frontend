@@ -866,8 +866,12 @@ function GuardianDetailsBanner({ user, onFocusForm }) {
 }
 
 function GuardianDetailsCard({ user, token, onUserUpdate }) {
+  const hasGuardianDetails = !!(user?.guardian_name && user?.guardian_email);
+
+  const [editing, setEditing] = useState(!hasGuardianDetails);
   const [guardianName, setGuardianName] = useState(user?.guardian_name || '');
   const [guardianEmail, setGuardianEmail] = useState(user?.guardian_email || '');
+  const [guardianPhone, setGuardianPhone] = useState(user?.guardian_phone || '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState('');
@@ -878,11 +882,20 @@ function GuardianDetailsCard({ user, token, onUserUpdate }) {
       const res = await fetch(`${API_BASE}/api/users/profile/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ guardian_name: guardianName, guardian_email: guardianEmail }),
+        body: JSON.stringify({
+          guardian_name: guardianName,
+          guardian_email: guardianEmail,
+          guardian_phone: guardianPhone,
+        }),
       });
-      if (!res.ok) throw new Error('Could not save guardian details.');
-      onUserUpdate(await res.json());
+      const data = await res.json();
+      if (!res.ok) {
+        const firstError = Object.values(data)[0];
+        throw new Error(Array.isArray(firstError) ? firstError[0] : 'Could not save guardian details.');
+      }
+      onUserUpdate(data);
       setSaved(true);
+      setEditing(false);
       setTimeout(() => setSaved(false), 2200);
     } catch (e) {
       setErr(e.message);
@@ -893,29 +906,81 @@ function GuardianDetailsCard({ user, token, onUserUpdate }) {
 
   return (
     <Card className="p-4 sm:p-5 mb-5" id="guardian-details-card">
-      <p className="text-slate-900 font-semibold text-sm tracking-tight mb-1">Parent / Guardian details</p>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-slate-900 font-semibold text-sm tracking-tight">Parent / Guardian details</p>
+        {!editing && (
+          <button
+            onClick={() => setEditing(true)}
+            className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition"
+          >
+            Edit
+          </button>
+        )}
+      </div>
       <p className="text-slate-400 text-[11px] mb-3.5">We'll use this to keep them updated on your progress.</p>
       {saved && <p className="text-emerald-600 text-xs font-medium mb-2.5">Saved ✓</p>}
       <ErrorBanner message={err} />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
-        <input
-          type="text"
-          value={guardianName}
-          onChange={(e) => setGuardianName(e.target.value)}
-          placeholder="Guardian name"
-          className="bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400"
-        />
-        <input
-          type="email"
-          value={guardianEmail}
-          onChange={(e) => setGuardianEmail(e.target.value)}
-          placeholder="Guardian email"
-          className="bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400"
-        />
-      </div>
-      <PrimaryButton onClick={handleSave} disabled={saving}>
-        {saving ? 'Saving…' : 'Save guardian details'}
-      </PrimaryButton>
+
+      {editing ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
+            <input
+              type="text"
+              value={guardianName}
+              onChange={(e) => setGuardianName(e.target.value)}
+              placeholder="Guardian name"
+              className="bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400"
+            />
+            <input
+              type="email"
+              value={guardianEmail}
+              onChange={(e) => setGuardianEmail(e.target.value)}
+              placeholder="Guardian email"
+              className="bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400"
+            />
+            <input
+              type="tel"
+              value={guardianPhone}
+              onChange={(e) => setGuardianPhone(e.target.value)}
+              placeholder="Guardian phone number"
+              className="bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 sm:col-span-2"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <PrimaryButton onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : 'Save guardian details'}
+            </PrimaryButton>
+            {hasGuardianDetails && (
+              <SecondaryButton
+                onClick={() => {
+                  setEditing(false);
+                  setGuardianName(user?.guardian_name || '');
+                  setGuardianEmail(user?.guardian_email || '');
+                  setGuardianPhone(user?.guardian_phone || '');
+                  setErr('');
+                }}
+              >
+                Cancel
+              </SecondaryButton>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1 font-bold">Name</p>
+            <p className="text-slate-800 text-sm font-medium">{user.guardian_name}</p>
+          </div>
+          <div>
+            <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1 font-bold">Email</p>
+            <p className="text-slate-800 text-sm font-medium">{user.guardian_email}</p>
+          </div>
+          <div>
+            <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1 font-bold">Phone</p>
+            <p className="text-slate-800 text-sm font-medium">{user.guardian_phone || '—'}</p>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
