@@ -853,6 +853,73 @@ function AssignedTutorCard({ tutor }) {
   );
 }
 
+// ─── Guardian Details ───────────────────────────────────────────────────────
+
+function GuardianDetailsBanner({ user, onFocusForm }) {
+  if (!user || (user.guardian_name && user.guardian_email)) return null;
+  return (
+    <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3 mb-6 flex-wrap">
+      <span>Please add your parent/guardian's name and email so we can keep them updated.</span>
+      <button onClick={onFocusForm} className="text-amber-900 font-semibold underline shrink-0">Add now</button>
+    </div>
+  );
+}
+
+function GuardianDetailsCard({ user, token, onUserUpdate }) {
+  const [guardianName, setGuardianName] = useState(user?.guardian_name || '');
+  const [guardianEmail, setGuardianEmail] = useState(user?.guardian_email || '');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState('');
+
+  const handleSave = async () => {
+    setSaving(true); setErr(''); setSaved(false);
+    try {
+      const res = await fetch(`${API_BASE}/api/users/profile/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ guardian_name: guardianName, guardian_email: guardianEmail }),
+      });
+      if (!res.ok) throw new Error('Could not save guardian details.');
+      onUserUpdate(await res.json());
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="p-4 sm:p-5 mb-5" id="guardian-details-card">
+      <p className="text-slate-900 font-semibold text-sm tracking-tight mb-1">Parent / Guardian details</p>
+      <p className="text-slate-400 text-[11px] mb-3.5">We'll use this to keep them updated on your progress.</p>
+      {saved && <p className="text-emerald-600 text-xs font-medium mb-2.5">Saved ✓</p>}
+      <ErrorBanner message={err} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
+        <input
+          type="text"
+          value={guardianName}
+          onChange={(e) => setGuardianName(e.target.value)}
+          placeholder="Guardian name"
+          className="bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400"
+        />
+        <input
+          type="email"
+          value={guardianEmail}
+          onChange={(e) => setGuardianEmail(e.target.value)}
+          placeholder="Guardian email"
+          className="bg-white border border-slate-300 focus:border-[#0057E7] focus:ring-2 focus:ring-[#0057E7]/15 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400"
+        />
+      </div>
+      <PrimaryButton onClick={handleSave} disabled={saving}>
+        {saving ? 'Saving…' : 'Save guardian details'}
+      </PrimaryButton>
+    </Card>
+  );
+}
+
 // ─── Assigned Cohorts Section ───────────────────────────────────────────────
 
 function AssignedCohortsSection({ applications }) {
@@ -1238,7 +1305,7 @@ function PayNowSection({ applications, token, openPayment, setOpenPayment, onPay
 
 // ─── Overview tab ───────────────────────────────────────────────────────────
 
-function OverviewTab({ user, applications, token, openPayment, setOpenPayment, onNavigate, onPaymentUpdate }) {
+function OverviewTab({ user, applications, token, openPayment, setOpenPayment, onNavigate, onPaymentUpdate, onUserUpdate }) {
   const count = applications.length;
   const onlineCount = applications.filter((a) => a.mode_of_learning === 'online').length;
   const physicalCount = applications.filter((a) => a.mode_of_learning === 'physical').length;
@@ -1269,6 +1336,11 @@ function OverviewTab({ user, applications, token, openPayment, setOpenPayment, o
         </div>
       </div>
 
+      <GuardianDetailsBanner
+        user={user}
+        onFocusForm={() => document.getElementById('guardian-details-card')?.scrollIntoView({ behavior: 'smooth' })}
+      />
+
       {(reviewCount > 0 || paidCount > 0) && (
         <div className="flex items-center gap-2 flex-wrap mb-6">
           {reviewCount > 0 && <Pill color="amber">{reviewCount} payment{reviewCount > 1 ? 's' : ''} in review</Pill>}
@@ -1287,6 +1359,8 @@ function OverviewTab({ user, applications, token, openPayment, setOpenPayment, o
       <div className="mb-5">
         <AssignedTutorCard tutor={user?.assigned_tutor_detail} />
       </div>
+
+      <GuardianDetailsCard user={user} token={token} onUserUpdate={onUserUpdate} />
 
       <AssignedCohortsSection applications={applications} />
 
@@ -2093,6 +2167,7 @@ export default function DashboardPage() {
                 setOpenPayment={setOpenPayment}
                 onNavigate={setTab}
                 onPaymentUpdate={handlePaymentUpdate}
+                onUserUpdate={setUser}
               />
             )}
             {tab === 'courses' && (
