@@ -809,7 +809,7 @@ function CertificateCard({ certificate }) {
       </div>
 
       {isReady ? (
-        
+        <a
           href={certificate.file}
           target="_blank"
           rel="noopener noreferrer"
@@ -1160,7 +1160,7 @@ function CapstoneProjectCard({ project }) {
           <p className="text-slate-400 text-xs">Due {formatDate(project.due_date)}</p>
         )}
         {project.attachment && (
-          
+          <a
             href={project.attachment}
             target="_blank"
             rel="noopener noreferrer"
@@ -1170,7 +1170,7 @@ function CapstoneProjectCard({ project }) {
           </a>
         )}
       </div>
-    </Card>
+    </Card >
   );
 }
 
