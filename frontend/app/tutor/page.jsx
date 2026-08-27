@@ -1678,11 +1678,11 @@ function useStudentAssessments(token, studentId) {
 
   useEffect(() => { if (token && studentId) refresh(); }, [token, studentId, refresh]);
 
-  const postAssessment = async (content) => {
+ const postAssessment = async (content, rating) => {
     const res = await fetch(`${API_BASE}/api/cohorts/assessments/tutor/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ student: studentId, content }),
+      body: JSON.stringify({ student: studentId, content, rating: rating || null }),
     });
     if (!res.ok) {
       const text = await res.text();
@@ -1698,6 +1698,7 @@ function useStudentAssessments(token, studentId) {
 function AssessmentModal({ token, student, onClose }) {
   const { assessments, loading, error, postAssessment } = useStudentAssessments(token, student.student_id);
   const [content, setContent] = useState('');
+  const [rating, setRating] = useState(0);
   const [posting, setPosting] = useState(false);
   const [postErr, setPostErr] = useState('');
 
@@ -1708,8 +1709,9 @@ function AssessmentModal({ token, student, onClose }) {
     }
     setPosting(true); setPostErr('');
     try {
-      await postAssessment(content.trim());
+      await postAssessment(content.trim(), rating);
       setContent('');
+      setRating(0);
     } catch (e) {
       setPostErr(e.message);
     } finally {
@@ -1738,7 +1740,24 @@ function AssessmentModal({ token, student, onClose }) {
             value={content}
             onChange={(e) => setContent(e.target.value)}
           />
-          <PrimaryButton className="mt-2" onClick={handlePost} disabled={posting}>
+
+          <div className="mt-3">
+            <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-widest">Rating (optional)</label>
+            <div className="flex items-center gap-1.5">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setRating(n === rating ? 0 : n)}
+                  className={n <= rating ? 'text-amber-400 text-2xl' : 'text-slate-200 text-2xl'}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <PrimaryButton className="mt-3" onClick={handlePost} disabled={posting}>
             {posting ? 'Posting…' : 'Post assessment'}
           </PrimaryButton>
         </div>
@@ -1754,7 +1773,12 @@ function AssessmentModal({ token, student, onClose }) {
             <div className="space-y-3">
               {assessments.map((a) => (
                 <div key={a.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
-                  <p className="text-slate-700 text-sm mb-1">{a.content}</p>
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className="text-slate-700 text-sm">{a.content}</p>
+                    {a.rating != null && (
+                      <span className="text-amber-500 text-xs font-bold shrink-0">{'★'.repeat(a.rating)}</span>
+                    )}
+                  </div>
                   <p className="text-slate-400 text-[11px]">{a.author_name} · {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                   {a.student_response && (
                     <div className="mt-2 pt-2 border-t border-slate-200">
