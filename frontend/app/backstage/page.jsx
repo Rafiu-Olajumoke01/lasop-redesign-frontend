@@ -1602,6 +1602,21 @@ function CohortDetailModal({ cohortId, token, onClose }) {
                     <span className="font-semibold">Outcome:</span> {detail.data.today.session.lesson_outcome}
                   </p>
                 )}
+                {(detail.data.today.session.start_latitude || detail.data.today.session.end_latitude) && (
+                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                    {detail.data.today.session.start_latitude && (
+                      <a href={`https://www.google.com/maps?q=${detail.data.today.session.start_latitude},${detail.data.today.session.start_longitude}`} target="_blank" rel="noopener noreferrer" className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition">
+                        📍 Start location →
+                      </a>
+                    )}
+                    {detail.data.today.session.end_latitude && (
+                      <a href={`https://www.google.com/maps?q=${detail.data.today.session.end_latitude},${detail.data.today.session.end_longitude}`} target="_blank" rel="noopener noreferrer" className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition">
+                        📍 Stop location →
+                      </a>
+                    )}
+                  </div>
+                )}
+
                 <Pill color={detail.data.today.attendance_taken ? 'emerald' : 'amber'}>
                   {detail.data.today.attendance_taken ? 'Attendance taken' : 'Attendance not taken yet'}
                 </Pill>

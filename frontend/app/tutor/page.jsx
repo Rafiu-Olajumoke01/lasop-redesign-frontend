@@ -162,6 +162,17 @@ function useTutorStudents(token) {
 
 // ── Class sessions for a given cohort (tutor's own) ─────────────────────────
 
+function getCurrentPosition() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve({}); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+      () => resolve({}),
+      { timeout: 8000 }
+    );
+  });
+}
+
 function useCohortSessions(token, cohortId) {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -203,11 +214,13 @@ function useCohortSessions(token, cohortId) {
     await refresh();
   };
 
-  const stopSession = async (sessionId) => {
+  const stopSession = async (sessionId, coords = {}) => {
     const res = await fetch(`${API_BASE}/api/cohorts/sessions/${sessionId}/stop/`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(coords),
     });
+
     if (!res.ok) {
       const text = await res.text();
       console.error('Stop session failed:', text);
@@ -772,7 +785,8 @@ function NewSessionModal({ activeTab, onClose, onCreate }) {
     let payload = { ...form };
     if (isToday) {
       const start = nowTimeString();
-      payload = { ...payload, date: todayISODate(), start_time: start, end_time: plusOneHour(start) };
+      const coords = await getCurrentPosition();
+      payload = { ...payload, date: todayISODate(), start_time: start, end_time: plusOneHour(start), ...coords };
     }
 
     setSaving(true); setFormErr('');
@@ -892,7 +906,8 @@ function CohortSessionsView({ token, cohort, onBack }) {
   const handleStop = async (sessionId) => {
     setStoppingId(sessionId); setStopErr('');
     try {
-      await stopSession(sessionId);
+      const coords = await getCurrentPosition();
+      await stopSession(sessionId, coords);
     } catch (e) {
       setStopErr(e.message);
     } finally {
@@ -1678,7 +1693,7 @@ function useStudentAssessments(token, studentId) {
 
   useEffect(() => { if (token && studentId) refresh(); }, [token, studentId, refresh]);
 
- const postAssessment = async (content, rating) => {
+  const postAssessment = async (content, rating) => {
     const res = await fetch(`${API_BASE}/api/cohorts/assessments/tutor/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
