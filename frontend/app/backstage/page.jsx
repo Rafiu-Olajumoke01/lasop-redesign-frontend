@@ -27,9 +27,11 @@ function getCourseTitle(a) {
 }
 
 function getCourseFee(a) {
+  if (a.payment?.amount != null) {
+    return Number(a.payment.amount);
+  }
   return Number(a.course_detail?.fee ?? a.course?.fee ?? a.fee ?? 0);
 }
-
 function formatMoney(n) {
   return `₦${Number(n || 0).toLocaleString()}`;
 }
