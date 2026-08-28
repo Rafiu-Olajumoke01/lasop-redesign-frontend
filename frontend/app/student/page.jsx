@@ -859,10 +859,36 @@ function GuardianDetailsBanner({ user, onFocusForm }) {
   );
 }
 
+function EyeIcon({ open }) {
+  return open ? (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ) : (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a20.3 20.3 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a20.3 20.3 0 01-3.22 4.41M14.12 14.12a3 3 0 11-4.24-4.24" />
+      <path d="M1 1l22 22" />
+    </svg>
+  );
+}
+
+function MaskedField({ label, value, revealed }) {
+  return (
+    <div>
+      <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1 font-bold">{label}</p>
+      <p className="text-slate-800 text-sm font-medium tracking-wider">
+        {revealed ? (value || '—') : '••••••••••'}
+      </p>
+    </div>
+  );
+}
+
 function GuardianDetailsCard({ user, token, onUserUpdate }) {
   const hasGuardianDetails = !!(user?.guardian_name && user?.guardian_email);
 
   const [editing, setEditing] = useState(!hasGuardianDetails);
+  const [revealed, setRevealed] = useState(false);
   const [guardianName, setGuardianName] = useState(user?.guardian_name || '');
   const [guardianEmail, setGuardianEmail] = useState(user?.guardian_email || '');
   const [guardianPhone, setGuardianPhone] = useState(user?.guardian_phone || '');
@@ -903,12 +929,21 @@ function GuardianDetailsCard({ user, token, onUserUpdate }) {
       <div className="flex items-center justify-between mb-1">
         <p className="text-slate-900 font-semibold text-sm tracking-tight">Parent / Guardian details</p>
         {!editing && (
-          <button
-            onClick={() => setEditing(true)}
-            className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition"
-          >
-            Edit
-          </button>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => setRevealed((r) => !r)}
+              className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold hover:text-slate-700 transition"
+            >
+              <EyeIcon open={revealed} />
+              {revealed ? 'Hide' : 'Show'}
+            </button>
+            <button
+              onClick={() => setEditing(true)}
+              className="text-[#0057E7] text-xs font-semibold hover:text-[#0A66FF] transition"
+            >
+              Edit
+            </button>
+          </div>
         )}
       </div>
       <p className="text-slate-400 text-[11px] mb-3.5">We'll use this to keep them updated on your progress.</p>
@@ -961,18 +996,9 @@ function GuardianDetailsCard({ user, token, onUserUpdate }) {
         </>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1 font-bold">Name</p>
-            <p className="text-slate-800 text-sm font-medium">{user.guardian_name}</p>
-          </div>
-          <div>
-            <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1 font-bold">Email</p>
-            <p className="text-slate-800 text-sm font-medium">{user.guardian_email}</p>
-          </div>
-          <div>
-            <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1 font-bold">Phone</p>
-            <p className="text-slate-800 text-sm font-medium">{user.guardian_phone || '—'}</p>
-          </div>
+          <MaskedField label="Name" value={user.guardian_name} revealed={revealed} />
+          <MaskedField label="Email" value={user.guardian_email} revealed={revealed} />
+          <MaskedField label="Phone" value={user.guardian_phone} revealed={revealed} />
         </div>
       )}
     </Card>
