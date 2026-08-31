@@ -696,7 +696,7 @@ function AdminAssessmentTab({ token, cohortLookup }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
-                  {['Student', 'Author', 'Cohort', 'Remark', 'Student response', 'Date'].map((h, i) => (
+                  {['Student', 'Author', 'Cohort', 'Topic', 'What happened', 'Student response', 'Date'].map((h, i) => (
                     <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -707,7 +707,8 @@ function AdminAssessmentTab({ token, cohortLookup }) {
                     <td className="px-5 py-4 text-slate-800 font-semibold">{a.student_name}</td>
                     <td className="px-5 py-4 text-slate-500">{a.author_name}</td>
                     <td className="px-5 py-4 text-slate-500">{a.cohort_name || '—'}</td>
-                    <td className="px-5 py-4 text-slate-600 max-w-xs truncate">{a.content}</td>
+                    <td className="px-5 py-4 text-slate-700 font-medium max-w-[10rem] truncate">{a.assessed_on}</td>
+                    <td className="px-5 py-4 text-slate-600 max-w-xs truncate">{a.student_answer}</td>
                     <td className="px-5 py-4 text-slate-500 max-w-xs truncate">{a.student_response || '—'}</td>
                     <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDate(a.created_at)}</td>
                   </tr>

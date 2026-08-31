@@ -1692,12 +1692,17 @@ function useStudentAssessments(token, studentId) {
   }, [token, studentId]);
 
   useEffect(() => { if (token && studentId) refresh(); }, [token, studentId, refresh]);
-
-  const postAssessment = async (content, rating) => {
+  const postAssessment = async (assessedOn, studentAnswer, tutorObservation, rating) => {
     const res = await fetch(`${API_BASE}/api/cohorts/assessments/tutor/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ student: studentId, content, rating: rating || null }),
+      body: JSON.stringify({
+        student: studentId,
+        assessed_on: assessedOn,
+        student_answer: studentAnswer,
+        tutor_observation: tutorObservation,
+        rating: rating || null,
+      }),
     });
     if (!res.ok) {
       const text = await res.text();
@@ -1706,26 +1711,29 @@ function useStudentAssessments(token, studentId) {
     }
     await refresh();
   };
-
   return { assessments, loading, error, refresh, postAssessment };
 }
 
 function AssessmentModal({ token, student, onClose }) {
   const { assessments, loading, error, postAssessment } = useStudentAssessments(token, student.student_id);
-  const [content, setContent] = useState('');
+  const [assessedOn, setAssessedOn] = useState('');
+  const [studentAnswer, setStudentAnswer] = useState('');
+  const [tutorObservation, setTutorObservation] = useState('');
   const [rating, setRating] = useState(0);
   const [posting, setPosting] = useState(false);
   const [postErr, setPostErr] = useState('');
 
   const handlePost = async () => {
-    if (!content.trim()) {
-      setPostErr('Write something before posting.');
+    if (!assessedOn.trim() || !studentAnswer.trim()) {
+      setPostErr('Fill in the topic and what the student did before posting.');
       return;
     }
     setPosting(true); setPostErr('');
     try {
-      await postAssessment(content.trim(), rating);
-      setContent('');
+      await postAssessment(assessedOn.trim(), studentAnswer.trim(), tutorObservation.trim(), rating);
+      setAssessedOn('');
+      setStudentAnswer('');
+      setTutorObservation('');
       setRating(0);
     } catch (e) {
       setPostErr(e.message);
@@ -1747,16 +1755,38 @@ function AssessmentModal({ token, student, onClose }) {
 
         {postErr && <ErrorBanner message={postErr} />}
 
-        <div className="mb-5">
-          <textarea
-            className={inputClass}
-            rows={3}
-            placeholder="Leave feedback for this student…"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-          />
+        <div className="mb-5 space-y-3">
+          <Field label="What was the student assessed on?">
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="e.g. Loops in JavaScript"
+              value={assessedOn}
+              onChange={(e) => setAssessedOn(e.target.value)}
+            />
+          </Field>
 
-          <div className="mt-3">
+          <Field label="What did the student do/say?">
+            <textarea
+              className={inputClass}
+              rows={3}
+              placeholder="Describe what the student did…"
+              value={studentAnswer}
+              onChange={(e) => setStudentAnswer(e.target.value)}
+            />
+          </Field>
+
+          <Field label="Your observation/recommendation (optional)">
+            <textarea
+              className={inputClass}
+              rows={2}
+              placeholder="Any recommendation or note…"
+              value={tutorObservation}
+              onChange={(e) => setTutorObservation(e.target.value)}
+            />
+          </Field>
+
+          <div>
             <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-widest">Rating (optional)</label>
             <div className="flex items-center gap-1.5">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -1772,7 +1802,7 @@ function AssessmentModal({ token, student, onClose }) {
             </div>
           </div>
 
-          <PrimaryButton className="mt-3" onClick={handlePost} disabled={posting}>
+          <PrimaryButton className="mt-1" onClick={handlePost} disabled={posting}>
             {posting ? 'Posting…' : 'Post assessment'}
           </PrimaryButton>
         </div>
@@ -1789,12 +1819,18 @@ function AssessmentModal({ token, student, onClose }) {
               {assessments.map((a) => (
                 <div key={a.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-slate-700 text-sm">{a.content}</p>
+                    <div>
+                      <p className="text-slate-500 text-[11px] font-semibold uppercase tracking-wide mb-1">{a.assessed_on}</p>
+                      <p className="text-slate-700 text-sm">{a.student_answer}</p>
+                    </div>
                     {a.rating != null && (
                       <span className="text-amber-500 text-xs font-bold shrink-0">{'★'.repeat(a.rating)}</span>
                     )}
                   </div>
-                  <p className="text-slate-400 text-[11px]">{a.author_name} · {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  {a.tutor_observation && (
+                    <p className="text-slate-500 text-xs mt-1.5 italic">{a.tutor_observation}</p>
+                  )}
+                  <p className="text-slate-400 text-[11px] mt-1.5">{a.author_name} · {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                   {a.student_response && (
                     <div className="mt-2 pt-2 border-t border-slate-200">
                       <p className="text-slate-600 text-sm">{a.student_response}</p>
