@@ -612,11 +612,68 @@ function getProjectStudentName(p) {
   const full = `${s.first_name || ''} ${s.last_name || ''}`.trim();
   return full || s.email || 'Unknown student';
 }
+function AssessmentDetailModal({ assessment, onClose }) {
+  return (
+    <Modal title="Assessment details" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3 text-sm pb-3 border-b border-slate-100">
+          <div>
+            <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Student</p>
+            <p className="text-slate-800 font-semibold">{assessment.student_name}</p>
+          </div>
+          <div>
+            <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Author</p>
+            <p className="text-slate-700 font-medium">{assessment.author_name}</p>
+          </div>
+          <div>
+            <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Cohort</p>
+            <p className="text-slate-700 font-medium">{assessment.cohort_name || '—'}</p>
+          </div>
+          <div>
+            <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Date</p>
+            <p className="text-slate-700 font-medium">{formatDate(assessment.created_at) || '—'}</p>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">Topic</p>
+          <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">{assessment.assessed_on || '—'}</p>
+        </div>
+
+        <div>
+          <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">What happened</p>
+          <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">{assessment.student_answer || '—'}</p>
+        </div>
+
+        {assessment.tutor_observation && (
+          <div>
+            <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">Tutor observation</p>
+            <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">{assessment.tutor_observation}</p>
+          </div>
+        )}
+
+        <div>
+          <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">Student response</p>
+          <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">{assessment.student_response || '—'}</p>
+        </div>
+
+        {assessment.rating != null && (
+          <div>
+            <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">Rating</p>
+            <p className="text-slate-800 text-sm font-semibold">{assessment.rating}/5</p>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function AdminAssessmentTab({ token, cohortLookup }) {
   const [cohortFilter, setCohortFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
   const [todayOnly, setTodayOnly] = useState(false);
+  const [viewingAssessment, setViewingAssessment] = useState(null);
 
   const assessments = useAdminAssessments(token, {
     cohort: cohortFilter, year: yearFilter, month: monthFilter, today: todayOnly,
@@ -703,7 +760,11 @@ function AdminAssessmentTab({ token, cohortLookup }) {
               </thead>
               <tbody>
                 {assessments.items.map((a) => (
-                  <tr key={a.id} className="border-b border-slate-100 last:border-0">
+                  <tr
+                    key={a.id}
+                    onClick={() => setViewingAssessment(a)}
+                    className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition cursor-pointer"
+                  >
                     <td className="px-5 py-4 text-slate-800 font-semibold">{a.student_name}</td>
                     <td className="px-5 py-4 text-slate-500">{a.author_name}</td>
                     <td className="px-5 py-4 text-slate-500">{a.cohort_name || '—'}</td>
@@ -717,6 +778,13 @@ function AdminAssessmentTab({ token, cohortLookup }) {
             </table>
           </div>
         </Card>
+      )}
+
+      {viewingAssessment && (
+        <AssessmentDetailModal
+          assessment={viewingAssessment}
+          onClose={() => setViewingAssessment(null)}
+        />
       )}
     </div>
   );
