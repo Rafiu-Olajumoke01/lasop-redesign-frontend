@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import ChatInterface from './../../components/chatinterface/Chatinterface'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -1101,6 +1102,35 @@ function AdminProjectsTab({ token }) {
   );
 }
 
+function AdminMessagesTab({ token }) {
+  const [activeChatId, setActiveChatId] = useState(null);
+
+  const mockChats = [
+    { id: 'all', name: 'All Cohorts', kind: 'all_cohorts', member_count: 42, unread_count: 3, last_message: { text: 'Welcome everyone!', sender_name: 'Admin', created_at: new Date().toISOString() } },
+    { id: 1, name: 'Jan 2026 Set', kind: 'cohort', member_count: 14, unread_count: 0, last_message: { text: 'See you tomorrow', sender_name: 'Ada', created_at: new Date().toISOString() } },
+    { id: 2, name: 'March 2026 Set', kind: 'cohort', member_count: 9, unread_count: 1, last_message: { text: 'Thank you sir', sender_name: 'Bola', created_at: new Date().toISOString() } },
+  ];
+
+  const mockMessages = [
+    { id: 1, text: 'Good morning everyone!', sender_id: 0, sender_name: 'Admin', created_at: new Date(Date.now() - 3600000).toISOString() },
+    { id: 2, text: 'Morning ma!', sender_id: 501, sender_name: 'Ada', created_at: new Date(Date.now() - 1800000).toISOString() },
+  ];
+
+  return (
+    <div>
+      <PageHeader title="Messages" subtitle="Talk to cohorts and staff" />
+      <ChatInterface
+        currentUser={{ id: 0, name: 'Admin' }}
+        chats={mockChats}
+        activeChatId={activeChatId}
+        onSelectChat={setActiveChatId}
+        messages={activeChatId ? mockMessages : []}
+        onSendMessage={(text) => console.log('send:', text)}
+        connectionStatus="connected"
+      />
+    </div>
+  );
+}
 // ─── Overview icons ─────────────────────────────────────────────────────────
 
 function PersonIcon() {
@@ -3718,7 +3748,7 @@ export default function BackstagePage() {
             {tab === 'staffs' && <ComingSoon title="Staffs" />}
             {tab === 'finances' && <FinancesTab applications={applications} token={token} />}
             {tab === 'queries' && <ComingSoon title="Queries" />}
-            {tab === 'messages' && <ComingSoon title="Messages" />}
+            {tab === 'messages' && <AdminMessagesTab token={token} />}
             {tab === 'postjob' && <ComingSoon title="Post Job" />}
           </div>
         </div>
