@@ -617,7 +617,7 @@ function AssessmentDetailModal({ assessment, onClose }) {
   return (
     <Modal title="Assessment details" onClose={onClose}>
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 text-sm pb-3 border-b border-slate-100">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm pb-3 border-b border-slate-100">
           <div>
             <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-0.5">Student</p>
             <p className="text-slate-800 font-semibold">{assessment.student_name}</p>
