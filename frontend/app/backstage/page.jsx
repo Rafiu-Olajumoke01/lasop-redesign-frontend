@@ -744,13 +744,31 @@ function AdminAssessmentTab({ token, cohortLookup }) {
 
       <ErrorBanner message={assessments.error} />
 
-      {assessments.loading ? (
+            {assessments.loading ? (
         <Spinner text="Loading assessments…" />
       ) : assessments.items.length === 0 ? (
         <Card><EmptyState title="No assessments" hint="Nothing matches this filter yet." /></Card>
       ) : (
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="sm:hidden divide-y divide-slate-100">
+            {assessments.items.map((a) => (
+              <div
+                key={a.id}
+                onClick={() => setViewingAssessment(a)}
+                className="p-4 active:bg-slate-50 transition cursor-pointer"
+              >
+                <div className="flex items-start justify-between gap-3 mb-1.5">
+                  <p className="text-slate-800 font-semibold text-sm truncate">{a.student_name}</p>
+                  <span className="text-slate-400 text-[11px] shrink-0">{formatDate(a.created_at)}</span>
+                </div>
+                <p className="text-slate-400 text-xs mb-2">{a.author_name} · {a.cohort_name || '—'}</p>
+                <p className="text-slate-700 text-sm font-medium mb-1 truncate">{a.assessed_on}</p>
+                <p className="text-slate-500 text-xs line-clamp-2">{a.student_answer}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
