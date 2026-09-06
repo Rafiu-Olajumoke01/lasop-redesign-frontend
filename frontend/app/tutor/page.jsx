@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import ChatInterface from './../../components/chatinterface/Chatinterface'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -477,47 +478,40 @@ const NAV = [
 // sub-tab is an honest "coming soon" state for now.
 // ═══════════════════════════════════════════════════════════════════════════
 
-function MessageTab() {
-  const [subTab, setSubTab] = useState('all');
-  const subTabs = [
-    { key: 'all', label: 'All' },
-    { key: 'admin', label: 'Admin' },
-    { key: 'cohorts', label: 'Cohorts' },
-    { key: 'private', label: 'Private' },
+function MessageTab({ tutor, cohorts }) {
+  const [activeChatId, setActiveChatId] = useState(null);
+
+  const mockChats = [
+    { id: 'admin', name: 'Admin', kind: 'admin', member_count: 2, unread_count: 0, last_message: { text: 'Welcome aboard!', sender_name: 'Admin', created_at: new Date().toISOString() } },
+    ...cohorts.map((c) => ({
+      id: c.id,
+      name: c.name,
+      kind: 'cohort',
+      member_count: c.student_count ?? 0,
+      unread_count: 0,
+      last_message: { text: 'No messages yet', sender_name: '', created_at: new Date().toISOString() },
+    })),
   ];
 
-  const hints = {
-    all: 'Every conversation you\u2019re part of will show up here.',
-    admin: 'Your direct conversation with admin will show up here.',
-    cohorts: 'Group chats for your cohorts will show up here.',
-    private: 'One-to-one conversations with students will show up here.',
-  };
+  const mockMessages = [
+    { id: 1, text: 'Good morning!', sender_id: 0, sender_name: 'Admin', created_at: new Date(Date.now() - 3600000).toISOString() },
+  ];
 
   return (
     <div>
-      <PageHeader title="Message" subtitle="Talk to admin and students directly">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {subTabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setSubTab(t.key)}
-              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${subTab === t.key
-                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
-                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
-                }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </PageHeader>
-      <Card>
-        <EmptyState title="Coming soon" hint={hints[subTab]} />
-      </Card>
+      <PageHeader title="Messages" subtitle="Talk to admin and your cohorts" />
+      <ChatInterface
+        currentUser={{ id: 1, name: `${tutor.first_name} ${tutor.last_name}` }}
+        chats={mockChats}
+        activeChatId={activeChatId}
+        onSelectChat={setActiveChatId}
+        messages={activeChatId ? mockMessages : []}
+        onSendMessage={(text) => console.log('send:', text)}
+        connectionStatus="connected"
+      />
     </div>
   );
 }
-
 // ═══════════════════════════════════════════════════════════════════════════
 // Dashboard tab
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1940,7 +1934,7 @@ export default function TutorPortalPage() {
             {tab === 'students' && (
               <StudentsTab token={token} studentsData={studentsData} cohortsData={cohortsData} subTab={studentsSubTab} />
             )}
-            {tab === 'messages' && <MessageTab />}
+            {tab === 'messages' && <MessageTab tutor={tutor} cohorts={cohortsData.cohorts} />}
             {tab === 'queries' && (
               <ComingSoon title="Queries" hint="This will be wired up once the Query model is built on the backend." />
             )}

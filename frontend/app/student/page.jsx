@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import GuardianGateModal from './../../components/GuardianGateModal';
-
+import ChatInterface from './../../components/chatinterface/Chatinterface'
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 // ─── Bank Account Details ──────────────────────────────────────────────────
@@ -296,6 +296,7 @@ const NAV = [
   { key: 'certificate', label: 'Certificate', icon: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></> },
   { key: 'payments', label: 'Payments', icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></> },
   { key: 'projects', label: 'Projects', icon: <><path d="M12 15a4 4 0 100-8 4 4 0 000 8z" /><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" /></> },
+  { key: 'messages', label: 'Messages', icon: <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" /> },
 ];
 
 // ─── Sidebar ────────────────────────────────────────────────────────────────
@@ -2144,6 +2145,51 @@ function AssessmentsTab({ token }) {
   );
 }
 
+function StudentMessagesTab({ user, applications }) {
+  const [activeChatId, setActiveChatId] = useState(null);
+
+  const tutorName = user?.assigned_tutor_detail?.name;
+
+  const mockChats = [
+    tutorName && {
+      id: 'tutor',
+      name: tutorName,
+      kind: 'tutor',
+      member_count: 2,
+      unread_count: 0,
+      last_message: { text: 'Welcome to the course!', sender_name: tutorName, created_at: new Date().toISOString() },
+    },
+    ...applications
+      .filter((a) => a.cohort_detail)
+      .map((a) => ({
+        id: a.cohort_detail.id,
+        name: a.cohort_detail.name,
+        kind: 'cohort',
+        member_count: 0,
+        unread_count: 0,
+        last_message: { text: 'No messages yet', sender_name: '', created_at: new Date().toISOString() },
+      })),
+  ].filter(Boolean);
+
+  const mockMessages = [
+    { id: 1, text: 'Hello!', sender_id: 0, sender_name: tutorName || 'Tutor', created_at: new Date(Date.now() - 3600000).toISOString() },
+  ];
+
+  return (
+    <div>
+      <PageHeader title="Messages" subtitle="Talk to your tutor and cohort" />
+      <ChatInterface
+        currentUser={{ id: 1, name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim() }}
+        chats={mockChats}
+        activeChatId={activeChatId}
+        onSelectChat={setActiveChatId}
+        messages={activeChatId ? mockMessages : []}
+        onSendMessage={(text) => console.log('send:', text)}
+        connectionStatus="connected"
+      />
+    </div>
+  );
+}
 // ─── Page shell ────────────────────────────────────────────────────────────
 // This is the ONLY place GuardianGateModal is rendered — it needs user,
 // token, and setUser, all of which are declared as state right below.
@@ -2276,6 +2322,7 @@ export default function DashboardPage() {
             {tab === 'certificate' && <CertificateTab certificate={user?.certificate} />}
             {tab === 'projects' && <ProjectsTab token={token} />}
             {tab === 'payments' && <PaymentsTab applications={applications} />}
+            {tab === 'messages' && <StudentMessagesTab user={user} applications={applications} />}
           </div>
         </div>
       </div>
