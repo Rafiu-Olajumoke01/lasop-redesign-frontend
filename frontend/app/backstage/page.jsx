@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ChatInterface from './../../components/chatinterface/Chatinterface'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
+const CHAT_API_BASE = 'https://lasop-redesign-backend.onrender.com';
+const CHAT_WS_BASE = 'wss://lasop-redesign-backend.onrender.com';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,6 +47,16 @@ function formatDate(d) {
 
 function slugify(text) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+function decodeToken(token) {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return decoded;
+  } catch {
+    return null;
+  }
 }
 
 // ─── Shared UI (light theme, sharpened) ────────────────────────────────────
@@ -378,6 +391,98 @@ function useDashboardStats(token) {
   useEffect(() => { if (token) refresh(); }, [token, refresh]);
 
   return { stats, loading, error, refresh };
+}
+
+function useChatConversations(token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load chats.');
+      const data = await res.json();
+      const list = (Array.isArray(data) ? data : data.results || []).map((c) => ({
+        id: c.id,
+        name: c.name || c.participants.map((p) => p.full_name || p.username).join(', '),
+        kind: c.conversation_type,
+        member_count: c.participants.length,
+        unread_count: c.unread_count || 0,
+        last_message: c.last_message
+          ? { text: c.last_message.content, sender_name: c.last_message.sender_name, created_at: c.last_message.created_at }
+          : null,
+      }));
+      setItems(list);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  return { items, loading, error, refresh };
+}
+
+function useChatMessages(token, conversationId) {
+  const [messages, setMessages] = useState([]);
+  const [connectionStatus, setConnectionStatus] = useState('connecting');
+  const wsRef = useRef(null);
+
+  useEffect(() => {
+    if (!token || !conversationId) { setMessages([]); return; }
+
+    setConnectionStatus('connecting');
+
+    (async () => {
+      try {
+        const res = await fetch(`${CHAT_API_BASE}/api/chats/conversations/${conversationId}/messages/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setMessages(
+          data.map((m) => ({
+            id: m.id,
+            text: m.content,
+            sender_id: m.sender_id,
+            sender_name: m.sender_name,
+            created_at: m.created_at,
+          }))
+        );
+      } catch {
+        // history fetch failed silently; WebSocket may still connect
+      }
+    })();
+
+    const ws = new WebSocket(`${CHAT_WS_BASE}/ws/chat/${conversationId}/?token=${token}`);
+    wsRef.current = ws;
+
+    ws.onopen = () => setConnectionStatus('connected');
+    ws.onclose = () => setConnectionStatus('offline');
+    ws.onerror = () => setConnectionStatus('offline');
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setMessages((prev) => [
+        ...prev,
+        { id: data.id, text: data.content, sender_id: data.sender_id, sender_name: data.sender_name, created_at: data.created_at },
+      ]);
+    };
+
+    return () => ws.close();
+  }, [token, conversationId]);
+
+  const sendMessage = (text) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ content: text }));
+    }
+  };
+
+  return { messages, sendMessage, connectionStatus };
 }
 
 // ─── Cohorts: today + attendance hooks ─────────────────────────────────────
@@ -1122,30 +1227,29 @@ function AdminProjectsTab({ token }) {
 
 function AdminMessagesTab({ token }) {
   const [activeChatId, setActiveChatId] = useState(null);
+  const decoded = useMemo(() => decodeToken(token), [token]);
+  const currentUser = { id: decoded?.user_id, name: decoded?.full_name || decoded?.username || 'Admin' };
 
-  const mockChats = [
-    { id: 'all', name: 'All Cohorts', kind: 'all_cohorts', member_count: 42, unread_count: 3, last_message: { text: 'Welcome everyone!', sender_name: 'Admin', created_at: new Date().toISOString() } },
-    { id: 1, name: 'Jan 2026 Set', kind: 'cohort', member_count: 14, unread_count: 0, last_message: { text: 'See you tomorrow', sender_name: 'Ada', created_at: new Date().toISOString() } },
-    { id: 2, name: 'March 2026 Set', kind: 'cohort', member_count: 9, unread_count: 1, last_message: { text: 'Thank you sir', sender_name: 'Bola', created_at: new Date().toISOString() } },
-  ];
-
-  const mockMessages = [
-    { id: 1, text: 'Good morning everyone!', sender_id: 0, sender_name: 'Admin', created_at: new Date(Date.now() - 3600000).toISOString() },
-    { id: 2, text: 'Morning ma!', sender_id: 501, sender_name: 'Ada', created_at: new Date(Date.now() - 1800000).toISOString() },
-  ];
+  const conversations = useChatConversations(token);
+  const { messages, sendMessage, connectionStatus } = useChatMessages(token, activeChatId);
 
   return (
     <div>
       <PageHeader title="Messages" subtitle="Talk to cohorts and staff" />
-      <ChatInterface
-        currentUser={{ id: 0, name: 'Admin' }}
-        chats={mockChats}
-        activeChatId={activeChatId}
-        onSelectChat={setActiveChatId}
-        messages={activeChatId ? mockMessages : []}
-        onSendMessage={(text) => console.log('send:', text)}
-        connectionStatus="connected"
-      />
+      <ErrorBanner message={conversations.error} />
+      {conversations.loading ? (
+        <Spinner text="Loading chats…" />
+      ) : (
+        <ChatInterface
+          currentUser={currentUser}
+          chats={conversations.items}
+          activeChatId={activeChatId}
+          onSelectChat={setActiveChatId}
+          messages={activeChatId ? messages : []}
+          onSendMessage={sendMessage}
+          connectionStatus={connectionStatus}
+        />
+      )}
     </div>
   );
 }
