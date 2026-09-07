@@ -485,6 +485,125 @@ function useChatMessages(token, conversationId) {
   return { messages, sendMessage, connectionStatus };
 }
 
+function useAllUsers(token) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      setLoading(true);
+      try {
+        const [tutorsRes, studentsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/tutors/`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/api/users/students/`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        const tutorsData = await tutorsRes.json();
+        const studentsData = await studentsRes.json();
+
+        const tutorList = (Array.isArray(tutorsData) ? tutorsData : tutorsData.results || []).map((t) => ({
+          id: t.user_detail?.id,
+          username: t.user_detail?.email,
+          full_name: `${t.user_detail?.first_name || ''} ${t.user_detail?.last_name || ''}`.trim() || t.user_detail?.email,
+          role: 'Tutor',
+        }));
+
+        const studentList = (Array.isArray(studentsData) ? studentsData : studentsData.results || []).map((s) => ({
+          id: s.id,
+          username: s.email,
+          full_name: `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.email,
+          role: 'Student',
+        }));
+
+        setUsers([...tutorList, ...studentList].filter((u) => u.id));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  return { users, loading };
+}
+
+function NewChatModal({ token, onClose, onCreated }) {
+  const { users, loading } = useAllUsers(token);
+  const [selected, setSelected] = useState([]);
+  const [name, setName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [err, setErr] = useState('');
+
+  const toggleUser = (u) => {
+    setSelected((prev) =>
+      prev.some((p) => p.id === u.id) ? prev.filter((p) => p.id !== u.id) : [...prev, u]
+    );
+  };
+
+  const selectAll = () => setSelected(users);
+  const clearAll = () => setSelected([]);
+
+  const handleCreate = async () => {
+    if (selected.length === 0) { setErr('Pick at least one person.'); return; }
+    setCreating(true); setErr('');
+    try {
+      const res = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          conversation_type: selected.length > 1 ? 'group' : 'direct',
+          name: name || (selected.length > 1 ? 'Group Chat' : selected[0].full_name),
+          participants: selected.map((u) => ({ id: u.id, username: u.username, full_name: u.full_name })),
+        }),
+      });
+      if (!res.ok) throw new Error('Could not create chat.');
+      const data = await res.json();
+      onCreated(data.id);
+      onClose();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <Modal title="New Chat" onClose={onClose}>
+      <div className="space-y-4">
+        {err && <ErrorBanner message={err} />}
+
+        <Field label="Chat name (optional)">
+          <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Everyone" />
+        </Field>
+
+        <Field label={`Participants (${selected.length} selected)`}>
+          <div className="flex gap-2 mb-2">
+            <SecondaryButton type="button" onClick={selectAll}>Select all</SecondaryButton>
+            <SecondaryButton type="button" onClick={clearAll}>Clear</SecondaryButton>
+          </div>
+          <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-md divide-y divide-slate-100">
+            {loading ? (
+              <div className="p-4 text-slate-400 text-sm">Loading users…</div>
+            ) : (
+              users.map((u) => {
+                const checked = selected.some((p) => p.id === u.id);
+                return (
+                  <label key={u.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50">
+                    <input type="checkbox" checked={checked} onChange={() => toggleUser(u)} />
+                    <span className="text-sm text-slate-800">{u.full_name}</span>
+                    <span className="text-xs text-slate-400 ml-auto">{u.role}</span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+        </Field>
+
+        <PrimaryButton className="w-full justify-center" onClick={handleCreate} disabled={creating}>
+          {creating ? 'Creating…' : 'Start chat'}
+        </PrimaryButton>
+      </div>
+    </Modal>
+  );
+}
 // ─── Cohorts: today + attendance hooks ─────────────────────────────────────
 
 function useCohortsToday(token) {
@@ -1227,6 +1346,7 @@ function AdminProjectsTab({ token }) {
 
 function AdminMessagesTab({ token }) {
   const [activeChatId, setActiveChatId] = useState(null);
+  const [showNewChat, setShowNewChat] = useState(false);
   const decoded = useMemo(() => decodeToken(token), [token]);
   const currentUser = { id: decoded?.user_id, name: decoded?.full_name || decoded?.username || 'Admin' };
 
@@ -1235,7 +1355,9 @@ function AdminMessagesTab({ token }) {
 
   return (
     <div>
-      <PageHeader title="Messages" subtitle="Talk to cohorts and staff" />
+      <PageHeader title="Messages" subtitle="Talk to cohorts and staff">
+        <PrimaryButton onClick={() => setShowNewChat(true)}>+ New Chat</PrimaryButton>
+      </PageHeader>
       <ErrorBanner message={conversations.error} />
       {conversations.loading ? (
         <Spinner text="Loading chats…" />
@@ -1248,6 +1370,16 @@ function AdminMessagesTab({ token }) {
           messages={activeChatId ? messages : []}
           onSendMessage={sendMessage}
           connectionStatus={connectionStatus}
+        />
+      )}
+      {showNewChat && (
+        <NewChatModal
+          token={token}
+          onClose={() => setShowNewChat(false)}
+          onCreated={(id) => {
+            conversations.refresh();
+            setActiveChatId(id);
+          }}
         />
       )}
     </div>
