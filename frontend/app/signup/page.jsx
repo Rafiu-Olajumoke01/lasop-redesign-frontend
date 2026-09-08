@@ -54,9 +54,12 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="relative h-screen bg-[#071224] flex items-center justify-center px-4 overflow-hidden">
-      <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] bg-blue-600/20 blur-[120px] rounded-full" />
-      <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] bg-cyan-500/10 blur-[120px] rounded-full" />
+    <main className="relative min-h-screen bg-[#071224] flex items-center justify-center px-4 py-10">
+      {/* decorative glow layer — contained separately so it never clips the form */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] bg-blue-600/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] bg-cyan-500/10 blur-[120px] rounded-full" />
+      </div>
 
       <div className="relative z-10 w-full max-w-md bg-white/5 border border-white/10 rounded-2xl p-6">
         <h1 className="text-xl font-bold text-white mb-0.5">Create an Account</h1>
