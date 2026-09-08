@@ -466,13 +466,12 @@ function useChatMessages(token, conversationId) {
     ws.onclose = () => setConnectionStatus('offline');
     ws.onerror = () => setConnectionStatus('offline');
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setMessages((prev) => [
-        ...prev,
-        { id: data.id, text: data.content, sender_id: data.sender_id, sender_name: data.sender_name, created_at: data.created_at },
-      ]);
-    };
-
+  const data = JSON.parse(event.data);
+  setMessages((prev) => [
+    ...prev,
+    { id: data.id, text: data.content, sender_id: Number(data.sender_id), sender_name: data.sender_name, created_at: data.created_at },
+  ]);
+};
     return () => ws.close();
   }, [token, conversationId]);
 

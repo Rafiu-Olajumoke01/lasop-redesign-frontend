@@ -565,7 +565,7 @@ function useChatMessages(token, conversationId) {
       const data = JSON.parse(event.data);
       setMessages((prev) => [
         ...prev,
-        { id: data.id, text: data.content, sender_id: data.sender_id, sender_name: data.sender_name, created_at: data.created_at },
+        { id: data.id, text: data.content, sender_id: Number(data.sender_id), sender_name: data.sender_name, created_at: data.created_at },
       ]);
     };
 
