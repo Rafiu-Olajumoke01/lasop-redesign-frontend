@@ -276,7 +276,7 @@ function ConversationView({ chat, messages, currentUser, onSend, onBack, connect
 
   return (
     <div className="flex flex-col h-full relative">
-      <div className="flex items-center gap-3 px-4 py-2.5 shrink-0 z-10" style={{ background: HEADER_TEAL }}>
+      <div className="sticky top-0 flex items-center gap-3 px-4 py-2.5 shrink-0 z-20" style={{ background: HEADER_TEAL }}>
         <button onClick={onBack} className="text-white md:hidden" aria-label="Back to chats">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M15 18l-6-6 6-6" />
