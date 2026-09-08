@@ -1348,7 +1348,7 @@ function AdminMessagesTab({ token }) {
   const [activeChatId, setActiveChatId] = useState(null);
   const [showNewChat, setShowNewChat] = useState(false);
   const decoded = useMemo(() => decodeToken(token), [token]);
-  const currentUser = { id: decoded?.user_id, name: decoded?.full_name || decoded?.username || 'Admin' };
+  const currentUser = { id: decoded?.user_id ? Number(decoded.user_id) : null, name: decoded?.full_name || decoded?.username || 'Admin' };
 
   const conversations = useChatConversations(token);
   const { messages, sendMessage, connectionStatus } = useChatMessages(token, activeChatId);

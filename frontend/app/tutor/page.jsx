@@ -584,7 +584,7 @@ function useChatMessages(token, conversationId) {
 function MessageTab({ tutor, token }) {
   const [activeChatId, setActiveChatId] = useState(null);
   const decoded = decodeToken(token);
-  const currentUser = { id: decoded?.user_id, name: `${tutor.first_name} ${tutor.last_name}` };
+  const currentUser = { id: decoded?.user_id ? Number(decoded.user_id) : null, name: `${tutor.first_name} ${tutor.last_name}` };
 
   const conversations = useChatConversations(token);
   const { messages, sendMessage, connectionStatus } = useChatMessages(token, activeChatId);
