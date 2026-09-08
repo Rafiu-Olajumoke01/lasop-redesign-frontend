@@ -54,7 +54,7 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="relative min-h-screen bg-[#071224] flex items-center justify-center px-4 py-10">
+    <div className="relative flex-1 flex items-center justify-center bg-[#071224] px-4 py-10">
       {/* decorative glow layer — contained separately so it never clips the form */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] bg-blue-600/20 blur-[120px] rounded-full" />
@@ -152,6 +152,6 @@ export default function SignupPage() {
           </Link>
         </p>
       </div>
-    </main>
+    </div>
   );
 }

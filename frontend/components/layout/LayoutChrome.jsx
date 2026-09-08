@@ -28,7 +28,7 @@ export default function LayoutChrome({ children }) {
     return (
       <>
         <AuthHeader />
-        <main>{children}</main>
+        <main className="flex flex-col min-h-screen">{children}</main>
       </>
     );
   }
