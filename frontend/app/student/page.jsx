@@ -1,12 +1,24 @@
 'use client';
-
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import GuardianGateModal from './../../components/GuardianGateModal';
 import ChatInterface from './../../components/chatinterface/Chatinterface'
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
+const CHAT_API_BASE = 'https://lasop-redesign-backend.onrender.com';
+const CHAT_WS_BASE = 'wss://lasop-redesign-backend.onrender.com';
+
+function decodeToken(token) {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return decoded;
+  } catch {
+    return null;
+  }
+}
 
 // ─── Bank Account Details ──────────────────────────────────────────────────
 const BANK_DETAILS = {
@@ -2145,54 +2157,126 @@ function AssessmentsTab({ token }) {
   );
 }
 
-function StudentMessagesTab({ user, applications }) {
+function useChatConversations(token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load chats.');
+      const data = await res.json();
+      const list = (Array.isArray(data) ? data : data.results || []).map((c) => ({
+        id: c.id,
+        name: c.name || c.participants.map((p) => p.full_name || p.username).join(', '),
+        kind: c.conversation_type,
+        member_count: c.participants.length,
+        unread_count: c.unread_count || 0,
+        last_message: c.last_message
+          ? { text: c.last_message.content, sender_name: c.last_message.sender_name, created_at: c.last_message.created_at }
+          : null,
+      }));
+      setItems(list);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  return { items, loading, error, refresh };
+}
+
+function useChatMessages(token, conversationId) {
+  const [messages, setMessages] = useState([]);
+  const [connectionStatus, setConnectionStatus] = useState('connecting');
+  const wsRef = useRef(null);
+
+  useEffect(() => {
+    if (!token || !conversationId) { setMessages([]); return; }
+
+    setConnectionStatus('connecting');
+
+    (async () => {
+      try {
+        const res = await fetch(`${CHAT_API_BASE}/api/chats/conversations/${conversationId}/messages/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setMessages(
+          data.map((m) => ({
+            id: m.id,
+            text: m.content,
+            sender_id: m.sender_id,
+            sender_name: m.sender_name,
+            created_at: m.created_at,
+          }))
+        );
+      } catch {
+        // history fetch failed silently; WebSocket may still connect
+      }
+    })();
+
+    const ws = new WebSocket(`${CHAT_WS_BASE}/ws/chat/${conversationId}/?token=${token}`);
+    wsRef.current = ws;
+
+    ws.onopen = () => setConnectionStatus('connected');
+    ws.onclose = () => setConnectionStatus('offline');
+    ws.onerror = () => setConnectionStatus('offline');
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setMessages((prev) => [
+        ...prev,
+        { id: data.id, text: data.content, sender_id: Number(data.sender_id), sender_name: data.sender_name, created_at: data.created_at },
+      ]);
+    };
+
+    return () => ws.close();
+  }, [token, conversationId]);
+
+  const sendMessage = (text) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ content: text }));
+    }
+  };
+
+  return { messages, sendMessage, connectionStatus };
+}
+
+function StudentMessagesTab({ user, token }) {
   const [activeChatId, setActiveChatId] = useState(null);
+  const decoded = decodeToken(token);
+  const currentUser = { id: decoded?.user_id ? Number(decoded.user_id) : null, name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim() };
 
-  const tutorName = user?.assigned_tutor_detail?.name;
-
-  const mockChats = [
-    tutorName && {
-      id: 'tutor',
-      name: tutorName,
-      kind: 'tutor',
-      member_count: 2,
-      unread_count: 0,
-      last_message: { text: 'Welcome to the course!', sender_name: tutorName, created_at: new Date().toISOString() },
-    },
-    ...applications
-      .filter((a) => a.cohort_detail)
-      .map((a) => ({
-        id: a.cohort_detail.id,
-        name: a.cohort_detail.name,
-        kind: 'cohort',
-        member_count: 0,
-        unread_count: 0,
-        last_message: { text: 'No messages yet', sender_name: '', created_at: new Date().toISOString() },
-      })),
-  ].filter(Boolean);
-
-  const mockMessages = [
-    { id: 1, text: 'Hello!', sender_id: 0, sender_name: tutorName || 'Tutor', created_at: new Date(Date.now() - 3600000).toISOString() },
-  ];
+  const conversations = useChatConversations(token);
+  const { messages, sendMessage, connectionStatus } = useChatMessages(token, activeChatId);
 
   return (
     <div>
       <PageHeader title="Messages" subtitle="Talk to your tutor and cohort" />
-      <ChatInterface
-        currentUser={{ id: 1, name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim() }}
-        chats={mockChats}
-        activeChatId={activeChatId}
-        onSelectChat={setActiveChatId}
-        messages={activeChatId ? mockMessages : []}
-        onSendMessage={(text) => console.log('send:', text)}
-        connectionStatus="connected"
-      />
+      <ErrorBanner message={conversations.error} />
+      {conversations.loading ? (
+        <Spinner text="Loading chats…" />
+      ) : (
+        <ChatInterface
+          currentUser={currentUser}
+          chats={conversations.items}
+          activeChatId={activeChatId}
+          onSelectChat={setActiveChatId}
+          messages={activeChatId ? messages : []}
+          onSendMessage={sendMessage}
+          connectionStatus={connectionStatus}
+        />
+      )}
     </div>
   );
 }
-// ─── Page shell ────────────────────────────────────────────────────────────
-// This is the ONLY place GuardianGateModal is rendered — it needs user,
-// token, and setUser, all of which are declared as state right below.
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -2322,7 +2406,7 @@ export default function DashboardPage() {
             {tab === 'certificate' && <CertificateTab certificate={user?.certificate} />}
             {tab === 'projects' && <ProjectsTab token={token} />}
             {tab === 'payments' && <PaymentsTab applications={applications} />}
-            {tab === 'messages' && <StudentMessagesTab user={user} applications={applications} />}
+            {tab === 'messages' && <StudentMessagesTab user={user} token={token} />}
           </div>
         </div>
       </div>
