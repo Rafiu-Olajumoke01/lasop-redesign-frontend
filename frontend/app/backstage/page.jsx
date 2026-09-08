@@ -1343,7 +1343,7 @@ function AdminProjectsTab({ token }) {
   );
 }
 
-function AdminMessagesTab({ token }) {
+function AdminMessagesTab({ token, initialChatId, onConsumeInitialChat }) {
   const [activeChatId, setActiveChatId] = useState(null);
   const [showNewChat, setShowNewChat] = useState(false);
   const decoded = useMemo(() => decodeToken(token), [token]);
@@ -1351,6 +1351,13 @@ function AdminMessagesTab({ token }) {
 
   const conversations = useChatConversations(token);
   const { messages, sendMessage, connectionStatus } = useChatMessages(token, activeChatId);
+
+  useEffect(() => {
+    if (initialChatId) {
+      setActiveChatId(initialChatId);
+      onConsumeInitialChat();
+    }
+  }, [initialChatId]);
 
   return (
     <div>
@@ -1535,7 +1542,7 @@ function OverviewStatCard({ label, value, icon }) {
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
-function OverviewTab({ courses, locations, applications, dashboardStats, tutors, token, onNavigate }) {
+function OverviewTab({ courses, locations, applications, dashboardStats, tutors, token, onNavigate, onMessageCohort }) {
   const pending = applications.items.filter((a) =>
     ['pending', 'awaiting_confirmation'].includes(a.payment?.status)
   ).length;
@@ -1584,6 +1591,7 @@ function OverviewTab({ courses, locations, applications, dashboardStats, tutors,
           cohortId={viewingCohortId}
           token={token}
           onClose={() => setViewingCohortId(null)}
+          onMessageCohort={onMessageCohort}
         />
       )}
     </div>
@@ -1875,7 +1883,7 @@ function CohortsTodaySection({ token, onViewCohort }) {
 const DAY_LABELS = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
 const STUDENT_STATUS_COLOR = { active: 'emerald', inactive: 'slate', expelled: 'rose', withdrawn: 'amber' };
 
-function CohortDetailModal({ cohortId, token, onClose }) {
+function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
   const detail = useCohortDetail(token);
 
   useEffect(() => { if (cohortId) detail.load(cohortId); }, [cohortId]);
@@ -2000,8 +2008,14 @@ function CohortDetailModal({ cohortId, token, onClose }) {
           </div>
 
           <div className="pt-4 border-t border-slate-100">
-            <SecondaryButton disabled className="w-full justify-center opacity-50 cursor-not-allowed">
-              Message cohort (coming soon)
+            <SecondaryButton
+              className="w-full justify-center"
+              onClick={() => {
+                onMessageCohort(cohortId, detail.data.name);
+                onClose();
+              }}
+            >
+              Message cohort
             </SecondaryButton>
           </div>
         </div>
@@ -2014,7 +2028,7 @@ function CohortDetailModal({ cohortId, token, onClose }) {
 
 const emptyCohort = { name: '', start_date: '', end_date: '', status: 'upcoming', class_days: [] };
 
-function CohortsTab({ cohorts, token }) {
+function CohortsTab({ cohorts, token, onMessageCohort }) {
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(emptyCohort);
   const [saving, setSaving] = useState(false);
@@ -2196,6 +2210,7 @@ function CohortsTab({ cohorts, token }) {
           cohortId={viewingCohortId}
           token={token}
           onClose={() => setViewingCohortId(null)}
+          onMessageCohort={onMessageCohort}
         />
       )}
     </div>
@@ -3890,6 +3905,7 @@ export default function BackstagePage() {
   const [tab, setTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentsSubTab, setStudentsSubTab] = useState('list');
+  const [pendingChatId, setPendingChatId] = useState(null);
 
   useEffect(() => {
     const t = localStorage.getItem('access');
@@ -3949,6 +3965,45 @@ export default function BackstagePage() {
     if (target === 'blog') setTab('postjob');
   };
 
+  const handleMessageCohort = async (cohortId, cohortName) => {
+  try {
+    const rosterRes = await fetch(`${API_BASE}/api/cohorts/${cohortId}/chat-roster/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!rosterRes.ok) throw new Error('Could not load cohort roster.');
+    const roster = await rosterRes.json();
+
+    const convRes = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const convData = await convRes.json();
+    const existing = (Array.isArray(convData) ? convData : convData.results || [])
+      .find((c) => c.conversation_type === 'group' && c.name === cohortName);
+
+    if (existing) {
+      setPendingChatId(existing.id);
+      setTab('messages');
+      return;
+    }
+
+    const createRes = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        conversation_type: 'group',
+        name: cohortName,
+        participants: roster.participants,
+      }),
+    });
+    if (!createRes.ok) throw new Error('Could not create cohort chat.');
+    const created = await createRes.json();
+    setPendingChatId(created.id);
+    setTab('messages');
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
   const currentLabel = NAV.find((n) => n.key === tab)?.label || 'Overview';
 
   if (!authChecked) {
@@ -3977,7 +4032,7 @@ export default function BackstagePage() {
 
         <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto pb-24">
           <div className="max-w-6xl">
-            {tab === 'overview' && (
+                        {tab === 'overview' && (
               <OverviewTab
                 courses={courses}
                 locations={locations}
@@ -3986,6 +4041,7 @@ export default function BackstagePage() {
                 tutors={tutors}
                 token={token}
                 onNavigate={handleOverviewNavigate}
+                onMessageCohort={handleMessageCohort}
               />
             )}
             {tab === 'syllabus' && <CoursesTab courses={courses} />}
@@ -3994,14 +4050,20 @@ export default function BackstagePage() {
             {tab === 'exam' && <ExamsTab exams={exams} cohorts={cohorts} courses={courses} />}
             {tab === 'results' && <ResultsTab results={results} exams={exams} applications={applications} />}
             {tab === 'projects' && <AdminProjectsTab token={token} />}
-            {tab === 'cohorts' && <CohortsTab cohorts={cohorts} token={token} />}
+                        {tab === 'cohorts' && <CohortsTab cohorts={cohorts} token={token} onMessageCohort={handleMessageCohort} />}
             {tab === 'tutors' && <TutorsTab tutors={tutors} cohorts={cohorts} />}
             {tab === 'students' && <StudentsTab token={token} tutors={tutors} subTab={studentsSubTab} />}
 
             {tab === 'staffs' && <ComingSoon title="Staffs" />}
             {tab === 'finances' && <FinancesTab applications={applications} token={token} />}
             {tab === 'queries' && <ComingSoon title="Queries" />}
-            {tab === 'messages' && <AdminMessagesTab token={token} />}
+            {tab === 'messages' && (
+              <AdminMessagesTab
+                token={token}
+                initialChatId={pendingChatId}
+                onConsumeInitialChat={() => setPendingChatId(null)}
+              />
+            )}
             {tab === 'postjob' && <ComingSoon title="Post Job" />}
           </div>
         </div>
