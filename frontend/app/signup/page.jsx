@@ -54,7 +54,7 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="h-screen bg-[#071224] flex items-center justify-center px-4 overflow-hidden">
+    <main className="relative h-screen bg-[#071224] flex items-center justify-center px-4 overflow-hidden">
       <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] bg-blue-600/20 blur-[120px] rounded-full" />
       <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] bg-cyan-500/10 blur-[120px] rounded-full" />
 
