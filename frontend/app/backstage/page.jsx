@@ -1949,6 +1949,11 @@ function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
                 <p className="text-slate-500 text-xs mb-1">
                   {detail.data.today.session.start_time?.slice(0, 5)}–{detail.data.today.session.end_time?.slice(0, 5)}
                 </p>
+                <p className="text-slate-400 text-[11px] mb-2">
+                  Session created: {detail.data.today.session.created_at
+                    ? new Date(detail.data.today.session.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                    : '—'}
+                </p>
                 {detail.data.today.session.title && (
                   <p className="text-slate-900 text-sm font-semibold mb-1">
                     {detail.data.today.session.title}
