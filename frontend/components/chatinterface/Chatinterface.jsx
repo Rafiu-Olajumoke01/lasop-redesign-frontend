@@ -2,57 +2,24 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ChatInterface — WhatsApp-style two-pane chat, restyled in LASOP blue.
-//
-// This component is UI-only and fully driven by props, so it can be
-// previewed with mock data today and wired to a real API/WebSocket
-// (e.g. Pusher) later without touching any of the markup below —
-// only the data hook that feeds it needs to change.
-//
-// USAGE
-// -----
-//   <ChatInterface
-//     currentUser={{ id: 12, name: 'Ada Bello', role: 'tutor' }}
-//     chats={chats}                 // see shape below
-//     activeChat Id={activeChatId}
-//     onSelectChat={(chatId) => ...}
-//     messages={messages}           // messages for the active chat only
-//     onSendMessage={(text) => ...}
-//     connectionStatus="connected"  // "connected" | "connecting" | "offline"
-//   />
-//
-// SHAPES
-// ------
-//   chat = {
-//     id, name, kind: 'cohort' | 'all_cohorts',
-//     member_count, last_message: { text, sender_name, created_at } | null,
-//     unread_count,
-//   }
-//   message = {
-//     id, text, sender_id, sender_name, created_at,
-//   }
-// ═══════════════════════════════════════════════════════════════════════════
-
-const BRAND_BLUE = '#0057E7';
-
-// ─── WhatsApp-style tiled background, recolored ────────────────────────────
-// A faint repeating doodle pattern, same idea as WhatsApp's chat wallpaper,
-// but in a muted blue tint so it reads as LASOP's own rather than a clone.
+const HEADER_TEAL = '#075E54';
+const ACCENT_BLUE = '#0057E7';
+const OUTGOING_GREEN = '#D9FDD3';
 
 function ChatWallpaper() {
   const pattern = encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="140" height="140" viewBox="0 0 140 140">
-      <g fill="none" stroke="#0057E7" stroke-width="1.2" opacity="0.06">
-        <circle cx="20" cy="24" r="7" />
-        <path d="M50 18 L58 26 M58 18 L50 26" />
-        <rect x="84" y="14" width="14" height="14" rx="3" />
-        <path d="M14 70 q8 -10 16 0 q8 10 16 0" />
-        <circle cx="70" cy="72" r="5" />
-        <path d="M100 60 L112 72 M112 60 L100 72" />
-        <rect x="20" y="100" width="12" height="12" rx="2" />
-        <circle cx="60" cy="112" r="6" />
-        <path d="M92 100 q8 -10 16 0 q8 10 16 0" />
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+      <g fill="none" stroke="#B7C6BE" stroke-width="1" opacity="0.35">
+        <circle cx="24" cy="30" r="9" />
+        <path d="M60 20 L70 30 M70 20 L60 30" />
+        <rect x="110" y="16" width="18" height="18" rx="4" />
+        <path d="M16 90 q10 -12 20 0 q10 12 20 0" />
+        <circle cx="90" cy="95" r="7" />
+        <path d="M140 78 L154 92 M154 78 L140 92" />
+        <rect x="24" y="140" width="16" height="16" rx="3" />
+        <circle cx="80" cy="155" r="8" />
+        <path d="M130 138 q10 -12 20 0 q10 12 20 0" />
+        <path d="M170 30 l6 6 -6 6 -6 -6z" />
       </g>
     </svg>
   `);
@@ -60,22 +27,20 @@ function ChatWallpaper() {
     <div
       className="absolute inset-0 pointer-events-none"
       style={{
-        backgroundColor: '#EEF3FB',
+        backgroundColor: '#EFEAE2',
         backgroundImage: `url("data:image/svg+xml,${pattern}")`,
-        backgroundSize: '140px 140px',
+        backgroundSize: '200px 200px',
       }}
     />
   );
 }
-
-// ─── Shared bits (mirrors Backstage / Tutor Portal styling) ────────────────
 
 function Avatar({ name, size = 40 }) {
   const initial = (name || '?').charAt(0).toUpperCase();
   return (
     <div
       className="rounded-full flex items-center justify-center text-white font-bold shrink-0"
-      style={{ width: size, height: size, background: BRAND_BLUE, fontSize: size * 0.4 }}
+      style={{ width: size, height: size, background: ACCENT_BLUE, fontSize: size * 0.4 }}
     >
       {initial}
     </div>
@@ -87,10 +52,19 @@ function Badge({ count }) {
   return (
     <span
       className="min-w-[20px] h-5 px-1.5 rounded-full text-white text-[11px] font-bold flex items-center justify-center"
-      style={{ background: BRAND_BLUE }}
+      style={{ background: '#25D366' }}
     >
       {count > 99 ? '99+' : count}
     </span>
+  );
+}
+
+function DoubleCheck() {
+  return (
+    <svg width="15" height="11" viewBox="0 0 16 11" fill="none" className="inline-block align-text-bottom">
+      <path d="M1 5.5L4.5 9L11 1.5" stroke="#53BDEB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 5.5L8.5 9L15 1.5" stroke="#53BDEB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -108,10 +82,8 @@ function formatBubbleTime(iso) {
   return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-// ─── Connection status pill ─────────────────────────────────────────────────
-
 function ConnectionStatus({ status }) {
-  if (status === 'connected') return null; // silent when healthy, like WhatsApp
+  if (status === 'connected') return null;
   const label = status === 'connecting' ? 'Connecting…' : 'Offline — messages will send once reconnected';
   const color = status === 'connecting' ? '#B45309' : '#B91C1C';
   const bg = status === 'connecting' ? '#FEF3C7' : '#FEE2E2';
@@ -122,14 +94,12 @@ function ConnectionStatus({ status }) {
   );
 }
 
-// ─── Chat list (left pane / mobile home) ───────────────────────────────────
-
 function ChatListItem({ chat, active, onClick }) {
   return (
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-slate-100 ${
-        active ? 'bg-blue-50' : 'hover:bg-slate-50'
+        active ? 'bg-slate-100' : 'hover:bg-slate-50'
       }`}
     >
       <Avatar name={chat.name} />
@@ -153,7 +123,7 @@ function ChatListItem({ chat, active, onClick }) {
   );
 }
 
-function ChatList({ chats, activeChatId, onSelectChat, currentUser }) {
+function ChatList({ chats, activeChatId, onSelectChat }) {
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -164,8 +134,8 @@ function ChatList({ chats, activeChatId, onSelectChat, currentUser }) {
 
   return (
     <div className="flex flex-col h-full bg-white">
-      <div className="px-4 pt-5 pb-3 shrink-0" style={{ background: BRAND_BLUE }}>
-        <h2 className="text-white font-bold text-[17px] mb-3">Chats</h2>
+      <div className="px-4 pt-5 pb-3 shrink-0" style={{ background: HEADER_TEAL }}>
+        <h2 className="text-white font-bold text-[19px] mb-3">Chats</h2>
         <div className="relative">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -202,25 +172,42 @@ function ChatList({ chats, activeChatId, onSelectChat, currentUser }) {
   );
 }
 
-// ─── Message bubble ─────────────────────────────────────────────────────────
-
-function MessageBubble({ message, isOwn, showSenderName }) {
+function MessageBubble({ message, isOwn, showSenderName, showTail }) {
   return (
-    <div className={`flex mb-1.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-[75%] sm:max-w-[65%] px-3.5 py-2 shadow-sm ${
-          isOwn
-            ? 'bg-blue-100 text-slate-900 rounded-2xl rounded-tr-sm'
-            : 'bg-white text-slate-900 rounded-2xl rounded-tl-sm'
-        }`}
-      >
-        {showSenderName && !isOwn && (
-          <p className="text-[12px] font-bold mb-0.5" style={{ color: BRAND_BLUE }}>
-            {message.sender_name}
+    <div className={`flex mb-[3px] ${isOwn ? 'justify-end' : 'justify-start'}`}>
+      <div className="relative max-w-[85%] sm:max-w-[70%]">
+        <div
+          className="px-2.5 pt-1.5 pb-1.5 shadow-sm rounded-lg"
+          style={{
+            background: isOwn ? OUTGOING_GREEN : '#FFFFFF',
+            borderTopRightRadius: isOwn && showTail ? 0 : undefined,
+            borderTopLeftRadius: !isOwn && showTail ? 0 : undefined,
+          }}
+        >
+          {showSenderName && !isOwn && (
+            <p className="text-[12.5px] font-bold mb-0.5" style={{ color: ACCENT_BLUE }}>
+              {message.sender_name}
+            </p>
+          )}
+          <p className="text-[14.5px] leading-snug text-slate-900 whitespace-pre-wrap break-words pr-14">
+            {message.text}
           </p>
+          <span className="absolute bottom-1 right-2.5 flex items-center gap-1">
+            <span className="text-slate-500 text-[10.5px]">{formatBubbleTime(message.created_at)}</span>
+            {isOwn && <DoubleCheck />}
+          </span>
+        </div>
+        {showTail && (
+          <svg
+            width="9" height="13" viewBox="0 0 9 13"
+            className={`absolute top-0 ${isOwn ? '-right-[8px]' : '-left-[8px] scale-x-[-1]'}`}
+          >
+            <path
+              d="M0 0 L9 0 L9 13 C6 10 2 7 0 0 Z"
+              fill={isOwn ? OUTGOING_GREEN : '#FFFFFF'}
+            />
+          </svg>
         )}
-        <p className="text-[14px] leading-snug whitespace-pre-wrap break-words">{message.text}</p>
-        <p className="text-slate-400 text-[10.5px] text-right mt-0.5">{formatBubbleTime(message.created_at)}</p>
       </div>
     </div>
   );
@@ -229,7 +216,7 @@ function MessageBubble({ message, isOwn, showSenderName }) {
 function DateDivider({ label }) {
   return (
     <div className="flex justify-center my-3">
-      <span className="bg-white/90 text-slate-500 text-[11px] font-semibold px-3 py-1 rounded-full shadow-sm">
+      <span className="bg-[#E1F2FA] text-slate-600 text-[12px] font-semibold px-3 py-1 rounded-md shadow-sm uppercase tracking-wide">
         {label}
       </span>
     </div>
@@ -237,19 +224,24 @@ function DateDivider({ label }) {
 }
 
 function groupBySender(messages) {
-  // Marks which messages should show the sender name (first in a run from
-  // that sender) and which day-divider should precede each message.
   return messages.map((m, i) => {
     const prev = messages[i - 1];
-    const showSenderName = !prev || prev.sender_id !== m.sender_id;
+    const next = messages[i + 1];
+    const sameAsPrev = prev && prev.sender_id === m.sender_id;
+    const sameAsNext = next && next.sender_id === m.sender_id;
     const prevDay = prev ? new Date(prev.created_at).toDateString() : null;
     const thisDay = new Date(m.created_at).toDateString();
-    const dayLabel = prevDay !== thisDay ? new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
-    return { ...m, _showSenderName: showSenderName, _dayLabel: dayLabel };
+    const dayLabel = prevDay !== thisDay
+      ? new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+      : null;
+    return {
+      ...m,
+      _showSenderName: !sameAsPrev,
+      _showTail: !sameAsNext,
+      _dayLabel: dayLabel,
+    };
   });
 }
-
-// ─── Conversation view (right pane / mobile full-screen) ──────────────────
 
 function ConversationView({ chat, messages, currentUser, onSend, onBack, connectionStatus }) {
   const [draft, setDraft] = useState('');
@@ -277,7 +269,7 @@ function ConversationView({ chat, messages, currentUser, onSend, onBack, connect
 
   if (!chat) {
     return (
-      <div className="hidden md:flex flex-1 items-center justify-center bg-slate-50">
+      <div className="hidden md:flex flex-1 items-center justify-center bg-[#F0F2F5]">
         <p className="text-slate-400 text-sm">Select a chat to start messaging</p>
       </div>
     );
@@ -285,26 +277,24 @@ function ConversationView({ chat, messages, currentUser, onSend, onBack, connect
 
   return (
     <div className="flex flex-col h-full relative">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 shrink-0 z-10" style={{ background: BRAND_BLUE }}>
+      <div className="flex items-center gap-3 px-4 py-2.5 shrink-0 z-10" style={{ background: HEADER_TEAL }}>
         <button onClick={onBack} className="text-white md:hidden" aria-label="Back to chats">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
-        <Avatar name={chat.name} size={36} />
+        <Avatar name={chat.name} size={38} />
         <div className="min-w-0">
-          <p className="text-white font-semibold text-[14.5px] truncate">{chat.name}</p>
-          <p className="text-blue-100 text-[11.5px]">{chat.member_count} member{chat.member_count !== 1 ? 's' : ''}</p>
+          <p className="text-white font-semibold text-[15px] truncate">{chat.name}</p>
+          <p className="text-white/70 text-[12px]">{chat.member_count} member{chat.member_count !== 1 ? 's' : ''}</p>
         </div>
       </div>
 
       <ConnectionStatus status={connectionStatus} />
 
-      {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto relative px-3 sm:px-6 py-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto relative px-3 sm:px-10 py-4">
         <ChatWallpaper />
-        <div className="relative max-w-2xl mx-auto">
+        <div className="relative">
           {grouped.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-slate-400 text-sm">No messages yet — say hello 👋</p>
@@ -317,6 +307,7 @@ function ConversationView({ chat, messages, currentUser, onSend, onBack, connect
                   message={m}
                   isOwn={m.sender_id === currentUser.id}
                   showSenderName={m._showSenderName}
+                  showTail={m._showTail}
                 />
               </div>
             ))
@@ -324,22 +315,21 @@ function ConversationView({ chat, messages, currentUser, onSend, onBack, connect
         </div>
       </div>
 
-      {/* Input bar */}
-      <div className="flex items-end gap-2 px-3 sm:px-4 py-3 bg-white border-t border-slate-200 shrink-0">
+      <div className="flex items-end gap-2 px-3 sm:px-4 py-2.5 bg-[#F0F2F5] border-t border-slate-200 shrink-0">
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type a message"
           rows={1}
-          className="flex-1 resize-none bg-slate-100 rounded-2xl px-4 py-2.5 text-[14px] text-slate-800 placeholder:text-slate-400 outline-none max-h-28"
+          className="flex-1 resize-none bg-white rounded-2xl px-4 py-2.5 text-[14.5px] text-slate-800 placeholder:text-slate-400 outline-none max-h-28 shadow-sm"
         />
         <button
           onClick={handleSend}
           disabled={!draft.trim()}
           aria-label="Send message"
           className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 disabled:opacity-40 transition-opacity"
-          style={{ background: BRAND_BLUE }}
+          style={{ background: HEADER_TEAL }}
         >
           <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
             <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
@@ -349,8 +339,6 @@ function ConversationView({ chat, messages, currentUser, onSend, onBack, connect
     </div>
   );
 }
-
-// ─── Root component ─────────────────────────────────────────────────────────
 
 export default function ChatInterface({
   currentUser,
@@ -371,7 +359,6 @@ export default function ChatInterface({
           chats={chats}
           activeChatId={activeChatId}
           onSelectChat={onSelectChat}
-          currentUser={currentUser}
         />
       </div>
       <div className={`flex-1 ${showListOnMobile ? 'hidden md:flex' : 'flex'} flex-col`}>
