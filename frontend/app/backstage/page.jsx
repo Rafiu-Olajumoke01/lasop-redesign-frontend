@@ -2546,7 +2546,16 @@ function useStudents(token) {
     await refresh();
   };
 
-  return { items, loading, error, refresh, assignTutor };
+  const deleteStudent = async (studentId) => {
+    const res = await fetch(`${API_BASE}/api/users/students/${studentId}/delete/`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Could not delete student account.');
+    setItems((prev) => prev.filter((s) => s.id !== studentId));
+  };
+
+  return { items, loading, error, refresh, assignTutor, deleteStudent };
 }
 
 function getStudentName(s) {
@@ -2565,6 +2574,8 @@ function StudentsTab({ token, tutors, subTab }) {
   const students = useStudents(token);
   const cohortLookup = useApplicationsCohortMap(token);
   const [savingId, setSavingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
   const [actionError, setActionError] = useState('');
   const [filter, setFilter] = useState('all');
   const [cohortFilter, setCohortFilter] = useState('');
@@ -2612,7 +2623,6 @@ function StudentsTab({ token, tutors, subTab }) {
 
     return list;
   }, [students.items, filter, cohortFilter, yearFilter, monthFilter, todayOnly, cohortLookup.map]);
-
   const handleAssign = async (studentId, tutorIdRaw) => {
     const tutorId = tutorIdRaw === '' ? null : Number(tutorIdRaw);
     setActionError('');
@@ -2626,6 +2636,18 @@ function StudentsTab({ token, tutors, subTab }) {
     }
   };
 
+  const handleDeleteStudent = async (studentId) => {
+    setActionError('');
+    setDeletingId(studentId);
+    try {
+      await students.deleteStudent(studentId);
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setDeletingId(null);
+      setConfirmingDeleteId(null);
+    }
+  };
   const filters = [
     { key: 'all', label: 'All' },
     { key: 'unassigned', label: 'Unassigned' },
@@ -2775,6 +2797,32 @@ function StudentsTab({ token, tutors, subTab }) {
                     </div>
                     <p className="text-slate-500 text-xs mb-3">{s.phone_number || 'No phone number'}</p>
                     <TutorSelect s={s} />
+                    <div onClick={(e) => e.stopPropagation()} className="mt-3 pt-3 border-t border-slate-100">
+                      {confirmingDeleteId === s.id ? (
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleDeleteStudent(s.id)}
+                            disabled={deletingId === s.id}
+                            className="text-[12px] font-semibold text-rose-600 hover:text-rose-700 transition disabled:opacity-50"
+                          >
+                            {deletingId === s.id ? 'Deleting…' : 'Confirm delete'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmingDeleteId(null)}
+                            className="text-[12px] font-medium text-slate-400 hover:text-slate-600 transition"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmingDeleteId(s.id)}
+                          className="text-[12px] font-semibold text-rose-500 hover:text-rose-600 transition"
+                        >
+                          Delete account
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2783,7 +2831,7 @@ function StudentsTab({ token, tutors, subTab }) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
-                      {['Student', 'Email', 'Phone', 'Tutor', ''].map((h, i) => (
+                      {['Student', 'Email', 'Phone', 'Tutor', '', ''].map((h, i) => (
                         <th
                           key={i}
                           className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap"
@@ -2830,6 +2878,32 @@ function StudentsTab({ token, tutors, subTab }) {
                             ))}
                           </select>
                           {savingId === s.id && <span className="text-slate-400 text-[11px] ml-2">Saving…</span>}
+                        </td>
+                        <td className="px-5 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          {confirmingDeleteId === s.id ? (
+                            <>
+                              <button
+                                onClick={() => handleDeleteStudent(s.id)}
+                                disabled={deletingId === s.id}
+                                className="text-[12px] font-semibold text-rose-600 hover:text-rose-700 transition disabled:opacity-50"
+                              >
+                                {deletingId === s.id ? 'Deleting…' : 'Confirm'}
+                              </button>
+                              <button
+                                onClick={() => setConfirmingDeleteId(null)}
+                                className="text-[12px] font-medium text-slate-400 hover:text-slate-600 transition ml-2"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmingDeleteId(s.id)}
+                              className="text-[12px] font-semibold text-rose-500 hover:text-rose-600 transition"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
