@@ -860,15 +860,14 @@ function AssessmentDetailModal({ assessment, onClose }) {
         </div>
 
         <div>
-          <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">Topic</p>
+          <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">Assessed on</p>
           <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">{assessment.assessed_on || '—'}</p>
         </div>
 
         <div>
-          <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">What happened</p>
+          <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">Student's answer to the question asked</p>
           <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">{assessment.student_answer || '—'}</p>
         </div>
-
         {assessment.tutor_observation && (
           <div>
             <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-1">Tutor observation</p>
@@ -995,7 +994,7 @@ function AdminAssessmentTab({ token, cohortLookup }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
-                  {['Student', 'Author', 'Cohort', 'Topic', 'What happened', 'Student response', 'Date'].map((h, i) => (
+                  {['Student', 'Author', 'Cohort', 'Assessed on', "Student's answer to the question asked", 'Student response', 'Date'].map((h, i) => (
                     <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
