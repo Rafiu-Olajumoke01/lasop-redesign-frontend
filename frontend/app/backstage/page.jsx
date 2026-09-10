@@ -1884,7 +1884,9 @@ const DAY_LABELS = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri',
 const STUDENT_STATUS_COLOR = { active: 'emerald', inactive: 'slate', expelled: 'rose', withdrawn: 'amber' };
 
 function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
+  const router = useRouter();
   const detail = useCohortDetail(token);
+  const [studentFilter, setStudentFilter] = useState('active');
 
   useEffect(() => { if (cohortId) detail.load(cohortId); }, [cohortId]);
 
@@ -1929,17 +1931,44 @@ function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
 
           <div>
             <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-2">Students</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-2 mb-3">
               {['active', 'inactive', 'expelled', 'withdrawn'].map((key) => (
-                <div key={key} className="text-center border border-slate-100 rounded-md py-2.5">
+                <button
+                  key={key}
+                  onClick={() => setStudentFilter(key)}
+                  className={`text-center border rounded-md py-2.5 transition ${studentFilter === key ? 'border-[#0057E7] bg-blue-50/40' : 'border-slate-100 hover:border-slate-200'}`}
+                >
                   <p className="text-slate-900 font-bold text-lg leading-none mb-1">{detail.data.student_counts[key]}</p>
                   <Pill color={STUDENT_STATUS_COLOR[key]}>{key}</Pill>
-                </div>
+                </button>
               ))}
             </div>
+
+            <div className="space-y-1.5 max-h-60 overflow-y-auto">
+              {(detail.data.students || [])
+                .filter((s) => s.status === studentFilter)
+                .map((s) => (
+                  <button
+                    key={s.application_id}
+                    onClick={() => router.push(`/backstage/students/${s.student_id}`)}
+                    className="w-full flex items-center justify-between px-3 py-2 border border-slate-100 rounded-md hover:bg-slate-50 hover:border-slate-200 transition text-left"
+                  >
+                    <div>
+                      <p className="text-slate-800 text-sm font-medium">{s.student_name}</p>
+                      <p className="text-slate-400 text-xs">{s.student_email}</p>
+                    </div>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="text-slate-300">
+                      <path d="M9 6l6 6-6 6" />
+                    </svg>
+                  </button>
+                ))}
+              {(detail.data.students || []).filter((s) => s.status === studentFilter).length === 0 && (
+                <p className="text-slate-400 text-xs text-center py-3">No {studentFilter} students.</p>
+              )}
+            </div>
+
             <p className="text-slate-400 text-xs mt-2">{detail.data.student_counts.total} total</p>
           </div>
-
           <div className="pt-4 border-t border-slate-100">
             <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-2">Today</p>
             {!detail.data.today.session ? (

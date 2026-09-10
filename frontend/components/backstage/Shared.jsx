@@ -1,8 +1,94 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
+export function useAdminResource({ label, basePath, detailPath, supportsUpdate = true }, token) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}${basePath}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Could not load ${label} (${res.status}).`);
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [basePath, label, token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  const save = async (payload, existingItem) => {
+    if (existingItem && !supportsUpdate) throw new Error(`Updating ${label} isn't supported yet.`);
+    const url = existingItem ? `${API_BASE}${detailPath(existingItem)}` : `${API_BASE}${basePath}`;
+
+    const hasFile = Object.values(payload).some((v) => v instanceof File);
+
+    let body;
+    let headers = { Authorization: `Bearer ${token}` };
+
+    if (hasFile) {
+      const formData = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        if (value instanceof File) {
+          formData.append(key, value);
+        } else if (key === 'cohorts' && Array.isArray(value)) {
+          value.forEach((id) => formData.append('cohorts', id));
+        } else if (Array.isArray(value) || typeof value === 'object') {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, value);
+        }
+      });
+      body = formData;
+    } else {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(payload);
+    }
+
+    const res = await fetch(url, {
+      method: existingItem ? 'PATCH' : 'POST',
+      headers,
+      body,
+    });
+
+    if (!res.ok) {
+      let details = '';
+      const rawText = await res.text();
+      try {
+        const errorData = JSON.parse(rawText);
+        details = Object.entries(errorData)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(' | ');
+      } catch {
+        details = `HTTP ${res.status} — check browser console for full error`;
+      }
+      throw new Error(details || 'Save failed. Check the fields and try again.');
+    }
+    await refresh();
+  };
+
+  const remove = async (item) => {
+    const res = await fetch(`${API_BASE}${detailPath(item)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Delete failed.');
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
+  };
+
+  return { items, loading, error, refresh, save, remove };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
