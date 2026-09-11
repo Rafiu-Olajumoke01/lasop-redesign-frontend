@@ -1862,8 +1862,14 @@ function CohortsTodaySection({ token, onViewCohort }) {
           <Card key={s.session_id} interactive className="p-4 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-slate-900 font-bold text-[14px] truncate">{s.cohort_name}</p>
-              <p className="text-slate-400 text-xs mt-0.5">
-                {s.tutor || 'No tutor assigned'} · {s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)}
+             <p className="text-slate-400 text-xs mt-0.5">
+                {s.tutor || 'No tutor assigned'} ·{' '}
+                {s.started_at
+                  ? new Date(s.started_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                  : 'Not started'}
+                {s.ended_at &&
+                  `–${new Date(s.ended_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`}
+                {s.actual_duration_minutes != null && ` · ${s.actual_duration_minutes} min`}
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -1975,8 +1981,18 @@ function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
             ) : (
               <div>
                 <p className="text-slate-500 text-xs mb-1">
-                  {detail.data.today.session.start_time?.slice(0, 5)}–{detail.data.today.session.end_time?.slice(0, 5)}
+                  {detail.data.today.session.started_at
+                    ? new Date(detail.data.today.session.started_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                    : 'Not started'}
+                  {detail.data.today.session.ended_at &&
+                    `–${new Date(detail.data.today.session.ended_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`}
+                  {detail.data.today.session.is_in_progress && ' · In progress'}
                 </p>
+                {detail.data.today.session.actual_duration_minutes != null && (
+                  <p className="text-slate-400 text-[11px] mb-2">
+                    Time spent: {detail.data.today.session.actual_duration_minutes} min
+                  </p>
+                )}
                 <p className="text-slate-400 text-[11px] mb-2">
                   Session created: {detail.data.today.session.created_at
                     ? new Date(detail.data.today.session.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
