@@ -452,6 +452,9 @@ function useChatMessages(token, conversationId) {
             sender_id: m.sender_id,
             sender_name: m.sender_name,
             created_at: m.created_at,
+            message_type: m.message_type,
+            attachment_url: m.attachment_url,
+            attachment_name: m.attachment_name,
           }))
         );
       } catch {
@@ -469,19 +472,45 @@ function useChatMessages(token, conversationId) {
   const data = JSON.parse(event.data);
   setMessages((prev) => [
     ...prev,
-    { id: data.id, text: data.content, sender_id: Number(data.sender_id), sender_name: data.sender_name, created_at: data.created_at },
+    {
+      id: data.id,
+      text: data.content,
+      sender_id: Number(data.sender_id),
+      sender_name: data.sender_name,
+      created_at: data.created_at,
+      message_type: data.message_type,
+      attachment_url: data.attachment_url,
+      attachment_name: data.attachment_name,
+    },
   ]);
 };
     return () => ws.close();
   }, [token, conversationId]);
 
-  const sendMessage = (text) => {
+  const sendMessage = (text, attachment) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ content: text }));
+      wsRef.current.send(JSON.stringify({
+        content: text || '',
+        message_type: attachment?.message_type || 'text',
+        attachment_url: attachment?.attachment_url || null,
+        attachment_name: attachment?.attachment_name || '',
+      }));
     }
   };
 
-  return { messages, sendMessage, connectionStatus };
+  const uploadAttachment = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${CHAT_API_BASE}/api/chats/upload/`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Could not upload file.');
+    return res.json();
+  };
+
+  return { messages, sendMessage, uploadAttachment, connectionStatus };
 }
 
 function useAllUsers(token) {
@@ -1349,7 +1378,7 @@ function AdminMessagesTab({ token, initialChatId, onConsumeInitialChat }) {
   const currentUser = { id: decoded?.user_id ? Number(decoded.user_id) : null, name: decoded?.full_name || decoded?.username || 'Admin' };
 
   const conversations = useChatConversations(token);
-  const { messages, sendMessage, connectionStatus } = useChatMessages(token, activeChatId);
+    const { messages, sendMessage, uploadAttachment, connectionStatus } = useChatMessages(token, activeChatId);
 
   useEffect(() => {
     if (initialChatId) {
@@ -1374,6 +1403,7 @@ function AdminMessagesTab({ token, initialChatId, onConsumeInitialChat }) {
           onSelectChat={setActiveChatId}
           messages={activeChatId ? messages : []}
           onSendMessage={sendMessage}
+          onUploadAttachment={uploadAttachment}
           connectionStatus={connectionStatus}
         />
       )}

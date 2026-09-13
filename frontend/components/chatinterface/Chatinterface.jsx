@@ -188,9 +188,38 @@ function MessageBubble({ message, isOwn, showSenderName, showTail }) {
               {message.sender_name}
             </p>
           )}
-          <p className="text-[14.5px] leading-snug text-slate-900 whitespace-pre-wrap break-words pr-14">
-            {message.text}
-          </p>
+          {message.message_type === 'image' && message.attachment_url && (
+            <a href={message.attachment_url} target="_blank" rel="noopener noreferrer" className="block mb-1 -mx-1">
+              <img
+                src={message.attachment_url}
+                alt={message.attachment_name || 'Image attachment'}
+                className="rounded-md max-w-full max-h-64 object-cover"
+              />
+            </a>
+          )}
+          {message.message_type === 'document' && message.attachment_url && (
+            <a
+              href={message.attachment_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2.5 mb-1 px-2.5 py-2 rounded-md bg-black/5 hover:bg-black/10 transition"
+            >
+              <span className="w-8 h-8 rounded-md bg-white flex items-center justify-center shrink-0 shadow-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACCENT_BLUE} strokeWidth={2}>
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                  <path d="M14 2v6h6M9 13h6M9 17h6" />
+                </svg>
+              </span>
+              <span className="text-[13px] font-medium text-slate-700 truncate">
+                {message.attachment_name || 'Document'}
+              </span>
+            </a>
+          )}
+          {message.text && (
+            <p className="text-[14.5px] leading-snug text-slate-900 whitespace-pre-wrap break-words pr-14">
+              {message.text}
+            </p>
+          )}
           <span className="absolute bottom-1 right-2.5 flex items-center gap-1">
             <span className="text-slate-500 text-[10.5px]">{formatBubbleTime(message.created_at)}</span>
             {isOwn && <DoubleCheck />}
@@ -242,9 +271,12 @@ function groupBySender(messages) {
   });
 }
 
-function ConversationView({ chat, messages, currentUser, onSend, onBack, connectionStatus }) {
+function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachment, onBack, connectionStatus }) {
   const [draft, setDraft] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const scrollRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -263,6 +295,33 @@ function ConversationView({ chat, messages, currentUser, onSend, onBack, connect
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handleAttachClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !onUploadAttachment) return;
+
+    setUploading(true);
+    setUploadError('');
+    try {
+      const uploaded = await onUploadAttachment(file);
+      const attachment = {
+        message_type: uploaded?.message_type || (file.type.startsWith('image/') ? 'image' : 'document'),
+        attachment_url: uploaded?.attachment_url,
+        attachment_name: uploaded?.attachment_name || file.name,
+      };
+      onSend(draft.trim(), attachment);
+      setDraft('');
+    } catch (err) {
+      setUploadError(err.message || 'Could not upload file.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -314,7 +373,36 @@ function ConversationView({ chat, messages, currentUser, onSend, onBack, connect
         </div>
       </div>
 
+      {uploadError && (
+        <div className="px-4 py-1.5 bg-rose-50 border-t border-rose-200 text-rose-600 text-[12px] shrink-0">
+          {uploadError}
+        </div>
+      )}
       <div className="flex items-end gap-2 px-3 sm:px-4 py-2.5 bg-[#F0F2F5] border-t border-slate-200 shrink-0">
+        {onUploadAttachment && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <button
+              onClick={handleAttachClick}
+              disabled={uploading}
+              aria-label="Attach file"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 shrink-0 disabled:opacity-40 transition-colors"
+            >
+              {uploading ? (
+                <span className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin" />
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                </svg>
+              )}
+            </button>
+          </>
+        )}
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -346,6 +434,7 @@ export default function ChatInterface({
   onSelectChat,
   messages,
   onSendMessage,
+  onUploadAttachment,
   connectionStatus = 'connected',
 }) {
   const activeChat = chats.find((c) => c.id === activeChatId) || null;
@@ -366,6 +455,7 @@ export default function ChatInterface({
           messages={messages}
           currentUser={currentUser}
           onSend={onSendMessage}
+          onUploadAttachment={onUploadAttachment}
           onBack={() => onSelectChat(null)}
           connectionStatus={connectionStatus}
         />

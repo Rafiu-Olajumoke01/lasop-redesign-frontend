@@ -219,12 +219,53 @@ function useCohortSessions(token, cohortId) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ ...payload, cohort: cohortId }),
     });
+    if (res.status === 409) {
+      const data = await res.json().catch(() => ({}));
+      const err = new Error(data.detail || 'A class session already exists for this cohort on this date.');
+      err.existingSession = data.existing_session || null;
+      throw err;
+    }
     if (!res.ok) {
       const text = await res.text();
       console.error('Session create failed:', text);
       throw new Error('Could not create session.');
     }
     await refresh();
+  };
+
+  const updateSession = async (sessionId, payload) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/tutor/sessions/${sessionId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Session update failed:', text);
+      throw new Error('Could not update session.');
+    }
+    await refresh();
+  };
+
+  const deleteSession = async (sessionId) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/tutor/sessions/${sessionId}/`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Session delete failed:', text);
+      throw new Error("Could not delete session. If attendance's already been marked, it can no longer be deleted.");
+    }
+    await refresh();
+  };
+
+  const checkSessionForDate = async (date) => {
+    const res = await fetch(`${API_BASE}/api/cohorts/tutor/sessions/today/?cohort=${cohortId}&date=${date}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    return await res.json();
   };
 
   const stopSession = async (sessionId, coords = {}) => {
@@ -244,7 +285,7 @@ function useCohortSessions(token, cohortId) {
     return updated;
   };
 
-  return { sessions, loading, error, refresh, createSession, stopSession };
+  return { sessions, loading, error, refresh, createSession, updateSession, deleteSession, checkSessionForDate, stopSession };
 }
 
 // ── Roster + attendance for a single session ─────────────────────────────────
@@ -541,13 +582,16 @@ function useChatMessages(token, conversationId) {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        setMessages(
+         setMessages(
           data.map((m) => ({
             id: m.id,
             text: m.content,
             sender_id: m.sender_id,
             sender_name: m.sender_name,
             created_at: m.created_at,
+            message_type: m.message_type,
+            attachment_url: m.attachment_url,
+            attachment_name: m.attachment_name,
           }))
         );
       } catch {
@@ -565,20 +609,46 @@ function useChatMessages(token, conversationId) {
       const data = JSON.parse(event.data);
       setMessages((prev) => [
         ...prev,
-        { id: data.id, text: data.content, sender_id: Number(data.sender_id), sender_name: data.sender_name, created_at: data.created_at },
+        {
+          id: data.id,
+          text: data.content,
+          sender_id: Number(data.sender_id),
+          sender_name: data.sender_name,
+          created_at: data.created_at,
+          message_type: data.message_type,
+          attachment_url: data.attachment_url,
+          attachment_name: data.attachment_name,
+        },
       ]);
     };
 
     return () => ws.close();
   }, [token, conversationId]);
 
-  const sendMessage = (text) => {
+  const sendMessage = (text, attachment) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ content: text }));
+      wsRef.current.send(JSON.stringify({
+        content: text || '',
+        message_type: attachment?.message_type || 'text',
+        attachment_url: attachment?.attachment_url || null,
+        attachment_name: attachment?.attachment_name || '',
+      }));
     }
   };
 
-  return { messages, sendMessage, connectionStatus };
+  const uploadAttachment = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${CHAT_API_BASE}/api/chats/upload/`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Could not upload file.');
+    return res.json();
+  };
+
+  return { messages, sendMessage, uploadAttachment, connectionStatus };
 }
 
 function MessageTab({ tutor, token }) {
@@ -587,7 +657,7 @@ function MessageTab({ tutor, token }) {
   const currentUser = { id: decoded?.user_id ? Number(decoded.user_id) : null, name: `${tutor.first_name} ${tutor.last_name}` };
 
   const conversations = useChatConversations(token);
-  const { messages, sendMessage, connectionStatus } = useChatMessages(token, activeChatId);
+  const { messages, sendMessage, uploadAttachment, connectionStatus } = useChatMessages(token, activeChatId);
 
   return (
     <div>
@@ -603,6 +673,7 @@ function MessageTab({ tutor, token }) {
           onSelectChat={setActiveChatId}
           messages={activeChatId ? messages : []}
           onSendMessage={sendMessage}
+          onUploadAttachment={uploadAttachment}
           connectionStatus={connectionStatus}
         />
       )}
@@ -857,24 +928,37 @@ function SessionAttendanceView({ token, session, onBack }) {
   );
 }
 
-function NewSessionModal({ activeTab, onClose, onCreate }) {
+function SessionFormModal({ activeTab, editSession, onClose, onCreate, onUpdate, onConflict }) {
+  const isEdit = !!editSession;
   const isToday = activeTab === 'today';
-  const [form, setForm] = useState(isToday ? { ...blankLessonFields } : { ...blankLessonFields, ...blankScheduleFields });
+  const [form, setForm] = useState(() => {
+    if (isEdit) {
+      return {
+        title: editSession.title || '',
+        topics_covered: editSession.topics_covered || '',
+        lesson_outcome: editSession.lesson_outcome || '',
+        date: editSession.date || '',
+        start_time: editSession.start_time || '',
+        end_time: editSession.end_time || '',
+      };
+    }
+    return isToday ? { ...blankLessonFields } : { ...blankLessonFields, ...blankScheduleFields };
+  });
   const [saving, setSaving] = useState(false);
   const [formErr, setFormErr] = useState('');
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!form.title || !form.topics_covered || !form.lesson_outcome) {
-      setFormErr('Please fill in all lesson fields before creating the session.');
+      setFormErr('Please fill in all lesson fields before saving.');
       return;
     }
-    if (!isToday && (!form.date || !form.start_time || !form.end_time)) {
+    if ((isEdit || !isToday) && (!form.date || !form.start_time || !form.end_time)) {
       setFormErr('Please fill in date, start time and end time.');
       return;
     }
 
     let payload = { ...form };
-    if (isToday) {
+    if (!isEdit && isToday) {
       const start = nowTimeString();
       const coords = await getCurrentPosition();
       payload = { ...payload, date: todayISODate(), start_time: start, end_time: plusOneHour(start), ...coords };
@@ -882,9 +966,17 @@ function NewSessionModal({ activeTab, onClose, onCreate }) {
 
     setSaving(true); setFormErr('');
     try {
-      await onCreate(payload);
+      if (isEdit) {
+        await onUpdate(editSession.id, payload);
+      } else {
+        await onCreate(payload);
+      }
       onClose();
     } catch (e) {
+      if (e.existingSession && onConflict) {
+        onConflict(e.existingSession);
+        return;
+      }
       setFormErr(e.message);
     } finally {
       setSaving(false);
@@ -894,9 +986,11 @@ function NewSessionModal({ activeTab, onClose, onCreate }) {
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-        <h3 className="text-slate-900 font-bold text-base mb-1">New class session</h3>
+        <h3 className="text-slate-900 font-bold text-base mb-1">{isEdit ? 'Edit class session' : 'New class session'}</h3>
         <p className="text-slate-400 text-xs mb-4">
-          {isToday ? 'The timer starts the moment you click Create session.' : 'Log a session that already happened, or schedule one ahead.'}
+          {isEdit
+            ? 'Update the details of this session.'
+            : isToday ? 'The timer starts the moment you click Create session.' : 'Log a session that already happened, or schedule one ahead.'}
         </p>
         {formErr && <ErrorBanner message={formErr} />}
         <div className="space-y-4">
@@ -930,7 +1024,7 @@ function NewSessionModal({ activeTab, onClose, onCreate }) {
             />
           </Field>
 
-          {!isToday && (
+          {(isEdit || !isToday) && (
             <>
               <Field label="Date">
                 <input
@@ -965,8 +1059,8 @@ function NewSessionModal({ activeTab, onClose, onCreate }) {
             <SecondaryButton className="flex-1 justify-center" onClick={onClose}>
               Cancel
             </SecondaryButton>
-            <PrimaryButton className="flex-1 justify-center" onClick={handleCreate} disabled={saving}>
-              {saving ? 'Creating…' : 'Create session'}
+            <PrimaryButton className="flex-1 justify-center" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create session'}
             </PrimaryButton>
           </div>
         </div>
@@ -975,10 +1069,62 @@ function NewSessionModal({ activeTab, onClose, onCreate }) {
   );
 }
 
+function SessionConflictModal({ session, onClose, onConfirm, onEdit, onDelete }) {
+  const [deleting, setDeleting] = useState(false);
+  const [err, setErr] = useState('');
+
+  const handleDelete = async () => {
+    setDeleting(true); setErr('');
+    try {
+      await onDelete(session.id);
+      onClose();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+        <h3 className="text-slate-900 font-bold text-base mb-1">A session already exists for this date</h3>
+        <p className="text-slate-400 text-xs mb-4">
+          You already created a class session for {session.date}. To avoid duplicating it, choose what to do:
+        </p>
+        {err && <ErrorBanner message={err} />}
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+          <p className="text-slate-900 font-semibold text-sm">
+            {session.title || (session.topics_covered ? session.topics_covered.split('\n')[0] : 'Untitled session')}
+          </p>
+          {session.topics_covered && <p className="text-slate-500 text-xs mt-1 line-clamp-2">{session.topics_covered}</p>}
+        </div>
+        <div className="space-y-2">
+          <PrimaryButton className="w-full justify-center" onClick={() => { onConfirm(session); onClose(); }}>
+            Confirm — use this as today's session
+          </PrimaryButton>
+          <SecondaryButton className="w-full justify-center" onClick={() => { onEdit(session); onClose(); }}>
+            Edit this session
+          </SecondaryButton>
+          <DangerButton className="w-full justify-center" onClick={handleDelete} disabled={deleting}>
+            {deleting ? 'Deleting…' : 'Delete it and create a fresh one'}
+          </DangerButton>
+          <SecondaryButton className="w-full justify-center" onClick={onClose}>
+            Cancel
+          </SecondaryButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CohortSessionsView({ token, cohort, onBack }) {
-  const { sessions, loading, error, createSession, stopSession } = useCohortSessions(token, cohort.id);
+  const { sessions, loading, error, createSession, updateSession, deleteSession, checkSessionForDate, stopSession } = useCohortSessions(token, cohort.id);
   const [openSession, setOpenSession] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editSession, setEditSession] = useState(null);
+  const [conflictSession, setConflictSession] = useState(null);
+  const [checkingToday, setCheckingToday] = useState(false);
   const [activeTab, setActiveTab] = useState('today');
   const [stoppingId, setStoppingId] = useState(null);
   const [stopErr, setStopErr] = useState('');
@@ -1021,7 +1167,25 @@ function CohortSessionsView({ token, cohort, onBack }) {
         title={cohort.name}
         subtitle={`${cohort.current_stage_label} · ${cohort.student_count ?? 0} students`}
       >
-        <PrimaryButton onClick={() => setModalOpen(true)}>+ New session</PrimaryButton>
+        <PrimaryButton
+          onClick={async () => {
+            if (activeTab === 'today') {
+              setCheckingToday(true);
+              try {
+                const existing = await checkSessionForDate(todayISODate());
+                if (existing) setConflictSession(existing);
+                else setModalOpen(true);
+              } finally {
+                setCheckingToday(false);
+              }
+            } else {
+              setModalOpen(true);
+            }
+          }}
+          disabled={checkingToday}
+        >
+          {checkingToday ? 'Checking…' : '+ New session'}
+        </PrimaryButton>
       </PageHeader>
 
       <div className="flex items-center gap-1.5 mb-5">
@@ -1067,10 +1231,32 @@ function CohortSessionsView({ token, cohort, onBack }) {
       )}
 
       {modalOpen && (
-        <NewSessionModal
+        <SessionFormModal
           activeTab={activeTab}
           onClose={() => setModalOpen(false)}
           onCreate={createSession}
+          onUpdate={updateSession}
+          onConflict={(existing) => { setModalOpen(false); setConflictSession(existing); }}
+        />
+      )}
+
+      {editSession && (
+        <SessionFormModal
+          activeTab={activeTab}
+          editSession={editSession}
+          onClose={() => setEditSession(null)}
+          onCreate={createSession}
+          onUpdate={updateSession}
+        />
+      )}
+
+      {conflictSession && (
+        <SessionConflictModal
+          session={conflictSession}
+          onClose={() => setConflictSession(null)}
+          onConfirm={(session) => setOpenSession(session)}
+          onEdit={(session) => setEditSession(session)}
+          onDelete={deleteSession}
         />
       )}
     </div>
