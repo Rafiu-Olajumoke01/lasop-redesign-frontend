@@ -266,7 +266,7 @@ function useCohortSessions(token, cohortId) {
     });
     if (!res.ok) return null;
     const text = await res.text();
-return text ? JSON.parse(text) : null;
+    return text ? JSON.parse(text) : null;
   };
 
   const stopSession = async (sessionId, coords = {}) => {
@@ -583,7 +583,7 @@ function useChatMessages(token, conversationId) {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-         setMessages(
+        setMessages(
           data.map((m) => ({
             id: m.id,
             text: m.content,
@@ -652,17 +652,126 @@ function useChatMessages(token, conversationId) {
   return { messages, sendMessage, uploadAttachment, connectionStatus };
 }
 
-function MessageTab({ tutor, token }) {
+function NewTutorChatModal({ token, students, onClose, onCreated }) {
+  const [selected, setSelected] = useState([]);
+  const [name, setName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [err, setErr] = useState('');
+
+  const toggleStudent = (s) => {
+    setSelected((prev) =>
+      prev.some((p) => p.student_id === s.student_id)
+        ? prev.filter((p) => p.student_id !== s.student_id)
+        : [...prev, s]
+    );
+  };
+
+  const selectAll = () => setSelected(students);
+  const clearAll = () => setSelected([]);
+
+  const handleCreate = async () => {
+    if (selected.length === 0) { setErr('Pick at least one student.'); return; }
+    setCreating(true); setErr('');
+    try {
+      const res = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          conversation_type: selected.length > 1 ? 'group' : 'direct',
+          name: name || (selected.length > 1 ? 'Group Chat' : selected[0].student_name),
+          participants: selected.map((s) => ({
+            id: s.student_id,
+            username: s.student_email,
+            full_name: s.student_name,
+            email: s.student_email,
+          })),
+        }),
+      });
+      if (!res.ok) throw new Error('Could not create chat.');
+      const data = await res.json();
+      onCreated(data.id);
+      onClose();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
+        <div className="flex items-start justify-between mb-1">
+          <h3 className="text-slate-900 font-bold text-base">New Chat</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {err && <ErrorBanner message={err} />}
+
+        <div className="space-y-4 mt-4">
+          <Field label="Chat name (optional)">
+            <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Everyone" />
+          </Field>
+
+          <Field label={`Students (${selected.length} selected)`}>
+            <div className="flex gap-2 mb-2">
+              <SecondaryButton type="button" onClick={selectAll}>Select all</SecondaryButton>
+              <SecondaryButton type="button" onClick={clearAll}>Clear</SecondaryButton>
+            </div>
+            <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
+              {students.length === 0 ? (
+                <div className="p-4 text-slate-400 text-sm">No students assigned to you yet.</div>
+              ) : (
+                students.map((s) => {
+                  const checked = selected.some((p) => p.student_id === s.student_id);
+                  return (
+                    <label key={s.student_id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50">
+                      <input type="checkbox" checked={checked} onChange={() => toggleStudent(s)} />
+                      <span className="text-sm text-slate-800">{s.student_name}</span>
+                      <span className="text-xs text-slate-400 ml-auto">{s.cohort_name}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          </Field>
+
+          <PrimaryButton className="w-full justify-center" onClick={handleCreate} disabled={creating}>
+            {creating ? 'Creating…' : 'Start chat'}
+          </PrimaryButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MessageTab({ tutor, token, studentsData }) {
   const [activeChatId, setActiveChatId] = useState(null);
+  const [showNewChat, setShowNewChat] = useState(false);
   const decoded = decodeToken(token);
   const currentUser = { id: decoded?.user_id ? Number(decoded.user_id) : null, name: `${tutor.first_name} ${tutor.last_name}` };
 
   const conversations = useChatConversations(token);
   const { messages, sendMessage, uploadAttachment, connectionStatus } = useChatMessages(token, activeChatId);
+  const activeChat = conversations.items.find((c) => c.id === activeChatId);
+  const isReadOnly = activeChat?.kind === 'broadcast';
 
   return (
     <div>
-      <PageHeader title="Messages" subtitle="Talk to admin and your cohorts" />
+      <PageHeader title="Messages" subtitle="Talk to admin and your cohorts">        <ChatInterface
+          currentUser={currentUser}
+          chats={conversations.items}
+          activeChatId={activeChatId}
+          onSelectChat={setActiveChatId}
+          messages={activeChatId ? messages : []}
+          onSendMessage={sendMessage}
+          onUploadAttachment={uploadAttachment}
+          connectionStatus={connectionStatus}
+        />
+        <PrimaryButton onClick={() => setShowNewChat(true)}>+ New Chat</PrimaryButton>
+      </PageHeader>
       <ErrorBanner message={conversations.error} />
       {conversations.loading ? (
         <Spinner text="Loading chats…" />
@@ -676,11 +785,24 @@ function MessageTab({ tutor, token }) {
           onSendMessage={sendMessage}
           onUploadAttachment={uploadAttachment}
           connectionStatus={connectionStatus}
+          readOnly={isReadOnly}
+        />
+      )}
+      {showNewChat && (
+        <NewTutorChatModal
+          token={token}
+          students={studentsData.students}
+          onClose={() => setShowNewChat(false)}
+          onCreated={(id) => {
+            conversations.refresh();
+            setActiveChatId(id);
+          }}
         />
       )}
     </div>
   );
 }
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Dashboard tab
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2218,7 +2340,7 @@ export default function TutorPortalPage() {
             {tab === 'students' && (
               <StudentsTab token={token} studentsData={studentsData} cohortsData={cohortsData} subTab={studentsSubTab} />
             )}
-            {tab === 'messages' && <MessageTab tutor={tutor} token={token} />}
+            {tab === 'messages' && <MessageTab tutor={tutor} token={token} studentsData={studentsData} />}
             {tab === 'queries' && (
               <ComingSoon title="Queries" hint="This will be wired up once the Query model is built on the backend." />
             )}

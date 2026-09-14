@@ -579,7 +579,7 @@ function NewChatModal({ token, onClose, onCreated }) {
         body: JSON.stringify({
           conversation_type: selected.length > 1 ? 'group' : 'direct',
           name: name || (selected.length > 1 ? 'Group Chat' : selected[0].full_name),
-          participants: selected.map((u) => ({ id: u.id, username: u.username, full_name: u.full_name })),
+          participants: selected.map((u) => ({ id: u.id, username: u.username, full_name: u.full_name, email: u.username })),
         }),
       });
       if (!res.ok) throw new Error('Could not create chat.');
@@ -1374,6 +1374,8 @@ function AdminProjectsTab({ token }) {
 function AdminMessagesTab({ token, initialChatId, onConsumeInitialChat }) {
   const [activeChatId, setActiveChatId] = useState(null);
   const [showNewChat, setShowNewChat] = useState(false);
+  const [openingBroadcast, setOpeningBroadcast] = useState(false);
+  const { users: allUsers } = useAllUsers(token);
   const decoded = useMemo(() => decodeToken(token), [token]);
   const currentUser = { id: decoded?.user_id ? Number(decoded.user_id) : null, name: decoded?.full_name || decoded?.username || 'Admin' };
 
@@ -1390,6 +1392,45 @@ function AdminMessagesTab({ token, initialChatId, onConsumeInitialChat }) {
   return (
     <div>
       <PageHeader title="Messages" subtitle="Talk to cohorts and staff">
+        <SecondaryButton
+          onClick={async () => {
+            setOpeningBroadcast(true);
+            try {
+              const res = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const data = await res.json();
+              const list = Array.isArray(data) ? data : data.results || [];
+              const existing = list.find((c) => c.conversation_type === 'broadcast');
+              if (existing) {
+                setActiveChatId(existing.id);
+                return;
+              }
+              const createRes = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                  conversation_type: 'broadcast',
+                  name: 'Broadcast',
+                  participants: allUsers.map((u) => ({
+                    id: u.id, username: u.username, full_name: u.full_name, email: u.username,
+                  })),
+                }),
+              });
+              if (!createRes.ok) throw new Error('Could not create broadcast channel.');
+              const created = await createRes.json();
+              conversations.refresh();
+              setActiveChatId(created.id);
+            } catch (e) {
+              alert(e.message);
+            } finally {
+              setOpeningBroadcast(false);
+            }
+          }}
+          disabled={openingBroadcast}
+        >
+          {openingBroadcast ? 'Opening…' : '📢 Broadcast'}
+        </SecondaryButton>
         <PrimaryButton onClick={() => setShowNewChat(true)}>+ New Chat</PrimaryButton>
       </PageHeader>
       <ErrorBanner message={conversations.error} />

@@ -271,7 +271,7 @@ function groupBySender(messages) {
   });
 }
 
-function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachment, onBack, connectionStatus }) {
+function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachment, onBack, connectionStatus, readOnly }) {
   const [draft, setDraft] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -378,6 +378,11 @@ function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachm
           {uploadError}
         </div>
       )}
+      {readOnly ? (
+        <div className="px-4 py-3 bg-[#F0F2F5] border-t border-slate-200 shrink-0 text-center text-slate-400 text-[13px]">
+          Only admin can post here
+        </div>
+      ) : (
       <div className="flex items-end gap-2 px-3 sm:px-4 py-2.5 bg-[#F0F2F5] border-t border-slate-200 shrink-0">
         {onUploadAttachment && (
           <>
@@ -423,6 +428,7 @@ function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachm
           </svg>
         </button>
       </div>
+      )}
     </div>
   );
 }
@@ -436,6 +442,7 @@ export default function ChatInterface({
   onSendMessage,
   onUploadAttachment,
   connectionStatus = 'connected',
+  readOnly = false,
 }) {
   const activeChat = chats.find((c) => c.id === activeChatId) || null;
   const showListOnMobile = !activeChatId;
@@ -458,6 +465,7 @@ export default function ChatInterface({
           onUploadAttachment={onUploadAttachment}
           onBack={() => onSelectChat(null)}
           connectionStatus={connectionStatus}
+          readOnly={readOnly}
         />
       </div>
     </div>
