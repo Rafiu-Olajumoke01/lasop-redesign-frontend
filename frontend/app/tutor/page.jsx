@@ -265,7 +265,8 @@ function useCohortSessions(token, cohortId) {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return null;
-    return await res.json();
+    const text = await res.text();
+return text ? JSON.parse(text) : null;
   };
 
   const stopSession = async (sessionId, coords = {}) => {
