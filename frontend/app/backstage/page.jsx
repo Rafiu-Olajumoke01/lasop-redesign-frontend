@@ -684,6 +684,33 @@ function useCohortDetail(token) {
   return { data, loading, error, load };
 }
 
+function useAdminCohortSessions(token, cohortId) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    if (!cohortId) return;
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/cohorts/${cohortId}/sessions/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load class sessions.');
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, cohortId]);
+
+  useEffect(() => { if (token && cohortId) refresh(); }, [token, cohortId, refresh]);
+
+  return { items, loading, error, refresh };
+}
+
 // ─── Promo codes hook ───────────────────────────────────────────────────────
 
 const PROMO_BASE = '/api/promo-codes/';
@@ -1962,11 +1989,16 @@ const STUDENT_STATUS_COLOR = { active: 'emerald', inactive: 'slate', expelled: '
 function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
   const router = useRouter();
   const detail = useCohortDetail(token);
+  const sessions = useAdminCohortSessions(token, cohortId);
   const [studentFilter, setStudentFilter] = useState('active');
+  const [sessionTab, setSessionTab] = useState('today');
 
   useEffect(() => { if (cohortId) detail.load(cohortId); }, [cohortId]);
 
   const statusColor = { present: 'emerald', absent: 'rose', late: 'amber' };
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const pastSessions = sessions.items.filter((s) => s.date < todayStr);
+  const futureSessions = sessions.items.filter((s) => s.date > todayStr);
 
   return (
     <Modal title={detail.data ? detail.data.name : 'Cohort details'} onClose={onClose}>
@@ -1975,6 +2007,17 @@ function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
 
       {detail.data && (
         <div className="space-y-5">
+          <div className="sticky top-0 z-10 bg-white -mx-6 -mt-6 px-6 pt-4 pb-3 mb-1 border-b border-slate-100">
+            <SecondaryButton
+              className="w-full justify-center"
+              onClick={() => {
+                onMessageCohort(cohortId, detail.data.name);
+                onClose();
+              }}
+            >
+              Message cohort
+            </SecondaryButton>
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             {detail.data.current_stage_label && <Pill color="indigo">{detail.data.current_stage_label}</Pill>}
             <Pill color={detail.data.today.is_learning_today ? 'emerald' : 'slate'}>
@@ -2046,8 +2089,26 @@ function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
             <p className="text-slate-400 text-xs mt-2">{detail.data.student_counts.total} total</p>
           </div>
           <div className="pt-4 border-t border-slate-100">
-            <p className="text-slate-400 text-[11px] uppercase tracking-widest font-bold mb-2">Today</p>
-            {!detail.data.today.session ? (
+            <div className="flex items-center gap-1.5 mb-3">
+              {[
+                { key: 'today', label: 'Today' },
+                { key: 'past', label: 'Past' },
+                { key: 'future', label: 'Future' },
+              ].map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setSessionTab(t.key)}
+                  className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${sessionTab === t.key
+                    ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                    : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                    }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {sessionTab === 'today' && (!detail.data.today.session ? (
               <p className="text-slate-400 text-sm">No class session scheduled for today.</p>
             ) : (
               <div>
@@ -2124,26 +2185,46 @@ function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
                   </div>
                 )}
               </div>
+            ))}
+
+            {sessionTab !== 'today' && (
+              <div>
+                {sessions.error && <ErrorBanner message={sessions.error} />}
+                {sessions.loading ? (
+                  <Spinner text="Loading sessions…" />
+                ) : (
+                  <>
+                    {(sessionTab === 'past' ? pastSessions : futureSessions).length === 0 ? (
+                      <p className="text-slate-400 text-sm text-center py-4">
+                        {sessionTab === 'past' ? 'No past sessions yet.' : 'No upcoming sessions scheduled.'}
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {(sessionTab === 'past' ? pastSessions : futureSessions).map((s) => (
+                          <div key={s.id} className="px-3 py-2.5 border border-slate-100 rounded-md">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-slate-800 text-sm font-semibold">{formatDate(s.date)}</p>
+                              <Pill color={s.attendance_marked ? 'emerald' : 'slate'}>
+                                {s.attendance_marked ? 'Attendance taken' : 'Not marked'}
+                              </Pill>
+                            </div>
+                            {s.title && <p className="text-slate-700 text-sm mt-1">{s.title}</p>}
+                            {s.topics_covered && <p className="text-slate-500 text-xs mt-0.5">{s.topics_covered}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             )}
           </div>
 
-          <div className="pt-4 border-t border-slate-100">
-            <SecondaryButton
-              className="w-full justify-center"
-              onClick={() => {
-                onMessageCohort(cohortId, detail.data.name);
-                onClose();
-              }}
-            >
-              Message cohort
-            </SecondaryButton>
-          </div>
         </div>
       )}
     </Modal>
   );
 }
-
 // ─── Cohorts tab ──────────────────────────────────────────────────────────────
 
 const emptyCohort = { name: '', start_date: '', end_date: '', status: 'upcoming', class_days: [] };

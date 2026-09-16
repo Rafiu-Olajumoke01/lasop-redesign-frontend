@@ -1251,6 +1251,19 @@ function CohortSessionsView({ token, cohort, onBack }) {
   const [activeTab, setActiveTab] = useState('today');
   const [stoppingId, setStoppingId] = useState(null);
   const [stopErr, setStopErr] = useState('');
+  const [autoChecked, setAutoChecked] = useState(false);
+
+  useEffect(() => {
+    if (autoChecked) return;
+    setAutoChecked(true);
+    (async () => {
+      const existing = await checkSessionForDate(todayISODate());
+      if (existing && !existing.attendance_marked) {
+        setConflictSession(existing);
+        setActiveTab('today');
+      }
+    })();
+  }, [autoChecked, checkSessionForDate]);
 
   if (openSession) {
     return <SessionAttendanceView token={token} session={openSession} onBack={() => setOpenSession(null)} />;
