@@ -62,12 +62,11 @@ function ModePill({ mode }) {
 }
 
 function PaymentStatusBadge({ status, amountPaid }) {
-  if (!status || status === 'not_started') return null;
+  if (status === 'paid') return <Pill color="emerald">Fees Fully Paid</Pill>;
+  if (status === 'partially_paid') return <Pill color="blue">{`Partially paid · ₦${Number(amountPaid).toLocaleString()}`}</Pill>;
   if (status === 'in_review') return <Pill color="amber">Payment in review</Pill>;
-  if (status === 'paid') return <Pill color="emerald">{`Paid · ₦${Number(amountPaid).toLocaleString()}`}</Pill>;
   return null;
 }
-
 
 
 function ErrorBanner({ message }) {
@@ -1239,9 +1238,11 @@ function CapstoneProjectsSection({ token, applications }) {
 function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemove, onPaymentUpdate }) {
   const isPaymentOpen = openPayment === app.id;
   const paymentStatus = app.payment_status || 'not_started';
-  const isPaid = paymentStatus === 'paid';
+  const fee = Number(app.course_detail?.fee) || 0;
+  const amountPaid = Number(app.amount_paid) || 0;
+  const balance = fee - amountPaid;
   const canPay = paymentStatus === 'not_started';
-
+  const canUpdatePayment = paymentStatus === 'partially_paid';
   return (
     <Card interactive className={featured ? 'md:col-span-2 p-5 md:p-6' : 'p-4'}>
       <div className={featured ? 'flex items-start justify-between gap-6 flex-wrap' : ''}>
@@ -1291,7 +1292,7 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
         </button>
       )}
 
-      {canPay && (
+      {(canPay || canUpdatePayment) && (
         <div className="mt-4 pt-3.5 border-t border-slate-100">
           {isPaymentOpen ? (
             <SecondaryButton onClick={() => setOpenPayment(null)} className="text-slate-500">
@@ -1299,12 +1300,11 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
             </SecondaryButton>
           ) : (
             <PrimaryButton onClick={() => setOpenPayment(app.id)}>
-              Pay Now
+              {canUpdatePayment ? 'Update Payment' : 'Pay Now'}
             </PrimaryButton>
           )}
         </div>
       )}
-
       <div className="mt-4 pt-3.5 border-t border-slate-100">
         <Link
           href={`/student/courses/${app.course}`}
@@ -1318,7 +1318,7 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
         <PaymentTransfer
           applicationId={app.id}
           authToken={token}
-          totalFee={Number(app.course_detail?.fee) || 0}
+          totalFee={canUpdatePayment ? balance : fee}
           onClose={() => setOpenPayment(null)}
           onSubmitted={() => {
             onPaymentUpdate(app.id, 'in_review');
@@ -1334,6 +1334,10 @@ function CourseCard({ app, featured, token, openPayment, setOpenPayment, onRemov
 
 function PayNowCard({ app, token, openPayment, setOpenPayment, onPaymentUpdate }) {
   const isPaymentOpen = openPayment === app.id;
+  const fee = Number(app.course_detail?.fee) || 0;
+  const amountPaid = Number(app.amount_paid) || 0;
+  const balance = fee - amountPaid;
+  const isUpdate = app.payment_status === 'partially_paid';
 
   return (
     <Card interactive className="p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap">
@@ -1344,7 +1348,7 @@ function PayNowCard({ app, token, openPayment, setOpenPayment, onPaymentUpdate }
         <div className="min-w-0">
           <p className="text-slate-900 font-semibold text-sm tracking-tight truncate">{app.course_detail?.title}</p>
           <p className="text-slate-400 text-[11px] mt-0.5">
-            ₦{Number(app.course_detail?.fee).toLocaleString()} · Payment pending
+            {isUpdate ? `₦${balance.toLocaleString()} balance remaining` : `₦${fee.toLocaleString()} · Payment pending`}
           </p>
         </div>
       </div>
@@ -1355,7 +1359,7 @@ function PayNowCard({ app, token, openPayment, setOpenPayment, onPaymentUpdate }
         </SecondaryButton>
       ) : (
         <PrimaryButton onClick={() => setOpenPayment(app.id)} className="shrink-0">
-          Pay Now
+          {isUpdate ? 'Update Payment' : 'Pay Now'}
         </PrimaryButton>
       )}
 
@@ -1363,7 +1367,7 @@ function PayNowCard({ app, token, openPayment, setOpenPayment, onPaymentUpdate }
         <PaymentTransfer
           applicationId={app.id}
           authToken={token}
-          totalFee={Number(app.course_detail?.fee) || 0}
+          totalFee={isUpdate ? balance : fee}
           onClose={() => setOpenPayment(null)}
           onSubmitted={() => {
             onPaymentUpdate(app.id, 'in_review');
@@ -1377,7 +1381,7 @@ function PayNowCard({ app, token, openPayment, setOpenPayment, onPaymentUpdate }
 
 function PayNowSection({ applications, token, openPayment, setOpenPayment, onPaymentUpdate }) {
   const unpaidApps = applications.filter(
-    (a) => !a.payment_status || a.payment_status === 'not_started'
+    (a) => !a.payment_status || a.payment_status === 'not_started' || a.payment_status === 'partially_paid'
   );
 
   if (unpaidApps.length === 0) return null;
