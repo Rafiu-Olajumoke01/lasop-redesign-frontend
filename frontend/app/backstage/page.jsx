@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ChatInterface from './../../components/chatinterface/Chatinterface'
+import GuestsTab from './../../components/backstage/GuestsTab';
+import BlogTab from './../../components/backstage/BlogTab';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -469,21 +471,21 @@ function useChatMessages(token, conversationId) {
     ws.onclose = () => setConnectionStatus('offline');
     ws.onerror = () => setConnectionStatus('offline');
     ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  setMessages((prev) => [
-    ...prev,
-    {
-      id: data.id,
-      text: data.content,
-      sender_id: Number(data.sender_id),
-      sender_name: data.sender_name,
-      created_at: data.created_at,
-      message_type: data.message_type,
-      attachment_url: data.attachment_url,
-      attachment_name: data.attachment_name,
-    },
-  ]);
-};
+      const data = JSON.parse(event.data);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: data.id,
+          text: data.content,
+          sender_id: Number(data.sender_id),
+          sender_name: data.sender_name,
+          created_at: data.created_at,
+          message_type: data.message_type,
+          attachment_url: data.attachment_url,
+          attachment_name: data.attachment_name,
+        },
+      ]);
+    };
     return () => ws.close();
   }, [token, conversationId]);
 
@@ -1022,7 +1024,7 @@ function AdminAssessmentTab({ token, cohortLookup }) {
 
       <ErrorBanner message={assessments.error} />
 
-            {assessments.loading ? (
+      {assessments.loading ? (
         <Spinner text="Loading assessments…" />
       ) : assessments.items.length === 0 ? (
         <Card><EmptyState title="No assessments" hint="Nothing matches this filter yet." /></Card>
@@ -1407,7 +1409,7 @@ function AdminMessagesTab({ token, initialChatId, onConsumeInitialChat }) {
   const currentUser = { id: decoded?.user_id ? Number(decoded.user_id) : null, name: decoded?.full_name || decoded?.username || 'Admin' };
 
   const conversations = useChatConversations(token);
-    const { messages, sendMessage, uploadAttachment, connectionStatus } = useChatMessages(token, activeChatId);
+  const { messages, sendMessage, uploadAttachment, connectionStatus } = useChatMessages(token, activeChatId);
 
   useEffect(() => {
     if (initialChatId) {
@@ -1960,7 +1962,7 @@ function CohortsTodaySection({ token, onViewCohort }) {
           <Card key={s.session_id} interactive className="p-4 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-slate-900 font-bold text-[14px] truncate">{s.cohort_name}</p>
-             <p className="text-slate-400 text-xs mt-0.5">
+              <p className="text-slate-400 text-xs mt-0.5">
                 {s.tutor || 'No tutor assigned'} ·{' '}
                 {s.started_at
                   ? new Date(s.started_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -4004,6 +4006,8 @@ const NAV = [
   { key: 'messages', label: 'Messages', icon: <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" /> },
   { key: 'postjob', label: 'Post Job', icon: <><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" /></> },
   { key: 'centers', label: 'Centers', icon: <><path d="M3 21h18M5 21V7l7-4 7 4v14" /></> },
+  { key: 'guests', label: 'Guests', icon: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" /></> },
+  { key: 'blog', label: 'Blog', icon: <><path d="M4 4h11l5 5v11H4z" /><path d="M15 4v5h5" /></> },
 ];
 
 // ─── Sidebar drawer ────────────────────────────────────────────────────────────
@@ -4141,43 +4145,171 @@ function Sidebar({ open, onClose, tab, setTab, studentsSubTab, setStudentsSubTab
 
 // ─── Top bar ───────────────────────────────────────────────────────────────────
 
-function TopBar({ onMenuClick, title, dateLabel }) {
-  return (
-    <header className="bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70 border-b border-slate-200 px-4 lg:px-8 py-3 flex items-center justify-between sticky top-0 z-20">
-      <div className="flex items-center gap-3">
-        <button onClick={onMenuClick} aria-label="Menu" className="text-slate-500 hover:text-slate-700 transition-colors lg:hidden">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-            <path d="M4 7h16M4 12h16M4 17h16" />
-          </svg>
-        </button>
-        <p className="text-slate-800 font-semibold text-[14px] tracking-tight">{title}</p>
-      </div>
+const SEARCH_PAGES = [
+  { tab: 'overview', label: 'Overview', keywords: ['home', 'dashboard'] },
+  { tab: 'cohorts', label: 'Cohorts', keywords: ['class', 'classes', 'session', 'sessions', 'attendance'] },
+  { tab: 'applicants', label: 'Applicants', keywords: ['application', 'applications', 'apply'] },
+  { tab: 'tutors', label: 'Tutors', keywords: ['teacher', 'instructor', 'user', 'users'] },
+  { tab: 'students', label: 'Students', keywords: ['learner', 'user', 'users', 'assessment', 'projects'] },
+  { tab: 'staffs', label: 'Staffs', keywords: ['staff', 'user', 'users'] },
+  { tab: 'finances', label: 'Finances', keywords: ['payment', 'payments', 'promo', 'revenue'] },
+  { tab: 'syllabus', label: 'Syllabus', keywords: ['course', 'courses'] },
+  { tab: 'exam', label: 'Exam', keywords: ['exams', 'test', 'quiz'] },
+  { tab: 'results', label: 'Results', keywords: ['score', 'scores', 'grade'] },
+  { tab: 'projects', label: 'Projects', keywords: ['project', 'capstone'] },
+  { tab: 'queries', label: 'Queries', keywords: ['query', 'complaint'] },
+  { tab: 'messages', label: 'Messages', keywords: ['chat', 'message', 'broadcast'] },
+  { tab: 'postjob', label: 'Post Job', keywords: ['job', 'jobs'] },
+  { tab: 'centers', label: 'Centers', keywords: ['location', 'locations', 'campus'] },
+  { tab: 'guests', label: 'Guests', keywords: ['visitor', 'visitors', 'guest'] },
+  { tab: 'blog', label: 'Blog', keywords: ['post', 'posts', 'article', 'articles'] },
+];
 
-      <div className="flex items-center gap-1">
-        {dateLabel && (
-          <span className="hidden sm:inline-flex items-center border border-slate-200 rounded-md px-2.5 py-1 text-slate-500 font-medium text-[12px] bg-white mr-1.5">
-            {dateLabel}
-          </span>
-        )}
-        <button aria-label="Messages" className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors rounded-md p-1.5">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
-          </svg>
-        </button>
-        <button aria-label="Notifications" className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors rounded-md p-1.5">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 01-3.46 0" />
-          </svg>
-        </button>
-        <button className="flex items-center gap-1.5 text-slate-700 font-medium text-[13px] hover:bg-slate-100 transition-colors rounded-md pl-1.5 pr-2 py-1.5 ml-0.5">
-          <span className="w-6 h-6 rounded-full bg-[#0057E7] text-white text-[11px] font-bold flex items-center justify-center shrink-0">A</span>
-          <span className="hidden sm:inline">Admin</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 9l6 6-6 6" />
-          </svg>
-        </button>
-      </div>
+function GlobalSearch({ token, data, onNavigate }) {
+  const router = useRouter();
+  const students = useStudents(token);
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const has = (...vals) => vals.some((v) => v != null && String(v).toLowerCase().includes(q));
+    const out = [];
+
+    SEARCH_PAGES.forEach((p) => {
+      if (p.label.toLowerCase().includes(q) || p.keywords.some((k) => k.startsWith(q))) {
+        out.push({ key: `page-${p.tab}`, label: p.label, sub: 'Go to page', type: 'Page', tab: p.tab });
+      }
+    });
+
+    students.items.forEach((s) => {
+      if (has(getStudentName(s), s.email, s.phone_number)) {
+        out.push({ key: `student-${s.id}`, label: getStudentName(s), sub: s.email, type: 'Student', href: `/backstage/students/${s.id}` });
+      }
+    });
+
+    data.tutors.items.forEach((t) => {
+      const u = t.user_detail;
+      const name = getTutorLabel(t);
+      if (has(name, u?.email, u?.phone_number, ...(t.courses_of_instruction || []))) {
+        out.push({ key: `tutor-${t.id}`, label: name, sub: u?.email, type: 'Tutor', tab: 'tutors' });
+      }
+    });
+
+    data.cohorts.items.forEach((c) => {
+      if (has(c.name, c.status)) {
+        out.push({ key: `cohort-${c.id}`, label: c.name, sub: c.status, type: 'Cohort', tab: 'cohorts' });
+      }
+    });
+
+    data.courses.items.forEach((c) => {
+      if (has(c.title, c.category)) {
+        out.push({ key: `course-${c.id}`, label: c.title, sub: c.category, type: 'Course', tab: 'syllabus' });
+      }
+    });
+
+    data.locations.items.forEach((l) => {
+      if (has(l.name, l.address)) {
+        out.push({ key: `center-${l.id}`, label: l.name, sub: l.address, type: 'Center', tab: 'centers' });
+      }
+    });
+
+    data.exams.items.forEach((e) => {
+      if (has(e.title, e.exam_type)) {
+        out.push({ key: `exam-${e.id}`, label: e.title, sub: e.exam_type, type: 'Exam', tab: 'exam' });
+      }
+    });
+
+    data.results.items.forEach((r) => {
+      const sd = r.student_detail;
+      const sName = sd ? `${sd.first_name || ''} ${sd.last_name || ''}`.trim() : '';
+      if (has(sName, r.exam_detail?.title, r.status)) {
+        out.push({ key: `result-${r.id}`, label: sName || 'Result', sub: r.exam_detail?.title, type: 'Result', tab: 'results' });
+      }
+    });
+
+    data.applications.items.forEach((a) => {
+      if (a.payment && has(a.payment.tx_ref)) {
+        out.push({ key: `payment-${a.payment.id}`, label: getApplicantName(a) || 'Payment', sub: a.payment.tx_ref, type: 'Payment', tab: 'finances' });
+      }
+    });
+
+    return out.slice(0, 12);
+  }, [query, students.items, data]);
+
+  const pick = (r) => {
+    if (!r) return;
+    if (r.href) router.push(r.href);
+    else onNavigate(r.tab);
+    setQuery('');
+    setOpen(false);
+  };
+
+  return (
+    <div ref={boxRef} className="relative w-full">
+      <svg
+        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"
+      >
+        <circle cx="11" cy="11" r="7" />
+        <path d="M21 21l-4.3-4.3" />
+      </svg>
+      <input
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') pick(matches[0]);
+          if (e.key === 'Escape') setOpen(false);
+        }}
+        placeholder="Search students, tutors, cohorts, courses, payments…"
+        className="w-full bg-slate-50 border border-slate-200 focus:border-[#0057E7] focus:bg-white focus:ring-2 focus:ring-[#0057E7]/15 outline-none rounded-md pl-10 pr-4 py-2.5 text-[14px] text-slate-800 placeholder:text-slate-400 transition"
+      />
+
+      {open && query.trim() !== '' && (
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden max-h-96 overflow-y-auto z-50">
+          {matches.length === 0 ? (
+            <p className="px-4 py-3 text-slate-400 text-sm">No results found.</p>
+          ) : (
+            matches.map((r) => (
+              <button
+                key={r.key}
+                onClick={() => pick(r)}
+                className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-slate-50 transition border-b border-slate-100 last:border-0"
+              >
+                <span className="min-w-0">
+                  <span className="block text-slate-800 text-sm font-medium truncate">{r.label}</span>
+                  {r.sub && <span className="block text-slate-400 text-xs truncate">{r.sub}</span>}
+                </span>
+                <Pill color={r.type === 'Page' ? 'blue' : 'slate'}>{r.type}</Pill>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TopBar({ onMenuClick, children }) {
+  return (
+    <header className="bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70 border-b border-slate-200 px-4 lg:px-8 py-3 flex items-center gap-3 sticky top-0 z-20">
+      <button onClick={onMenuClick} aria-label="Menu" className="text-slate-500 hover:text-slate-700 transition-colors lg:hidden shrink-0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+      <div className="flex-1 min-w-0">{children}</div>
     </header>
   );
 }
@@ -4247,50 +4379,48 @@ export default function BackstagePage() {
   const dashboardStats = useDashboardStats(token);
 
   const handleOverviewNavigate = (target) => {
-    if (target === 'guests') setTab('students');
-    if (target === 'blog') setTab('postjob');
+    if (target === 'guests') setTab('guests');
+    if (target === 'blog') setTab('blog');
   };
 
   const handleMessageCohort = async (cohortId, cohortName) => {
-  try {
-    const rosterRes = await fetch(`${API_BASE}/api/cohorts/${cohortId}/chat-roster/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!rosterRes.ok) throw new Error('Could not load cohort roster.');
-    const roster = await rosterRes.json();
+    try {
+      const rosterRes = await fetch(`${API_BASE}/api/cohorts/${cohortId}/chat-roster/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!rosterRes.ok) throw new Error('Could not load cohort roster.');
+      const roster = await rosterRes.json();
 
-    const convRes = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const convData = await convRes.json();
-    const existing = (Array.isArray(convData) ? convData : convData.results || [])
-      .find((c) => c.conversation_type === 'group' && c.name === cohortName);
+      const convRes = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const convData = await convRes.json();
+      const existing = (Array.isArray(convData) ? convData : convData.results || [])
+        .find((c) => c.conversation_type === 'group' && c.name === cohortName);
 
-    if (existing) {
-      setPendingChatId(existing.id);
+      if (existing) {
+        setPendingChatId(existing.id);
+        setTab('messages');
+        return;
+      }
+
+      const createRes = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          conversation_type: 'group',
+          name: cohortName,
+          participants: roster.participants,
+        }),
+      });
+      if (!createRes.ok) throw new Error('Could not create cohort chat.');
+      const created = await createRes.json();
+      setPendingChatId(created.id);
       setTab('messages');
-      return;
+    } catch (e) {
+      alert(e.message);
     }
-
-    const createRes = await fetch(`${CHAT_API_BASE}/api/chats/conversations/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        conversation_type: 'group',
-        name: cohortName,
-        participants: roster.participants,
-      }),
-    });
-    if (!createRes.ok) throw new Error('Could not create cohort chat.');
-    const created = await createRes.json();
-    setPendingChatId(created.id);
-    setTab('messages');
-  } catch (e) {
-    alert(e.message);
-  }
-};
-
-  const currentLabel = NAV.find((n) => n.key === tab)?.label || 'Overview';
+  };
 
   if (!authChecked) {
     return (
@@ -4314,11 +4444,16 @@ export default function BackstagePage() {
         setStudentsSubTab={setStudentsSubTab}
       />
       <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
-        <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} dateLabel={tab === 'overview' ? 'June 2026' : null} />
-
+        <TopBar onMenuClick={() => setSidebarOpen(true)}>
+          <GlobalSearch
+            token={token}
+            data={{ courses, cohorts, tutors, applications, locations, exams, results }}
+            onNavigate={setTab}
+          />
+        </TopBar>
         <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto pb-24">
           <div className="max-w-6xl">
-                        {tab === 'overview' && (
+            {tab === 'overview' && (
               <OverviewTab
                 courses={courses}
                 locations={locations}
@@ -4336,7 +4471,7 @@ export default function BackstagePage() {
             {tab === 'exam' && <ExamsTab exams={exams} cohorts={cohorts} courses={courses} />}
             {tab === 'results' && <ResultsTab results={results} exams={exams} applications={applications} />}
             {tab === 'projects' && <AdminProjectsTab token={token} />}
-                        {tab === 'cohorts' && <CohortsTab cohorts={cohorts} token={token} onMessageCohort={handleMessageCohort} />}
+            {tab === 'cohorts' && <CohortsTab cohorts={cohorts} token={token} onMessageCohort={handleMessageCohort} />}
             {tab === 'tutors' && <TutorsTab tutors={tutors} cohorts={cohorts} />}
             {tab === 'students' && <StudentsTab token={token} tutors={tutors} subTab={studentsSubTab} />}
 
@@ -4351,22 +4486,11 @@ export default function BackstagePage() {
               />
             )}
             {tab === 'postjob' && <ComingSoon title="Post Job" />}
+            {tab === 'guests' && <GuestsTab token={token} />}
+            {tab === 'blog' && <BlogTab />}
           </div>
         </div>
       </div>
-
-      {/* WhatsApp floating button */}
-      <a
-        href="https://wa.me/"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Chat on WhatsApp"
-        className="fixed bottom-5 right-5 w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 z-30"
-      >
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
-          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.47 3.47 1.29 4.93L2 22l5.29-1.39a9.9 9.9 0 004.75 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.79 14.02c-.24.68-1.4 1.3-1.93 1.38-.49.08-1.11.11-1.79-.11-.41-.13-.94-.3-1.62-.6-2.84-1.23-4.7-4.1-4.84-4.29-.14-.19-1.16-1.54-1.16-2.94 0-1.4.73-2.08 1-2.37.24-.27.53-.34.71-.34.18 0 .35 0 .5.01.16.01.38-.06.6.46.24.57.81 1.97.88 2.11.07.14.11.3.02.49-.09.19-.14.3-.27.46-.14.16-.29.36-.41.48-.14.14-.28.29-.12.57.16.28.71 1.17 1.52 1.9 1.05.94 1.93 1.23 2.21 1.37.28.14.44.12.6-.07.16-.19.68-.79.87-1.06.18-.27.36-.22.6-.13.24.09 1.55.73 1.82.86.27.13.45.19.51.3.07.13.07.7-.17 1.38z" />
-        </svg>
-      </a>
     </div>
   );
 }
