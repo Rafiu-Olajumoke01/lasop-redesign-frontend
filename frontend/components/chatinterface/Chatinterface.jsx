@@ -472,7 +472,7 @@ export default function ChatInterface({
   const showListOnMobile = !activeChatId;
 
   return (
-    <div className="flex h-[calc(100dvh-140px)] min-h-[480px] bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div className="flex h-[calc(100dvh-140px)] min-h-[480px] w-full max-w-full bg-white border border-slate-200 rounded-lg overflow-hidden">
       <div className={`w-full md:w-[340px] shrink-0 border-r border-slate-200 ${showListOnMobile ? 'block' : 'hidden md:block'}`}>
         <ChatList
           chats={chats}
@@ -480,7 +480,7 @@ export default function ChatInterface({
           onSelectChat={onSelectChat}
         />
       </div>
-      <div className={`flex-1 ${showListOnMobile ? 'hidden md:flex' : 'flex'} flex-col`}>
+      <div className={`flex-1 min-w-0 ${showListOnMobile ? 'hidden md:flex' : 'flex'} flex-col`}>
         <ConversationView
           chat={activeChat}
           messages={messages}
