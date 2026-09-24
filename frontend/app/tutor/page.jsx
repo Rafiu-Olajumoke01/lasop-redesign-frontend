@@ -226,9 +226,9 @@ function useCohortSessions(token, cohortId) {
       throw err;
     }
     if (!res.ok) {
-      const text = await res.text();
-      console.error('Session create failed:', text);
-      throw new Error('Could not create session.');
+      const data = await res.json().catch(() => ({}));
+      const detail = Array.isArray(data.detail) ? data.detail.join(' ') : data.detail;
+      throw new Error(detail || 'Could not create session.');
     }
     await refresh();
   };
@@ -335,26 +335,24 @@ function useSessionAttendance(token, sessionId) {
 
 // ── Live elapsed timer, ticks while started_at is set and ended_at isn't ────
 
-function useElapsedTimer(startedAt, endedAt) {
-  const [elapsed, setElapsed] = useState(0);
+function useElapsedTimer(startedAt, endedAt, capAt) {
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!startedAt) { setElapsed(0); return; }
-    const start = new Date(startedAt).getTime();
-
-    const computeElapsed = () => {
-      const end = endedAt ? new Date(endedAt).getTime() : Date.now();
-      setElapsed(Math.max(0, Math.floor((end - start) / 1000)));
-    };
-
-    computeElapsed();
-    if (endedAt) return;
-
-    const interval = setInterval(computeElapsed, 1000);
+    if (!startedAt || endedAt) return;
+    setNow(Date.now());
+    const interval = setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      if (capAt && t >= capAt) clearInterval(interval);
+    }, 1000);
     return () => clearInterval(interval);
-  }, [startedAt, endedAt]);
+  }, [startedAt, endedAt, capAt]);
 
-  return elapsed;
+  if (!startedAt) return 0;
+  const start = new Date(startedAt).getTime();
+  const end = endedAt ? new Date(endedAt).getTime() : Math.min(now, capAt || now);
+  return Math.max(0, Math.floor((end - start) / 1000));
 }
 
 function formatElapsed(totalSeconds) {
@@ -894,11 +892,15 @@ function plusOneHour(timeStr) {
 }
 
 const blankLessonFields = { title: '', topics_covered: '', lesson_outcome: '' };
-const blankScheduleFields = { date: '', start_time: '', end_time: '' };
+const blankScheduleFields = { date: '' };
 
 function SessionCard({ session, onOpen, onStop, stopping }) {
-  const live = !!session.started_at && !session.ended_at;
-  const elapsed = useElapsedTimer(session.started_at, session.ended_at);
+  const scheduledEnd = new Date(`${session.date}T${session.end_time}`).getTime();
+  const expired = Date.now() >= scheduledEnd;
+  const ended = !!session.ended_at || (!!session.started_at && expired);
+  const live = !!session.started_at && !ended;
+  const elapsed = useElapsedTimer(session.started_at, session.ended_at, scheduledEnd);
+  const remaining = Math.max(0, Math.floor((scheduledEnd - Date.now()) / 1000));
   return (
     <Card className="p-5 hover:border-slate-300 transition-colors">
       <div className="flex items-start justify-between mb-2 gap-2">
@@ -906,12 +908,14 @@ function SessionCard({ session, onOpen, onStop, stopping }) {
           {session.title || (session.topics_covered ? session.topics_covered.split('\n')[0] : 'Untitled session')}
         </h3>
         <div className="flex items-center gap-1.5 shrink-0">
-          {live && <Pill color="emerald">Live · {formatElapsed(elapsed)}</Pill>}
-          {!live && session.ended_at && <Pill color="slate">Ended</Pill>}
+          {live && <Pill color="emerald">Live · {formatElapsed(remaining)} left</Pill>}
+          {ended && <Pill color="slate">Ended</Pill>}
         </div>
       </div>
-      <p className="text-slate-400 text-xs mb-1">{session.date}</p>
-      {!live && session.started_at && session.ended_at && (
+      <p className="text-slate-400 text-xs mb-1">
+        {session.date} · {session.start_time?.slice(0, 5)}–{session.end_time?.slice(0, 5)}
+      </p>
+      {ended && session.started_at && (
         <p className="text-slate-500 text-xs font-medium mb-4">
           Total time spent: {formatElapsed(elapsed)}
         </p>
@@ -1061,8 +1065,6 @@ function SessionFormModal({ activeTab, editSession, onClose, onCreate, onUpdate,
         topics_covered: editSession.topics_covered || '',
         lesson_outcome: editSession.lesson_outcome || '',
         date: editSession.date || '',
-        start_time: editSession.start_time || '',
-        end_time: editSession.end_time || '',
       };
     }
     return isToday ? { ...blankLessonFields } : { ...blankLessonFields, ...blankScheduleFields };
@@ -1075,16 +1077,15 @@ function SessionFormModal({ activeTab, editSession, onClose, onCreate, onUpdate,
       setFormErr('Please fill in all lesson fields before saving.');
       return;
     }
-    if ((isEdit || !isToday) && (!form.date || !form.start_time || !form.end_time)) {
-      setFormErr('Please fill in date, start time and end time.');
+    if (!isEdit && !isToday && !form.date) {
+      setFormErr('Please pick a date.');
       return;
     }
 
     let payload = { ...form };
     if (!isEdit && isToday) {
-      const start = nowTimeString();
       const coords = await getCurrentPosition();
-      payload = { ...payload, date: todayISODate(), start_time: start, end_time: plusOneHour(start), ...coords };
+      payload = { ...payload, date: todayISODate(), ...coords };
     }
 
     setSaving(true); setFormErr('');
@@ -1147,35 +1148,15 @@ function SessionFormModal({ activeTab, editSession, onClose, onCreate, onUpdate,
             />
           </Field>
 
-          {(isEdit || !isToday) && (
-            <>
-              <Field label="Date">
-                <input
-                  type="date"
-                  className={inputClass}
-                  value={form.date}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
-                />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Start time">
-                  <input
-                    type="time"
-                    className={inputClass}
-                    value={form.start_time}
-                    onChange={(e) => setForm({ ...form, start_time: e.target.value })}
-                  />
-                </Field>
-                <Field label="End time">
-                  <input
-                    type="time"
-                    className={inputClass}
-                    value={form.end_time}
-                    onChange={(e) => setForm({ ...form, end_time: e.target.value })}
-                  />
-                </Field>
-              </div>
-            </>
+             {!isEdit && !isToday && (
+            <Field label="Date">
+              <input
+                type="date"
+                className={inputClass}
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+              />
+            </Field>
           )}
 
           <div className="flex gap-2 pt-2">

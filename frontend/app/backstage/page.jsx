@@ -2039,7 +2039,10 @@ function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
               <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-1">Class days</p>
               <p className="text-slate-800 font-semibold text-sm">
                 {detail.data.class_days?.length
-                  ? detail.data.class_days.map((d) => DAY_LABELS[d] || d).join(', ')
+                  ? detail.data.class_days.map((d) => {
+                    const t = detail.data.class_times?.[d];
+                    return `${DAY_LABELS[d] || d}${t ? ` ${t.start}–${t.end}` : ''}`;
+                  }).join(', ')
                   : '—'}
               </p>
             </div>
@@ -2261,7 +2264,7 @@ function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
 }
 // ─── Cohorts tab ──────────────────────────────────────────────────────────────
 
-const emptyCohort = { name: '', start_date: '', end_date: '', status: 'upcoming', class_days: [] };
+const emptyCohort = { name: '', start_date: '', end_date: '', status: 'upcoming', class_days: [], class_times: {} };
 
 function CohortsTab({ cohorts, token, onMessageCohort }) {
   const [modal, setModal] = useState(null);
@@ -2279,6 +2282,7 @@ function CohortsTab({ cohorts, token, onMessageCohort }) {
       end_date: c.end_date || '',
       status: c.status,
       class_days: c.class_days || [],
+      class_times: c.class_times || {},
     });
     setModal(c);
     setErr('');
@@ -2414,12 +2418,18 @@ function CohortsTab({ cohorts, token, onMessageCohort }) {
                       type="button"
                       key={code}
                       onClick={() => {
-                        setForm((f) => ({
-                          ...f,
-                          class_days: checked
-                            ? f.class_days.filter((d) => d !== code)
-                            : [...f.class_days, code],
-                        }));
+                        setForm((f) => {
+                          const nextTimes = { ...f.class_times };
+                          if (checked) delete nextTimes[code];
+                          else nextTimes[code] = { start: '', end: '' };
+                          return {
+                            ...f,
+                            class_days: checked
+                              ? f.class_days.filter((d) => d !== code)
+                              : [...f.class_days, code],
+                            class_times: nextTimes,
+                          };
+                        });
                       }}
                       className={`text-[12px] font-medium px-2.5 py-1 rounded-full border transition ${checked
                         ? 'border-[#0057E7] bg-[#0057E7] text-white'
@@ -2432,6 +2442,31 @@ function CohortsTab({ cohorts, token, onMessageCohort }) {
                 })}
               </div>
             </Field>
+
+            {form.class_days.length > 0 && (
+              <Field label="Class time for each day">
+                <div className="space-y-2">
+                  {Object.keys(DAY_LABELS).filter((d) => form.class_days.includes(d)).map((d) => (
+                    <div key={d} className="flex items-center gap-2">
+                      <span className="w-10 text-[12px] font-semibold text-slate-600">{DAY_LABELS[d]}</span>
+                      <input
+                        type="time"
+                        className={inputClass}
+                        value={form.class_times[d]?.start || ''}
+                        onChange={(e) => setForm({ ...form, class_times: { ...form.class_times, [d]: { ...form.class_times[d], start: e.target.value } } })}
+                      />
+                      <span className="text-slate-400 text-xs">to</span>
+                      <input
+                        type="time"
+                        className={inputClass}
+                        value={form.class_times[d]?.end || ''}
+                        onChange={(e) => setForm({ ...form, class_times: { ...form.class_times, [d]: { ...form.class_times[d], end: e.target.value } } })}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </Field>
+            )}
 
             <PrimaryButton className="w-full justify-center" onClick={handleSave} disabled={saving}>
               {saving ? 'Saving…' : 'Save cohort'}
