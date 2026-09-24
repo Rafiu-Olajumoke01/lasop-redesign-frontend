@@ -5,6 +5,9 @@ const HEADER_TEAL = '#075E54';
 const ACCENT_BLUE = '#0057E7';
 const OUTGOING_GREEN = '#D9FDD3';
 
+// Unsent drafts, kept per chat so they survive re-renders and switching chats
+const chatDrafts = {};
+
 function ChatWallpaper() {
   const pattern = encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
@@ -32,6 +35,8 @@ function ChatWallpaper() {
       }}
     />
   );
+
+
 }
 
 function Avatar({ name, size = 40 }) {
@@ -146,7 +151,7 @@ function ChatList({ chats, activeChatId, onSelectChat }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search chats"
-            className="w-full bg-white/95 rounded-full pl-9 pr-3.5 py-2 text-[13px] text-slate-700 placeholder:text-slate-400 outline-none"
+            className="w-full bg-white/95 rounded-full pl-9 pr-3.5 py-2 text-[16px] sm:text-[13px] text-slate-700rounded-full pl-9 pr-3.5 py-2 text-[13px] text-slate-700 placeholder:text-slate-400 outline-none"
           />
         </div>
       </div>
@@ -272,11 +277,12 @@ function groupBySender(messages) {
 }
 
 function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachment, onBack, connectionStatus, readOnly }) {
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(() => chatDrafts[chat?.id] || '');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -284,15 +290,32 @@ function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachm
 
   const grouped = useMemo(() => groupBySender(messages), [messages]);
 
+  // Load the saved draft when switching chats
+  useEffect(() => {
+    setDraft(chatDrafts[chat?.id] || '');
+  }, [chat?.id]);
+
+  // Grow the box as she types, up to a max height
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 112)}px`;
+  }, [draft]);
+
+  const updateDraft = (value) => {
+    setDraft(value);
+    if (chat) chatDrafts[chat.id] = value;
+  };
+
   const handleSend = () => {
     const text = draft.trim();
     if (!text) return;
     onSend(text);
-    setDraft('');
+    updateDraft('');
   };
-
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(pointer: fine)').matches) {
       e.preventDefault();
       handleSend();
     }
@@ -317,7 +340,7 @@ function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachm
         attachment_name: uploaded?.attachment_name || file.name,
       };
       onSend(draft.trim(), attachment);
-      setDraft('');
+      updateDraft('');
     } catch (err) {
       setUploadError(err.message || 'Could not upload file.');
     } finally {
@@ -409,12 +432,13 @@ function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachm
           </>
         )}
         <textarea
+          ref={textareaRef}
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => updateDraft(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type a message"
           rows={1}
-          className="flex-1 resize-none bg-white rounded-2xl px-4 py-2.5 text-[14.5px] text-slate-800 placeholder:text-slate-400 outline-none max-h-28 shadow-sm"
+          className="flex-1 resize-none overflow-y-auto bg-white rounded-2xl px-4 py-2.5 text-[16px] sm:text-[14.5px] text-slate-800 placeholder:text-slate-400 outline-none max-h-28 shadow-sm"
         />
         <button
           onClick={handleSend}
@@ -448,7 +472,7 @@ export default function ChatInterface({
   const showListOnMobile = !activeChatId;
 
   return (
-    <div className="flex h-[calc(100vh-140px)] min-h-[480px] bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div className="flex h-[calc(100dvh-140px)] min-h-[480px] bg-white border border-slate-200 rounded-lg overflow-hidden">
       <div className={`w-full md:w-[340px] shrink-0 border-r border-slate-200 ${showListOnMobile ? 'block' : 'hidden md:block'}`}>
         <ChatList
           chats={chats}
