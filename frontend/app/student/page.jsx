@@ -2288,7 +2288,9 @@ function StudentMessagesTab({ user, token }) {
   const currentUser = { id: decoded?.user_id ? Number(decoded.user_id) : null, name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim() };
 
   const conversations = useChatConversations(token);
-  const { messages, sendMessage, uploadAttachment, connectionStatus } = useChatMessages(token, activeChatId);
+  const { messages, sendMessage, uploadAttachment, connectionStatus, messagesLoading } = useChatMessages(token, activeChatId);
+  const activeChat = conversations.items.find((c) => c.id === activeChatId);
+  const isReadOnly = activeChat?.kind === 'broadcast';
 
   return (
     <div>
@@ -2306,6 +2308,8 @@ function StudentMessagesTab({ user, token }) {
           onSendMessage={sendMessage}
           onUploadAttachment={uploadAttachment}
           connectionStatus={connectionStatus}
+          readOnly={isReadOnly}
+          messagesLoading={messagesLoading}
         />
       )}
     </div>

@@ -752,22 +752,13 @@ function MessageTab({ tutor, token, studentsData }) {
   const currentUser = { id: decoded?.user_id ? Number(decoded.user_id) : null, name: `${tutor.first_name} ${tutor.last_name}` };
 
   const conversations = useChatConversations(token);
-  const { messages, sendMessage, uploadAttachment, connectionStatus } = useChatMessages(token, activeChatId);
+  const { messages, sendMessage, uploadAttachment, connectionStatus, messagesLoading } = useChatMessages(token, activeChatId);
   const activeChat = conversations.items.find((c) => c.id === activeChatId);
   const isReadOnly = activeChat?.kind === 'broadcast';
 
   return (
     <div>
-      <PageHeader title="Messages" subtitle="Talk to admin and your cohorts">        <ChatInterface
-          currentUser={currentUser}
-          chats={conversations.items}
-          activeChatId={activeChatId}
-          onSelectChat={setActiveChatId}
-          messages={activeChatId ? messages : []}
-          onSendMessage={sendMessage}
-          onUploadAttachment={uploadAttachment}
-          connectionStatus={connectionStatus}
-        />
+      <PageHeader title="Messages" subtitle="Talk to admin and your cohorts">
         <PrimaryButton onClick={() => setShowNewChat(true)}>+ New Chat</PrimaryButton>
       </PageHeader>
       <ErrorBanner message={conversations.error} />
@@ -784,6 +775,7 @@ function MessageTab({ tutor, token, studentsData }) {
           onUploadAttachment={uploadAttachment}
           connectionStatus={connectionStatus}
           readOnly={isReadOnly}
+          messagesLoading={messagesLoading}
         />
       )}
       {showNewChat && (

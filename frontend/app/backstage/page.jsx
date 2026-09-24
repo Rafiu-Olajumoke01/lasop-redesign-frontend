@@ -435,9 +435,12 @@ function useChatMessages(token, conversationId) {
   const [messages, setMessages] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('connecting');
   const wsRef = useRef(null);
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   useEffect(() => {
-    if (!token || !conversationId) { setMessages([]); return; }
+    if (!token || !conversationId) { setMessages([]); setMessagesLoading(false); return; }
+
+    setMessagesLoading(true);
 
     setConnectionStatus('connecting');
 
@@ -461,6 +464,8 @@ function useChatMessages(token, conversationId) {
         );
       } catch {
         // history fetch failed silently; WebSocket may still connect
+      } finally {
+        setMessagesLoading(false);
       }
     })();
 
@@ -512,7 +517,7 @@ function useChatMessages(token, conversationId) {
     return res.json();
   };
 
-  return { messages, sendMessage, uploadAttachment, connectionStatus };
+  return { messages, sendMessage, uploadAttachment, connectionStatus, messagesLoading };
 }
 
 function useAllUsers(token) {
@@ -1409,7 +1414,7 @@ function AdminMessagesTab({ token, initialChatId, onConsumeInitialChat }) {
   const currentUser = { id: decoded?.user_id ? Number(decoded.user_id) : null, name: decoded?.full_name || decoded?.username || 'Admin' };
 
   const conversations = useChatConversations(token);
-  const { messages, sendMessage, uploadAttachment, connectionStatus } = useChatMessages(token, activeChatId);
+  const { messages, sendMessage, uploadAttachment, connectionStatus, messagesLoading } = useChatMessages(token, activeChatId);
 
   useEffect(() => {
     if (initialChatId) {
@@ -1475,6 +1480,7 @@ function AdminMessagesTab({ token, initialChatId, onConsumeInitialChat }) {
           onSendMessage={sendMessage}
           onUploadAttachment={uploadAttachment}
           connectionStatus={connectionStatus}
+          messagesLoading={messagesLoading}
         />
       )}
       {showNewChat && (

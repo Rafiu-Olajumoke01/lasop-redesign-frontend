@@ -276,7 +276,7 @@ function groupBySender(messages) {
   });
 }
 
-function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachment, onBack, connectionStatus, readOnly }) {
+function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachment, onBack, connectionStatus, readOnly, messagesLoading }) {
   const [draft, setDraft] = useState(() => chatDrafts[chat?.id] || '');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -376,7 +376,12 @@ function ConversationView({ chat, messages, currentUser, onSend, onUploadAttachm
       <div ref={scrollRef} className="flex-1 overflow-y-auto relative px-3 sm:px-10 py-4">
         <ChatWallpaper />
         <div className="relative">
-          {grouped.length === 0 ? (
+          {messagesLoading ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <span className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-[#075E54] animate-spin mb-3" />
+              <p className="text-slate-500 text-sm">Loading messages…</p>
+            </div>
+          ) : grouped.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-slate-400 text-sm">No messages yet — say hello 👋</p>
             </div>
@@ -467,6 +472,7 @@ export default function ChatInterface({
   onUploadAttachment,
   connectionStatus = 'connected',
   readOnly = false,
+  messagesLoading = false,
 }) {
   const activeChat = chats.find((c) => c.id === activeChatId) || null;
   const showListOnMobile = !activeChatId;
@@ -490,6 +496,7 @@ export default function ChatInterface({
           onBack={() => onSelectChat(null)}
           connectionStatus={connectionStatus}
           readOnly={readOnly}
+          messagesLoading={messagesLoading}
         />
       </div>
     </div>
