@@ -2304,7 +2304,7 @@ export default function TutorPortalPage() {
   const tutor = profileData.tutor;
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex bg-slate-50">
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -2313,10 +2313,10 @@ export default function TutorPortalPage() {
         studentsSubTab={studentsSubTab}
         setStudentsSubTab={setStudentsSubTab}
       />
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen">
         <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} tutor={tutor} />
-        <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto pb-24">
-          <div className="max-w-6xl">
+        <div className="flex-1 min-w-0 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto overflow-x-hidden pb-24">
+          <div className="max-w-6xl min-w-0">
             {tab === 'dashboard' && (
               <DashboardTab tutor={tutor} statsData={statsData} cohortsData={cohortsData} setTab={setTab} />
             )}

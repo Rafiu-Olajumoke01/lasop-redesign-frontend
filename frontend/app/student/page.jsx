@@ -2410,11 +2410,11 @@ export default function DashboardPage() {
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} tab={tab} setTab={setTab} onLogout={handleLogout} />
 
-      <div className="flex-1 flex flex-col h-screen overflow-hidden lg:ml-0">
+      <div className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden lg:ml-0">
         <TopBar onMenuClick={() => setSidebarOpen(true)} title={currentLabel} initials={initials} />
 
-        <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto pb-24">
-          <div className="max-w-5xl">
+        <div className="flex-1 min-w-0 px-4 sm:px-6 lg:px-10 py-6 overflow-y-auto overflow-x-hidden pb-24">
+          <div className="max-w-5xl min-w-0">
             <ErrorBanner message={error} />
 
             {tab === 'overview' && (
