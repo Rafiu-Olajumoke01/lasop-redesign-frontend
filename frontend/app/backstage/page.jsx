@@ -2222,8 +2222,29 @@ function CohortDetailModal({ cohortId, token, onClose, onMessageCohort }) {
                                 {s.attendance_marked ? 'Attendance taken' : 'Not marked'}
                               </Pill>
                             </div>
-                            {s.title && <p className="text-slate-700 text-sm mt-1">{s.title}</p>}
-                            {s.topics_covered && <p className="text-slate-500 text-xs mt-0.5">{s.topics_covered}</p>}
+
+                            {s.title && <p className="text-slate-900 text-sm font-semibold mt-2">{s.title}</p>}
+
+                            {s.topics_covered && (
+                              <p className="text-slate-700 text-sm mt-1 whitespace-pre-line">
+                                <span className="font-semibold">Focus:</span> {s.topics_covered}
+                              </p>
+                            )}
+                            {s.lesson_outcome && (
+                              <p className="text-slate-700 text-sm mt-1 whitespace-pre-line">
+                                <span className="font-semibold">Outcome:</span> {s.lesson_outcome}
+                              </p>
+                            )}
+
+                            {(s.started_at || s.actual_duration_minutes != null) && (
+                              <p className="text-slate-400 text-[11px] mt-2">
+                                {s.started_at &&
+                                  new Date(s.started_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                {s.ended_at &&
+                                  `–${new Date(s.ended_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`}
+                                {s.actual_duration_minutes != null && ` · ${s.actual_duration_minutes} min`}
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>
