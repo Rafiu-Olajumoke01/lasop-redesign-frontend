@@ -520,6 +520,7 @@ const NAV = [
   { key: 'students', label: 'Students', icon: <><circle cx="9" cy="8" r="3" /><path d="M2 20c0-3.2 3.2-5.5 7-5.5s7 2.3 7 5.5" /><circle cx="17" cy="8.5" r="2.3" /><path d="M16.5 13c2.3.4 3.7 1.9 3.7 3.8" /></> },
   { key: 'messages', label: 'Message', icon: <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" /> },
   { key: 'queries', label: 'Queries', icon: <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><path d="M12 9v4M12 17h.01" /></> },
+  { key: 'exams', label: 'Exams', icon: <><path d="M9 12l2 2 4-4" /><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.85 0 3.58.56 5 1.52" /></> },
   { key: 'settings', label: 'Settings', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></> },
   { key: 'profile', label: 'Profile', icon: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" /></> },
 ];
@@ -1782,6 +1783,342 @@ function ProjectsTab({ token, cohorts }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Exams & Results tab
+// ═══════════════════════════════════════════════════════════════════════════
+
+function useCourses(token) {
+  const [courses, setCourses] = useState([]);
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/courses/`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) return;
+        const data = await res.json();
+        setCourses(Array.isArray(data) ? data : data.results || []);
+      } catch {}
+    })();
+  }, [token]);
+  return courses;
+}
+
+function useTutorExams(token) {
+  const [exams, setExams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/exams/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load exams.');
+      const data = await res.json();
+      setExams(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+
+  const createExam = async (payload) => {
+    const res = await fetch(`${API_BASE}/api/exams/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Create exam failed:', text);
+      throw new Error('Could not create exam.');
+    }
+    await refresh();
+  };
+
+  return { exams, loading, error, refresh, createExam };
+}
+
+function useTutorResults(token, examId) {
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const refresh = useCallback(async () => {
+    if (!examId) return;
+    setLoading(true); setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/results/?exam=${examId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not load results.');
+      const data = await res.json();
+      setResults(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, examId]);
+
+  useEffect(() => { if (token && examId) refresh(); }, [token, examId, refresh]);
+
+  const saveResult = async (studentId, score, resultId) => {
+    const payload = { exam: examId, student: studentId, score };
+    const url = resultId ? `${API_BASE}/api/results/${resultId}/` : `${API_BASE}/api/results/`;
+    const method = resultId ? 'PATCH' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('Save result failed:', text);
+      throw new Error('Could not save score.');
+    }
+    await refresh();
+  };
+
+  return { results, loading, error, refresh, saveResult };
+}
+
+function CreateExamForm({ cohorts, courses, onCreate }) {
+  const [cohortId, setCohortId] = useState('');
+  const [courseId, setCourseId] = useState('');
+  const [title, setTitle] = useState('');
+  const [examType, setExamType] = useState('project');
+  const [startDate, setStartDate] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [totalMarks, setTotalMarks] = useState(100);
+  const [passMark, setPassMark] = useState(50);
+  const [instructions, setInstructions] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const handleSubmit = async () => {
+    if (!cohortId || !courseId || !title.trim() || !startDate || !dueDate) {
+      setErr('Cohort, course, title, start date, and due date are required.');
+      return;
+    }
+    setSaving(true); setErr('');
+    try {
+      await onCreate({
+        cohort: Number(cohortId),
+        course: Number(courseId),
+        title: title.trim(),
+        exam_type: examType,
+        start_date: startDate,
+        due_date: dueDate,
+        total_marks: Number(totalMarks),
+        pass_mark: Number(passMark),
+        instructions: instructions.trim(),
+      });
+      setTitle(''); setInstructions('');
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="p-5">
+      <h3 className="text-slate-900 font-bold text-sm mb-4">Create an exam</h3>
+      {err && <ErrorBanner message={err} />}
+      <div className="space-y-4">
+        <Field label="Cohort">
+          <select className={inputClass} value={cohortId} onChange={(e) => setCohortId(e.target.value)}>
+            <option value="">Select cohort</option>
+            {cohorts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </Field>
+        <Field label="Course">
+          <select className={inputClass} value={courseId} onChange={(e) => setCourseId(e.target.value)}>
+            <option value="">Select course</option>
+            {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+          </select>
+        </Field>
+        <Field label="Title">
+          <input type="text" className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Final Project — Build a Portfolio Site" />
+        </Field>
+        <Field label="Type">
+          <select className={inputClass} value={examType} onChange={(e) => setExamType(e.target.value)}>
+            <option value="quiz">Quiz</option>
+            <option value="midterm">Midterm</option>
+            <option value="final">Final Assessment</option>
+            <option value="project">Project Assessment</option>
+          </select>
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Start date">
+            <input type="date" className={inputClass} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </Field>
+          <Field label="Due date">
+            <input type="date" className={inputClass} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Total marks">
+            <input type="number" className={inputClass} value={totalMarks} onChange={(e) => setTotalMarks(e.target.value)} />
+          </Field>
+          <Field label="Pass mark">
+            <input type="number" className={inputClass} value={passMark} onChange={(e) => setPassMark(e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Instructions (optional)">
+          <textarea className={inputClass} rows={3} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Project brief or requirements shown to students" />
+        </Field>
+        <PrimaryButton onClick={handleSubmit} disabled={saving} className="w-full justify-center">
+          {saving ? 'Starting…' : 'Start Exam'}
+        </PrimaryButton>
+      </div>
+    </Card>
+  );
+}
+
+function ResultsSubTab({ token, exams, studentsData }) {
+  const [examId, setExamId] = useState('');
+  const exam = exams.find((e) => e.id === Number(examId));
+  const { results, loading, error, saveResult } = useTutorResults(token, examId ? Number(examId) : null);
+  const [scores, setScores] = useState({});
+  const [savingId, setSavingId] = useState(null);
+  const [saveErr, setSaveErr] = useState('');
+
+  const roster = exam ? studentsData.students.filter((s) => s.cohort_id === exam.cohort) : [];
+  const resultFor = (studentId) => results.find((r) => r.student === studentId || r.student_id === studentId);
+
+  const handleSave = async (studentId) => {
+    const score = scores[studentId];
+    if (score === undefined || score === '') return;
+    setSavingId(studentId); setSaveErr('');
+    try {
+      const existing = resultFor(studentId);
+      await saveResult(studentId, Number(score), existing?.id);
+    } catch (e) {
+      setSaveErr(e.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  return (
+    <div>
+      <Field label="Exam">
+        <select className={inputClass} value={examId} onChange={(e) => setExamId(e.target.value)}>
+          <option value="">Select exam</option>
+          {exams.map((e) => <option key={e.id} value={e.id}>{e.title} — {e.cohort_detail?.name || e.cohort}</option>)}
+        </select>
+      </Field>
+
+      {examId && (
+        <div className="mt-5">
+          <ErrorBanner message={error || saveErr} />
+          {loading ? (
+            <Spinner text="Loading roster…" />
+          ) : roster.length === 0 ? (
+            <Card><EmptyState title="No students in this cohort" /></Card>
+          ) : (
+            <Card className="overflow-hidden">
+              <div className="divide-y divide-slate-100">
+                {roster.map((s) => {
+                  const existing = resultFor(s.student_id);
+                  return (
+                    <div key={s.student_id} className="flex items-center justify-between px-5 py-3.5 gap-3 flex-wrap">
+                      <div>
+                        <p className="text-slate-800 font-semibold text-sm">{s.student_name}</p>
+                        {existing && <p className="text-slate-400 text-xs">Current: {existing.score ?? '—'} ({existing.status})</p>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          className={`${inputClass} w-24`}
+                          defaultValue={existing?.score ?? ''}
+                          onChange={(e) => setScores((prev) => ({ ...prev, [s.student_id]: e.target.value }))}
+                        />
+                        <PrimaryButton onClick={() => handleSave(s.student_id)} disabled={savingId === s.student_id}>
+                          {savingId === s.student_id ? 'Saving…' : 'Save'}
+                        </PrimaryButton>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExamsTab({ token, cohorts, studentsData }) {
+  const [subTab, setSubTab] = useState('create');
+  const courses = useCourses(token);
+  const examsData = useTutorExams(token);
+
+  const subTabs = [
+    { key: 'create', label: 'Exams' },
+    { key: 'results', label: 'Results' },
+  ];
+
+  return (
+    <div>
+      <PageHeader title="Exams" subtitle="Create exams and record results for your cohorts">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {subTabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setSubTab(t.key)}
+              className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${subTab === t.key
+                ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </PageHeader>
+
+      {subTab === 'create' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <CreateExamForm cohorts={cohorts} courses={courses} onCreate={examsData.createExam} />
+          <div>
+            <h3 className="text-slate-900 font-bold text-sm mb-3">Your exams</h3>
+            <ErrorBanner message={examsData.error} />
+            {examsData.loading ? (
+              <Spinner text="Loading…" />
+            ) : examsData.exams.length === 0 ? (
+              <Card><EmptyState title="No exams yet" hint="Exams you create will show up here." /></Card>
+            ) : (
+              <div className="space-y-3">
+                {examsData.exams.map((e) => (
+                  <Card key={e.id} className="p-4">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-slate-900 font-semibold text-sm">{e.title}</p>
+                      <Pill color="blue">{e.exam_type}</Pill>
+                    </div>
+                    <p className="text-slate-400 text-xs">{e.cohort_detail?.name || e.cohort} · Due {e.due_date}</p>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {subTab === 'results' && (
+        <ResultsSubTab token={token} exams={examsData.exams} studentsData={studentsData} />
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Settings tab
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -2329,6 +2666,9 @@ export default function TutorPortalPage() {
             {tab === 'messages' && <MessageTab tutor={tutor} token={token} studentsData={studentsData} />}
             {tab === 'queries' && (
               <ComingSoon title="Queries" hint="This will be wired up once the Query model is built on the backend." />
+            )}
+            {tab === 'exams' && (
+              <ExamsTab token={token} cohorts={cohortsData.cohorts} studentsData={studentsData} />
             )}
             {tab === 'settings' && <SettingsTab tutor={tutor} updateProfile={profileData.updateProfile} />}
             {tab === 'profile' && <ProfileTab tutor={tutor} />}
