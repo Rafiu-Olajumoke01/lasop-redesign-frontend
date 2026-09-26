@@ -12,11 +12,10 @@ export default function GuardianGateModal({ user, token, onUserUpdate }) {
   const [err, setErr] = useState('');
 
   const handleSave = async () => {
-    if (!guardianName.trim() || !guardianEmail.trim()) {
-      setErr('Please fill in both guardian name and email.');
+    if (!guardianName.trim() || !guardianEmail.trim() || !guardianPhone.trim()) {
+      setErr('Please fill in guardian name, email, and phone number.');
       return;
     }
-
     setSaving(true);
     setErr('');
     try {
@@ -101,7 +100,7 @@ export default function GuardianGateModal({ user, token, onUserUpdate }) {
 
             <div>
               <label className="block text-slate-600 text-[12px] font-semibold mb-1.5">
-                Guardian phone number <span className="text-slate-400 font-normal">(optional)</span>
+                Guardian phone number <span className="text-rose-500">*</span>
               </label>
               <input
                 type="tel"
