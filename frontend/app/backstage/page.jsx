@@ -2731,42 +2731,60 @@ function TutorsTab({ tutors, cohorts }) {
 // ─── Students tab ───────────────────────────────────────────────────────────
 function useApplicationsCohortMap(token) {
   const [map, setMap] = useState({});
+  const [paymentMap, setPaymentMap] = useState({});
   const [cohorts, setCohorts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const refresh = useCallback(async () => {
     if (!token) return;
-    (async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_BASE}/api/applications/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        const apps = Array.isArray(data) ? data : data.results || [];
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/applications/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const apps = Array.isArray(data) ? data : data.results || [];
 
-        const studentToCohort = {};
-        const cohortSet = new Map();
+      const studentToCohort = {};
+      const studentToPayment = {};
+      const cohortSet = new Map();
 
-        apps.forEach((a) => {
-          const studentId = a.student_detail?.id ?? a.student;
-          const cohort = a.cohort_detail;
-          if (studentId && cohort) {
-            studentToCohort[studentId] = cohort;
-            cohortSet.set(cohort.id, cohort);
+      apps.forEach((a) => {
+        const studentId = a.student_detail?.id ?? a.student;
+        const cohort = a.cohort_detail;
+        if (studentId && cohort) {
+          studentToCohort[studentId] = cohort;
+          cohortSet.set(cohort.id, cohort);
+        }
+        if (studentId && a.payment) {
+          const total = getCourseFee(a);
+          const paid = Number(a.amount_paid || 0);
+          const existing = studentToPayment[studentId];
+          if (!existing || (total - paid) > (existing.total - existing.paid)) {
+            studentToPayment[studentId] = {
+              applicationId: a.id,
+              total,
+              paid,
+              balance: total - paid,
+              status: a.payment.status,
+              canConfirm: a.payment.status === 'awaiting_confirmation',
+            };
           }
-        });
+        }
+      });
 
-        setMap(studentToCohort);
-        setCohorts(Array.from(cohortSet.values()));
-      } finally {
-        setLoading(false);
-      }
-    })();
+      setMap(studentToCohort);
+      setPaymentMap(studentToPayment);
+      setCohorts(Array.from(cohortSet.values()));
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
 
-  return { map, cohorts, loading };
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { map, paymentMap, cohorts, loading, refresh };
 }
 
 function useStudents(token) {
@@ -2849,10 +2867,12 @@ function StudentsTab({ token, tutors, subTab }) {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
   const [actionError, setActionError] = useState('');
   const [filter, setFilter] = useState('all');
+  const [paymentFilter, setPaymentFilter] = useState('all');
   const [cohortFilter, setCohortFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
   const [todayOnly, setTodayOnly] = useState(false);
+  const [confirmingPaymentId, setConfirmingPaymentId] = useState(null);
 
 
   const filtered = useMemo(() => {
@@ -2892,8 +2912,18 @@ function StudentsTab({ token, tutors, subTab }) {
       });
     }
 
+    if (paymentFilter === 'owing') {
+      list = list.filter((s) => cohortLookup.paymentMap[s.id]?.balance > 0);
+    }
+    if (paymentFilter === 'paid') {
+      list = list.filter((s) => {
+        const p = cohortLookup.paymentMap[s.id];
+        return p && p.balance <= 0;
+      });
+    }
+
     return list;
-  }, [students.items, filter, cohortFilter, yearFilter, monthFilter, todayOnly, cohortLookup.map]);
+  }, [students.items, filter, paymentFilter, cohortFilter, yearFilter, monthFilter, todayOnly, cohortLookup.map, cohortLookup.paymentMap]);
   const handleAssign = async (studentId, tutorIdRaw) => {
     const tutorId = tutorIdRaw === '' ? null : Number(tutorIdRaw);
     setActionError('');
@@ -2917,6 +2947,26 @@ function StudentsTab({ token, tutors, subTab }) {
     } finally {
       setDeletingId(null);
       setConfirmingDeleteId(null);
+    }
+  };
+
+  const handleMarkPaid = async (studentId) => {
+    const payment = cohortLookup.paymentMap[studentId];
+    if (!payment) return;
+    setActionError('');
+    setConfirmingPaymentId(studentId);
+    try {
+      const res = await fetch(`${API_BASE}/api/applications/${payment.applicationId}/payments/admin-confirm/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) throw new Error('Could not confirm payment.');
+      await cohortLookup.refresh();
+    } catch (e) {
+      setActionError(e.message);
+    } finally {
+      setConfirmingPaymentId(null);
     }
   };
   const filters = [
@@ -2961,6 +3011,25 @@ function StudentsTab({ token, tutors, subTab }) {
                   onClick={() => setFilter(f.key)}
                   className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${filter === f.key
                     ? 'border-[#0057E7] bg-[#0057E7] text-white shadow-sm'
+                    : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                    }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[
+                { key: 'all', label: 'All payments' },
+                { key: 'owing', label: 'Owing' },
+                { key: 'paid', label: 'Fully paid' },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setPaymentFilter(f.key)}
+                  className={`text-[12px] font-semibold px-3 py-1.5 rounded-full border transition ${paymentFilter === f.key
+                    ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm'
                     : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
                     }`}
                 >
@@ -3067,6 +3136,24 @@ function StudentsTab({ token, tutors, subTab }) {
                       )}
                     </div>
                     <p className="text-slate-500 text-xs mb-3">{s.phone_number || 'No phone number'}</p>
+                    <div onClick={(e) => e.stopPropagation()} className="mb-3">
+                      {(() => {
+                        const p = cohortLookup.paymentMap[s.id];
+                        if (!p) return null;
+                        if (p.canConfirm) {
+                          return (
+                            <button
+                              onClick={() => handleMarkPaid(s.id)}
+                              disabled={confirmingPaymentId === s.id}
+                              className="text-[12px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 px-3 py-1.5 rounded-md transition disabled:opacity-40"
+                            >
+                              {confirmingPaymentId === s.id ? 'Confirming…' : 'Mark as paid'}
+                            </button>
+                          );
+                        }
+                        return p.balance > 0 ? <Pill color="amber">Owing</Pill> : <Pill color="emerald">Fully paid</Pill>;
+                      })()}
+                    </div>
                     <TutorSelect s={s} />
                     <div onClick={(e) => e.stopPropagation()} className="mt-3 pt-3 border-t border-slate-100">
                       {confirmingDeleteId === s.id ? (
@@ -3102,7 +3189,7 @@ function StudentsTab({ token, tutors, subTab }) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
-                      {['Student', 'Email', 'Phone', 'Tutor', '', ''].map((h, i) => (
+                      {['Student', 'Email', 'Phone', 'Tutor', 'Payment', '', ''].map((h, i) => (
                         <th
                           key={i}
                           className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap"
@@ -3135,6 +3222,24 @@ function StudentsTab({ token, tutors, subTab }) {
                           ) : (
                             <Pill color="rose">Unassigned</Pill>
                           )}
+                        </td>
+                        <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
+                          {(() => {
+                            const p = cohortLookup.paymentMap[s.id];
+                            if (!p) return <span className="text-slate-400 text-xs">—</span>;
+                            if (p.canConfirm) {
+                              return (
+                                <button
+                                  onClick={() => handleMarkPaid(s.id)}
+                                  disabled={confirmingPaymentId === s.id}
+                                  className="text-[12px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 px-3 py-1.5 rounded-md transition disabled:opacity-40"
+                                >
+                                  {confirmingPaymentId === s.id ? 'Confirming…' : 'Mark as paid'}
+                                </button>
+                              );
+                            }
+                            return p.balance > 0 ? <Pill color="amber">Owing</Pill> : <Pill color="emerald">Fully paid</Pill>;
+                          })()}
                         </td>
                         <td className="px-5 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <select
