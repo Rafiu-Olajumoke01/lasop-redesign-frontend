@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -26,6 +26,7 @@ const GuestsTab = ({ token }) => {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -167,7 +168,7 @@ const GuestsTab = ({ token }) => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
-                  {['Name', 'Phone', 'Email', 'Purpose', 'Date', ''].map((h, i) => (
+                  {['Guest ID', 'Name', 'Phone', 'Email', 'Purpose', 'Date', ''].map((h, i) => (
                     <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                       {h}
                     </th>
@@ -175,24 +176,51 @@ const GuestsTab = ({ token }) => {
                 </tr>
               </thead>
               <tbody>
-                {guests.map((g) => (
-                  <tr key={g.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition">
-                    <td className="px-5 py-4 text-slate-800 font-semibold">{g.name}</td>
-                    <td className="px-5 py-4 text-slate-500">{g.phone_number || '—'}</td>
-                    <td className="px-5 py-4 text-slate-500">{g.email || '—'}</td>
-                    <td className="px-5 py-4 text-slate-700">{g.purpose}</td>
-                    <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDateTime(g.created_at)}</td>
-                    <td className="px-5 py-4 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => handleDelete(g.id)}
-                        disabled={deletingId === g.id}
-                        className="text-[13px] font-semibold text-rose-600 hover:text-rose-700 hover:underline underline-offset-2 disabled:opacity-40 transition"
+                {guests.map((g) => {
+                  const isLong = (g.purpose || '').length > 40;
+                  const isOpen = expandedId === g.id;
+                  return (
+                    <Fragment key={g.id}>
+                      <tr
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition cursor-pointer"
+                        onClick={() => setExpandedId(isOpen ? null : g.id)}
                       >
-                        {deletingId === g.id ? 'Deleting…' : 'Delete'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                        <td className="px-5 py-4 text-slate-500 font-mono text-xs">{g.guest_id || '—'}</td>
+                        <td className="px-5 py-4 text-slate-800 font-semibold">{g.name}</td>
+                        <td className="px-5 py-4 text-slate-500">{g.phone_number || '—'}</td>
+                        <td className="px-5 py-4 text-slate-500">{g.email || '—'}</td>
+                        <td className="px-5 py-4 text-slate-700 max-w-[220px]">
+                          <span className={isOpen ? '' : 'block truncate'}>{g.purpose}</span>
+                          {isLong && (
+                            <span className="text-[#0057E7] text-xs font-semibold ml-1">
+                              {isOpen ? 'less' : 'more'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDateTime(g.created_at)}</td>
+                        <td className="px-5 py-4 text-right whitespace-nowrap">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }}
+                            disabled={deletingId === g.id}
+                            className="text-[13px] font-semibold text-rose-600 hover:text-rose-700 hover:underline underline-offset-2 disabled:opacity-40 transition"
+                          >
+                            {deletingId === g.id ? 'Deleting…' : 'Delete'}
+                          </button>
+                        </td>
+                      </tr>
+                      {isOpen && (
+                        <tr className="bg-slate-50/70 border-b border-slate-100">
+                          <td colSpan={7} className="px-5 py-4">
+                            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.1em] mb-1.5">
+                              Full purpose of visit
+                            </p>
+                            <p className="text-slate-700 whitespace-pre-wrap">{g.purpose}</p>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
