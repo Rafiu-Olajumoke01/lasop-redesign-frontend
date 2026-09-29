@@ -26,7 +26,7 @@ const GuestsTab = ({ token }) => {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState('');
-  const [expandedId, setExpandedId] = useState(null);
+  const [activeGuest, setActiveGuest] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -175,54 +175,92 @@ const GuestsTab = ({ token }) => {
                   ))}
                 </tr>
               </thead>
-              <tbody>
-                {guests.map((g) => {
-                  const isLong = (g.purpose || '').length > 40;
-                  const isOpen = expandedId === g.id;
-                  return (
-                    <Fragment key={g.id}>
-                      <tr
-                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition cursor-pointer"
-                        onClick={() => setExpandedId(isOpen ? null : g.id)}
+                            <tbody>
+                {guests.map((g) => (
+                  <tr
+                    key={g.id}
+                    className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition cursor-pointer"
+                    onClick={() => setActiveGuest(g)}
+                  >
+                    <td className="px-5 py-4 text-slate-500 font-mono text-xs">{g.guest_id || '—'}</td>
+                    <td className="px-5 py-4 text-slate-800 font-semibold">{g.name}</td>
+                    <td className="px-5 py-4 text-slate-500">{g.phone_number || '—'}</td>
+                    <td className="px-5 py-4 text-slate-500">{g.email || '—'}</td>
+                    <td className="px-5 py-4 text-slate-700 max-w-[220px]">
+                      <span className="block truncate">{g.purpose}</span>
+                    </td>
+                    <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDateTime(g.created_at)}</td>
+                    <td className="px-5 py-4 text-right whitespace-nowrap">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }}
+                        disabled={deletingId === g.id}
+                        className="text-[13px] font-semibold text-rose-600 hover:text-rose-700 hover:underline underline-offset-2 disabled:opacity-40 transition"
                       >
-                        <td className="px-5 py-4 text-slate-500 font-mono text-xs">{g.guest_id || '—'}</td>
-                        <td className="px-5 py-4 text-slate-800 font-semibold">{g.name}</td>
-                        <td className="px-5 py-4 text-slate-500">{g.phone_number || '—'}</td>
-                        <td className="px-5 py-4 text-slate-500">{g.email || '—'}</td>
-                        <td className="px-5 py-4 text-slate-700 max-w-[220px]">
-                          <span className={isOpen ? '' : 'block truncate'}>{g.purpose}</span>
-                          {isLong && (
-                            <span className="text-[#0057E7] text-xs font-semibold ml-1">
-                              {isOpen ? 'less' : 'more'}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDateTime(g.created_at)}</td>
-                        <td className="px-5 py-4 text-right whitespace-nowrap">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }}
-                            disabled={deletingId === g.id}
-                            className="text-[13px] font-semibold text-rose-600 hover:text-rose-700 hover:underline underline-offset-2 disabled:opacity-40 transition"
-                          >
-                            {deletingId === g.id ? 'Deleting…' : 'Delete'}
-                          </button>
-                        </td>
-                      </tr>
-                      {isOpen && (
-                        <tr className="bg-slate-50/70 border-b border-slate-100">
-                          <td colSpan={7} className="px-5 py-4">
-                            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.1em] mb-1.5">
-                              Full purpose of visit
-                            </p>
-                            <p className="text-slate-700 whitespace-pre-wrap">{g.purpose}</p>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
+                        {deletingId === g.id ? 'Deleting…' : 'Delete'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {activeGuest && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] transition-opacity"
+            onClick={() => setActiveGuest(null)}
+          />
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col transition-transform duration-200 ease-out translate-x-0">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-start justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-[#0057E7] uppercase tracking-[0.12em] mb-1">
+                  {activeGuest.guest_id || 'Guest'}
+                </p>
+                <h3 className="text-lg font-bold text-slate-900">{activeGuest.name}</h3>
+              </div>
+              <button
+                onClick={() => setActiveGuest(null)}
+                className="text-slate-400 hover:text-slate-600 text-2xl leading-none px-1"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className={labelClass}>Phone</p>
+                  <p className="text-sm text-slate-800">{activeGuest.phone_number || '—'}</p>
+                </div>
+                <div>
+                  <p className={labelClass}>Email</p>
+                  <p className="text-sm text-slate-800 break-all">{activeGuest.email || '—'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className={labelClass}>Visited</p>
+                  <p className="text-sm text-slate-800">{formatDateTime(activeGuest.created_at)}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className={labelClass}>Purpose of visit</p>
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50 border border-slate-200/80 rounded-lg px-4 py-3">
+                  {activeGuest.purpose}
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100">
+              <button
+                onClick={() => { handleDelete(activeGuest.id); setActiveGuest(null); }}
+                className="text-[13px] font-semibold text-rose-600 hover:text-rose-700 hover:underline underline-offset-2 transition"
+              >
+                Delete guest
+              </button>
+            </div>
           </div>
         </div>
       )}
