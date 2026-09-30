@@ -27,6 +27,8 @@ const GuestsTab = ({ token }) => {
   const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState('');
   const [activeGuest, setActiveGuest] = useState(null);
+  const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -45,6 +47,19 @@ const GuestsTab = ({ token }) => {
   }, [token]);
 
   useEffect(() => { if (token) load(); }, [token, load]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setAppliedSearch(search.trim().toLowerCase());
+  };
+
+  const filteredGuests = appliedSearch
+    ? guests.filter((g) =>
+        [g.guest_id, g.name, g.email, g.phone_number, g.purpose]
+          .filter(Boolean)
+          .some((field) => field.toLowerCase().includes(appliedSearch))
+      )
+    : guests;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -156,12 +171,40 @@ const GuestsTab = ({ token }) => {
         </button>
       </form>
 
+      <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+        <input
+          className={`${inputClass} flex-1`}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by Guest ID, name, email, phone, or purpose…"
+        />
+        <button
+          type="submit"
+          className="bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold px-4 py-2.5 rounded-md shadow-sm transition shrink-0"
+        >
+          Search
+        </button>
+        {appliedSearch && (
+          <button
+            type="button"
+            onClick={() => { setSearch(''); setAppliedSearch(''); }}
+            className="text-sm font-semibold text-slate-500 hover:text-slate-700 px-3 transition shrink-0"
+          >
+            Clear
+          </button>
+        )}
+      </form>
+
       {loading ? (
         <p className="text-slate-400 text-sm py-10 text-center">Loading guests…</p>
-      ) : guests.length === 0 ? (
+      ) : filteredGuests.length === 0 ? (
         <div className="bg-white border border-slate-200/80 rounded-lg py-16 text-center">
-          <p className="text-slate-700 font-semibold mb-1">No guests recorded yet</p>
-          <p className="text-slate-400 text-sm">Visitors you add will show up here.</p>
+          <p className="text-slate-700 font-semibold mb-1">
+            {appliedSearch ? 'No guests match your search' : 'No guests recorded yet'}
+          </p>
+          <p className="text-slate-400 text-sm">
+            {appliedSearch ? 'Try a different Guest ID, name, or keyword.' : 'Visitors you add will show up here.'}
+          </p>
         </div>
       ) : (
         <div className="bg-white border border-slate-200/80 rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden">
@@ -177,7 +220,7 @@ const GuestsTab = ({ token }) => {
                 </tr>
               </thead>
                             <tbody>
-                {guests.map((g) => (
+                {filteredGuests.map((g) => (
                   <tr
                     key={g.id}
                     className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition cursor-pointer"
