@@ -4654,7 +4654,7 @@ export default function BackstagePage() {
             )}
             {tab === 'postjob' && <ComingSoon title="Post Job" />}
             {tab === 'guests' && <GuestsTab token={token} />}
-            {tab === 'blog' && <BlogTab />}
+            {tab === 'blog' && <BlogTab token={token} />}
           </div>
         </div>
       </div>
