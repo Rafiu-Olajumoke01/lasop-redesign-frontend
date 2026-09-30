@@ -2051,7 +2051,14 @@ function NewProjectModal({ token, onClose, onCreated }) {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      if (!res.ok) throw new Error('Could not save your project.');
+      if (!res.ok) {
+        let detail = 'Could not save your project.';
+        try {
+          const data = await res.json();
+          detail = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(' ') : v}`).join(' | ') || detail;
+        } catch {}
+        throw new Error(detail);
+      }
       onCreated();
       onClose();
     } catch (err) {
