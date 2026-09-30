@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
-const EXCERPT_WORDS = 30;
+const EXCERPT_WORDS = 40;
 const SLIDE_INTERVAL = 4000; // ms
+const DEFAULT_AUTHOR = 'LASOP Team';
 
 function formatDate(d) {
   if (!d) return '';
@@ -13,7 +14,8 @@ function formatDate(d) {
 }
 
 function makeExcerpt(post) {
-  const raw = post.intro_text || post.excerpt || '';
+  const firstSection = (post.sections || []).find((s) => s.text)?.text || '';
+  const raw = post.intro_text || post.excerpt || firstSection;
   const text = raw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   if (!text) return '';
   const words = text.split(' ');
@@ -27,7 +29,7 @@ function getAuthor(post) {
     post.author?.name ||
     post.author?.full_name ||
     post.author?.username ||
-    'LASOP Team'
+    DEFAULT_AUTHOR
   );
 }
 
@@ -133,7 +135,21 @@ const LatestBlog = () => {
         const res = await fetch(`${API_BASE}/api/blog/`);
         if (!res.ok) return;
         const data = await res.json();
-        setPosts((Array.isArray(data) ? data : data.results || []).slice(0, 3));
+        const latest = (Array.isArray(data) ? data : data.results || []).slice(0, 3);
+
+        // The list endpoint is missing text and images, so load each post's full details
+        const full = await Promise.all(
+          latest.map(async (p) => {
+            try {
+              const r = await fetch(`${API_BASE}/api/blog/${p.id}/`);
+              if (!r.ok) return p;
+              return { ...p, ...(await r.json()) };
+            } catch {
+              return p;
+            }
+          })
+        );
+        setPosts(full);
       } catch {
         // fail quietly on the homepage
       } finally {
@@ -162,6 +178,7 @@ const LatestBlog = () => {
           {posts.map((post) => {
             const href = `/blog/${post.id}`;
             const excerpt = makeExcerpt(post);
+            const author = getAuthor(post);
 
             return (
               <article
@@ -171,18 +188,23 @@ const LatestBlog = () => {
                 <ImageSlider images={getImages(post)} href={href} />
 
                 <div className="flex flex-1 flex-col p-5">
-                  <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                    <span className="truncate">{getAuthor(post)}</span>
-                    <span>·</span>
-                    <span className="shrink-0">{formatDate(post.date_published)}</span>
-                  </div>
-
-                  <h3 className="line-clamp-2 text-base font-bold leading-snug tracking-tight text-slate-900 transition-colors group-hover:text-[#0057E7]">
+                  <h3 className="line-clamp-2 text-lg font-bold leading-snug tracking-tight text-slate-900 transition-colors group-hover:text-[#0057E7]">
                     <Link href={href}>{post.main_heading}</Link>
                   </h3>
 
+                  <div className="mt-3 flex items-center gap-2.5">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[11px] font-bold text-[#0057E7]">
+                      {author.trim().charAt(0).toUpperCase()}
+                    </span>
+                    <p className="text-xs text-slate-500">
+                      <span className="font-semibold text-slate-700">By {author}</span>
+                      <span className="mx-1.5">·</span>
+                      {formatDate(post.date_published)}
+                    </p>
+                  </div>
+
                   {excerpt && (
-                    <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-600">{excerpt}</p>
+                    <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-slate-600">{excerpt}</p>
                   )}
 
                   <Link
