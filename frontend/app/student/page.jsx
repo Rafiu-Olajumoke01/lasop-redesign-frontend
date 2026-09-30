@@ -2004,6 +2004,12 @@ function ProjectsTab({ token }) {
   );
 }
 
+function normalizeUrl(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 function NewProjectModal({ token, onClose, onCreated }) {
   const [title, setTitle] = useState('');
   const [projectType, setProjectType] = useState('capstone');
@@ -2041,8 +2047,8 @@ function NewProjectModal({ token, onClose, onCreated }) {
       formData.append('project_type', projectType);
       formData.append('description', description);
       if (techStack) formData.append('tech_stack', techStack);
-      if (repoUrl) formData.append('repo_url', repoUrl);
-      if (liveUrl) formData.append('live_url', liveUrl);
+      if (repoUrl) formData.append('repo_url', normalizeUrl(repoUrl));
+      if (liveUrl) formData.append('live_url', normalizeUrl(liveUrl));
       if (coverImage) formData.append('cover_image', coverImage);
       if (attachment) formData.append('attachment', attachment);
 
