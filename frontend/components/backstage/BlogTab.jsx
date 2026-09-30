@@ -37,6 +37,16 @@ const PrimaryButton = ({ children, className = '', ...props }) => (
   </button>
 );
 
+const SecondaryButton = ({ children, className = '', ...props }) => (
+  <button
+    {...props}
+    className={`bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-medium px-4 py-2.5
+      rounded-md border border-slate-200 transition-all duration-150 active:scale-[0.97] ${className}`}
+  >
+    {children}
+  </button>
+);
+
 const LinkButton = ({ children, danger, ...props }) => (
   <button
     {...props}
@@ -70,7 +80,156 @@ const PageHeader = ({ title, subtitle, children }) => (
 );
 
 const today = () => new Date().toISOString().slice(0, 10);
-const emptyForm = () => ({ title: '', author: '', body: '', date: today(), image: null });
+
+const emptySection = () => ({
+  id: Date.now() + Math.random(),
+  subheading: '',
+  text: '',
+  images: [],
+});
+
+const emptyForm = () => ({
+  main_heading: '',
+  intro_text: '',
+  intro_images: [],
+  date_published: today(),
+  sections: [emptySection()],
+});
+
+// ─── Image picker (multi) ──────────────────────────────────────────────────
+
+const ImagesField = ({ label, images, onChange }) => {
+  const handleFiles = (fileList) => {
+    const files = Array.from(fileList || []);
+    onChange([...images, ...files]);
+  };
+
+  const removeAt = (idx) => onChange(images.filter((_, i) => i !== idx));
+
+  return (
+    <Field label={label}>
+      <input
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={(e) => handleFiles(e.target.files)}
+        className={inputClass}
+      />
+      {images.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2.5">
+          {images.map((file, idx) => (
+            <div key={idx} className="relative group">
+              <img
+                src={URL.createObjectURL(file)}
+                alt=""
+                className="w-16 h-16 object-cover rounded-md border border-slate-200"
+              />
+              <button
+                type="button"
+                onClick={() => removeAt(idx)}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-600 text-white text-[11px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </Field>
+  );
+};
+
+// ─── One section block ──────────────────────────────────────────────────────
+
+const SectionBlock = ({ index, section, onChange, onRemove, canRemove }) => {
+  const set = (key, value) => onChange({ ...section, [key]: value });
+
+  return (
+    <div className="border border-slate-200/80 rounded-lg p-5 space-y-4 bg-slate-50/60">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.1em]">
+          Section {index + 1}
+        </p>
+        {canRemove && (
+          <LinkButton danger onClick={onRemove}>Remove section</LinkButton>
+        )}
+      </div>
+
+      <Field label="Subheading">
+        <input
+          value={section.subheading}
+          onChange={(e) => set('subheading', e.target.value)}
+          placeholder="e.g. Student 1. Ibrahim Ajadi"
+          className={inputClass}
+        />
+      </Field>
+
+      <Field label="Text">
+        <textarea
+          rows={5}
+          value={section.text}
+          onChange={(e) => set('text', e.target.value)}
+          placeholder="Write about this section..."
+          className={inputClass}
+        />
+      </Field>
+
+      <ImagesField
+        label="Images"
+        images={section.images}
+        onChange={(images) => set('images', images)}
+      />
+    </div>
+  );
+};
+
+// ─── Post preview (published list) ─────────────────────────────────────────
+
+const PostPreview = ({ post, onRemove }) => (
+  <Card interactive className="p-6 space-y-5">
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight leading-snug">
+          {post.main_heading}
+        </h2>
+        <p className="text-slate-400 text-xs mt-1.5">{formatDate(post.date_published)}</p>
+      </div>
+      <LinkButton danger onClick={() => onRemove(post.id)}>Delete</LinkButton>
+    </div>
+
+    {post.intro_text && (
+      <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line">{post.intro_text}</p>
+    )}
+
+    {post.intro_images.length > 0 && (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {post.intro_images.map((src, i) => (
+          <img key={i} src={src} alt="" className="w-full h-36 object-cover rounded-md border border-slate-200" />
+        ))}
+      </div>
+    )}
+
+    {post.sections.map((s, i) => (
+      <div key={s.id || i} className="pt-5 border-t border-slate-100 space-y-3">
+        {s.subheading && (
+          <h3 className="text-base font-bold text-slate-900 tracking-tight">{s.subheading}</h3>
+        )}
+        {s.text && (
+          <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">{s.text}</p>
+        )}
+        {s.images.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {s.images.map((src, j) => (
+              <img key={j} src={src} alt="" className="w-full h-32 object-cover rounded-md border border-slate-200" />
+            ))}
+          </div>
+        )}
+      </div>
+    ))}
+  </Card>
+);
+
+// ─── Main tab ───────────────────────────────────────────────────────────────
 
 const BlogTab = () => {
   const [posts, setPosts] = useState([]);
@@ -78,19 +237,37 @@ const BlogTab = () => {
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
+  const updateSection = (idx, updated) => {
+    setForm((f) => {
+      const sections = [...f.sections];
+      sections[idx] = updated;
+      return { ...f, sections };
+    });
+  };
+
+  const addSection = () => {
+    setForm((f) => ({ ...f, sections: [...f.sections, emptySection()] }));
+  };
+
+  const removeSection = (idx) => {
+    setForm((f) => ({ ...f, sections: f.sections.filter((_, i) => i !== idx) }));
+  };
+
   const submit = (e) => {
     e.preventDefault();
     const post = {
       id: Date.now(),
-      title: form.title,
-      author: form.author,
-      body: form.body,
-      date: form.date,
-      image: form.image ? URL.createObjectURL(form.image) : null,
+      main_heading: form.main_heading,
+      intro_text: form.intro_text,
+      intro_images: form.intro_images.map((f) => URL.createObjectURL(f)),
+      date_published: form.date_published,
+      sections: form.sections.map((s) => ({
+        ...s,
+        images: s.images.map((f) => URL.createObjectURL(f)),
+      })),
     };
     setPosts((p) => [post, ...p]);
     setForm(emptyForm());
-    e.target.reset();
   };
 
   const remove = (id) => setPosts((p) => p.filter((post) => post.id !== id));
@@ -101,88 +278,78 @@ const BlogTab = () => {
 
       <form
         onSubmit={submit}
-        className="bg-white border border-slate-200/80 rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-6 space-y-4"
+        className="bg-white border border-slate-200/80 rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-6 space-y-5"
       >
         <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.12em] pb-4 border-b border-slate-200/80 -mx-6 px-6">
           New post
         </h3>
 
-        <Field label="Title">
+        <Field label="Main heading">
           <input
             required
-            value={form.title}
-            onChange={(e) => set('title', e.target.value)}
-            placeholder="Post title"
+            value={form.main_heading}
+            onChange={(e) => set('main_heading', e.target.value)}
+            placeholder="e.g. Top 10 Best Students In LASOP"
             className={inputClass}
           />
         </Field>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Author">
-            <input
-              required
-              value={form.author}
-              onChange={(e) => set('author', e.target.value)}
-              placeholder="Author name"
-              className={inputClass}
+        <Field label="Date published">
+          <input
+            required
+            type="date"
+            value={form.date_published}
+            onChange={(e) => set('date_published', e.target.value)}
+            className={`${inputClass} max-w-[220px]`}
+          />
+        </Field>
+
+        <Field label="Intro text">
+          <textarea
+            rows={5}
+            value={form.intro_text}
+            onChange={(e) => set('intro_text', e.target.value)}
+            placeholder="Introduce the post..."
+            className={inputClass}
+          />
+        </Field>
+
+        <ImagesField
+          label="Intro images"
+          images={form.intro_images}
+          onChange={(images) => set('intro_images', images)}
+        />
+
+        <div className="space-y-4 pt-2">
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.1em]">Sections</p>
+          {form.sections.map((section, idx) => (
+            <SectionBlock
+              key={section.id}
+              index={idx}
+              section={section}
+              onChange={(updated) => updateSection(idx, updated)}
+              onRemove={() => removeSection(idx)}
+              canRemove={form.sections.length > 1}
             />
-          </Field>
-          <Field label="Date">
-            <input
-              required
-              type="date"
-              value={form.date}
-              onChange={(e) => set('date', e.target.value)}
-              className={inputClass}
-            />
-          </Field>
+          ))}
+          <SecondaryButton type="button" onClick={addSection}>
+            + Add section
+          </SecondaryButton>
         </div>
 
-        <Field label="Post">
-          <textarea
-            required
-            rows={8}
-            value={form.body}
-            onChange={(e) => set('body', e.target.value)}
-            placeholder="Write your post..."
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="Cover image">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => set('image', e.target.files[0] || null)}
-            className={inputClass}
-          />
-        </Field>
-
-        <PrimaryButton type="submit">Publish post</PrimaryButton>
+        <PrimaryButton type="submit" className="w-full justify-center">
+          Publish post
+        </PrimaryButton>
       </form>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {posts.length === 0 && (
           <Card>
             <EmptyState title="No posts yet" hint="Posts you publish will show up here." />
           </Card>
         )}
         {posts.map((post) => (
-          <Card key={post.id} interactive className="p-4 flex gap-4 items-start">
-            {post.image && (
-              <img src={post.image} alt="" className="w-24 h-24 object-cover rounded-md border border-slate-200" />
-            )}
-            <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-slate-900 tracking-tight">{post.title}</h3>
-              <p className="text-slate-400 text-xs mt-0.5">
-                {post.author} · {formatDate(post.date)}
-              </p>
-              <p className="text-sm text-slate-600 mt-2 leading-relaxed line-clamp-3 whitespace-pre-line">
-                {post.body}
-              </p>
-            </div>
-            <LinkButton danger onClick={() => remove(post.id)}>Delete</LinkButton>
-          </Card>
+          <PostPreview key={post.id} post={post} onRemove={remove} />
         ))}
       </div>
     </div>
