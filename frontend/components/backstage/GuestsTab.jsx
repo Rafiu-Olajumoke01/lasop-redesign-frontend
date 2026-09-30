@@ -136,13 +136,14 @@ const GuestsTab = ({ token }) => {
               placeholder="visitor@example.com"
             />
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <label className={labelClass}>Purpose of visit</label>
-            <input
-              className={inputClass}
+            <textarea
+              className={`${inputClass} resize-y min-h-[90px]`}
               value={form.purpose}
               onChange={(e) => setForm({ ...form, purpose: e.target.value })}
               placeholder="e.g. Course enquiry"
+              rows={3}
             />
           </div>
         </div>
@@ -168,7 +169,7 @@ const GuestsTab = ({ token }) => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
-                  {['Guest ID', 'Name', 'Phone', 'Email', 'Purpose', 'Date', ''].map((h, i) => (
+                 {['Guest ID', 'Name', 'Phone', 'Email', 'Purpose', 'Date'].map((h, i) => (
                     <th key={i} className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                       {h}
                     </th>
@@ -190,15 +191,6 @@ const GuestsTab = ({ token }) => {
                       <span className="block truncate">{g.purpose}</span>
                     </td>
                     <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{formatDateTime(g.created_at)}</td>
-                    <td className="px-5 py-4 text-right whitespace-nowrap">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }}
-                        disabled={deletingId === g.id}
-                        className="text-[13px] font-semibold text-rose-600 hover:text-rose-700 hover:underline underline-offset-2 disabled:opacity-40 transition"
-                      >
-                        {deletingId === g.id ? 'Deleting…' : 'Delete'}
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
