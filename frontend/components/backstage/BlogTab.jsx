@@ -195,16 +195,80 @@ const SectionBlock = ({ index, section, onChange, onRemove, canRemove }) => {
   );
 };
 
-// ─── Post preview (published list) ─────────────────────────────────────────
+// ─── Post row (compact, expands to full preview) ──────────────────────────
 
-const PostPreview = ({ post, onRemove }) => {
-  const [cover, ...restIntroImages] = post.intro_images;
+const PostRow = ({ post, token, onRemove }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [full, setFull] = useState(null);
+  const [loadingFull, setLoadingFull] = useState(false);
+
+  const toggle = async () => {
+    if (expanded) { setExpanded(false); return; }
+    setExpanded(true);
+    if (full) return;
+    setLoadingFull(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/blog/${post.id}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setFull(await res.json());
+    } finally {
+      setLoadingFull(false);
+    }
+  };
 
   return (
-    <Card interactive className="overflow-hidden">
+    <Card>
+      <button onClick={toggle} className="w-full flex items-center gap-4 p-4 text-left">
+        <div className="w-14 h-14 rounded-lg bg-slate-100 overflow-hidden shrink-0">
+          {post.cover_image ? (
+            <img src={post.cover_image} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-slate-300 text-lg">📰</div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-slate-900 tracking-tight truncate">{post.main_heading}</p>
+          <p className="text-slate-400 text-xs mt-0.5">
+            {formatDate(post.date_published)} · {post.status === 'published' ? 'Published' : 'Draft'}
+          </p>
+        </div>
+        <svg
+          className={`text-slate-400 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-slate-100">
+          {loadingFull ? (
+            <p className="text-slate-400 text-sm py-10 text-center">Loading post…</p>
+          ) : full ? (
+            <PostPreview post={full} onRemove={onRemove} bare />
+          ) : (
+            <p className="text-rose-500 text-sm py-10 text-center">Could not load this post.</p>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+};
+
+// ─── Post preview (published list) ─────────────────────────────────────────
+
+const PostPreview = ({ post, onRemove, bare = false }) => {
+  const introImages = post.intro_images || [];
+  const [cover, ...restIntroImages] = introImages;
+  const Wrapper = bare ? 'div' : Card;
+  const wrapperProps = bare ? {} : { interactive: true, className: 'overflow-hidden' };
+
+  return (
+    <Wrapper {...wrapperProps}>
       {cover && (
-        <div className="w-full h-56 sm:h-72 overflow-hidden">
-          <img src={cover} alt="" className="w-full h-full object-cover" />
+        <div className={`w-full overflow-hidden ${bare ? 'h-56' : 'h-56 sm:h-72'}`}>
+          <img src={cover.image} alt="" className="w-full h-full object-cover" />
         </div>
       )}
 
@@ -227,14 +291,14 @@ const PostPreview = ({ post, onRemove }) => {
 
         {restIntroImages.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {restIntroImages.map((src, i) => (
-              <img key={i} src={src} alt="" className="w-full h-40 object-cover rounded-lg border border-slate-200" />
+            {restIntroImages.map((img) => (
+              <img key={img.id} src={img.image} alt="" className="w-full h-40 object-cover rounded-lg border border-slate-200" />
             ))}
           </div>
         )}
 
-        {post.sections.map((s, i) => (
-          (s.subheading || s.text || s.images.length > 0) && (
+        {(post.sections || []).map((s, i) => (
+          (s.subheading || s.text || (s.images || []).length > 0) && (
             <div key={s.id || i} className="pt-6 border-t border-slate-100 space-y-3.5">
               {s.subheading && (
                 <div className="flex items-center gap-2.5">
@@ -247,10 +311,10 @@ const PostPreview = ({ post, onRemove }) => {
               {s.text && (
                 <p className="text-slate-600 text-[14.5px] leading-relaxed whitespace-pre-line pl-0.5">{s.text}</p>
               )}
-              {s.images.length > 0 && (
+              {(s.images || []).length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {s.images.map((src, j) => (
-                    <img key={j} src={src} alt="" className="w-full h-36 object-cover rounded-lg border border-slate-200" />
+                  {s.images.map((img) => (
+                    <img key={img.id} src={img.image} alt="" className="w-full h-36 object-cover rounded-lg border border-slate-200" />
                   ))}
                 </div>
               )}
@@ -258,7 +322,7 @@ const PostPreview = ({ post, onRemove }) => {
           )
         ))}
       </div>
-    </Card>
+    </Wrapper>
   );
 };
 
@@ -446,7 +510,7 @@ const BlogTab = ({ token }) => {
           {saving ? 'Publishing…' : 'Publish post'}
         </PrimaryButton>
       </form>
-      <div className="space-y-5">
+      <div className="space-y-3">
         {loading && (
           <p className="text-slate-400 text-sm py-10 text-center">Loading posts…</p>
         )}
@@ -456,7 +520,7 @@ const BlogTab = ({ token }) => {
           </Card>
         )}
         {posts.map((post) => (
-          <PostPreview key={post.id} post={post} onRemove={remove} />
+          <PostRow key={post.id} post={post} token={token} onRemove={remove} />
         ))}
       </div>
     </div>

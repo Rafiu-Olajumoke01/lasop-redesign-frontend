@@ -6,6 +6,7 @@ import About from "@/components/home/About";
 import LearnStudyWork from "@/components/home/LearnStudyWork";
 import StudentProjects from "@/components/home/StudentProjects";
 import SuccessStories from "@/components/home/SuccessStories";
+import LatestBlog from "@/components/home/LatestBlog";
 import CTA from "@/components/home/CTA";
 
 export default function Home() {
@@ -18,6 +19,7 @@ export default function Home() {
       <About />
       <LearnStudyWork />  
       <SuccessStories /> 
+      <LatestBlog />
       <CTA /> 
       {/* <FeaturedPrograms />  */} 
     </>
