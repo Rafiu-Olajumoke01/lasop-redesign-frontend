@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const formatDate = (d) => {
   if (!d) return null;
@@ -264,9 +264,32 @@ const PostPreview = ({ post, onRemove }) => {
 
 // ─── Main tab ───────────────────────────────────────────────────────────────
 
-const BlogTab = () => {
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
+const BlogTab = ({ token }) => {
   const [posts, setPosts] = useState([]);
   const [form, setForm] = useState(emptyForm());
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/blog/?all=1`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Could not load posts.');
+        setPosts(await res.json());
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token) load();
+  }, [token]);
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -286,28 +309,72 @@ const BlogTab = () => {
     setForm((f) => ({ ...f, sections: f.sections.filter((_, i) => i !== idx) }));
   };
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    const post = {
-      id: Date.now(),
-      main_heading: form.main_heading,
-      intro_text: form.intro_text,
-      intro_images: form.intro_images.map((f) => URL.createObjectURL(f)),
-      date_published: form.date_published,
-      sections: form.sections.map((s) => ({
-        ...s,
-        images: s.images.map((f) => URL.createObjectURL(f)),
-      })),
-    };
-    setPosts((p) => [post, ...p]);
-    setForm(emptyForm());
+    setError('');
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append('main_heading', form.main_heading);
+      fd.append('intro_text', form.intro_text);
+      fd.append('date_published', form.date_published);
+      fd.append('status', 'published');
+      form.intro_images.forEach((file) => fd.append('intro_images', file));
+
+      fd.append('section_count', form.sections.length);
+      form.sections.forEach((s, i) => {
+        fd.append(`sections[${i}][subheading]`, s.subheading);
+        fd.append(`sections[${i}][text]`, s.text);
+        s.images.forEach((file) => fd.append(`sections[${i}][images]`, file));
+      });
+
+      const res = await fetch(`${API_BASE}/api/blog/create/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!res.ok) {
+        let detail = 'Could not publish post.';
+        try {
+          const data = await res.json();
+          detail = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(' ') : v}`).join(' | ') || detail;
+        } catch {}
+        throw new Error(detail);
+      }
+      const created = await res.json();
+      setPosts((p) => [created, ...p]);
+      setForm(emptyForm());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const remove = (id) => setPosts((p) => p.filter((post) => post.id !== id));
+  const remove = async (id) => {
+    if (!window.confirm('Delete this post?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/blog/${id}/delete/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not delete post.');
+      setPosts((p) => p.filter((post) => post.id !== id));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   return (
     <div className="space-y-8 max-w-3xl">
       <PageHeader title="Blog" subtitle={`${posts.length} post${posts.length !== 1 ? 's' : ''}`} />
+
+      {error && (
+        <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-lg px-4 py-3">
+          <span className="mt-0.5 shrink-0">⚠</span>
+          {error}
+        </div>
+      )}
 
       <form onSubmit={submit} className="space-y-5">
         <Card className="p-6 sm:p-7 space-y-5">
@@ -375,13 +442,15 @@ const BlogTab = () => {
           </SecondaryButton>
         </div>
 
-        <PrimaryButton type="submit" className="w-full justify-center text-[15px]">
-          Publish post
+        <PrimaryButton type="submit" disabled={saving} className="w-full justify-center text-[15px]">
+          {saving ? 'Publishing…' : 'Publish post'}
         </PrimaryButton>
       </form>
-
       <div className="space-y-5">
-        {posts.length === 0 && (
+        {loading && (
+          <p className="text-slate-400 text-sm py-10 text-center">Loading posts…</p>
+        )}
+        {!loading && posts.length === 0 && (
           <Card>
             <EmptyState title="No posts yet" hint="Posts you publish will show up here." />
           </Card>
