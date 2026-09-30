@@ -105,9 +105,34 @@ const GuestsTab = ({ token }) => {
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight">Guests</h2>
-        <p className="text-slate-400 text-sm mt-0.5">{guests.length} recorded</p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Guests</h2>
+          <p className="text-slate-400 text-sm mt-0.5">{guests.length} recorded</p>
+        </div>
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <input
+            className={`${inputClass} w-56`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search guests…"
+          />
+          <button
+            type="submit"
+            className="bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold px-4 py-2.5 rounded-md shadow-sm transition shrink-0"
+          >
+            Search
+          </button>
+          {appliedSearch && (
+            <button
+              type="button"
+              onClick={() => { setSearch(''); setAppliedSearch(''); }}
+              className="text-sm font-semibold text-slate-500 hover:text-slate-700 px-3 transition shrink-0"
+            >
+              Clear
+            </button>
+          )}
+        </form>
       </div>
 
       {error && (
@@ -169,30 +194,6 @@ const GuestsTab = ({ token }) => {
         >
           {saving ? 'Saving…' : 'Add guest'}
         </button>
-      </form>
-
-      <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-        <input
-          className={`${inputClass} flex-1`}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by Guest ID, name, email, phone, or purpose…"
-        />
-        <button
-          type="submit"
-          className="bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold px-4 py-2.5 rounded-md shadow-sm transition shrink-0"
-        >
-          Search
-        </button>
-        {appliedSearch && (
-          <button
-            type="button"
-            onClick={() => { setSearch(''); setAppliedSearch(''); }}
-            className="text-sm font-semibold text-slate-500 hover:text-slate-700 px-3 transition shrink-0"
-          >
-            Clear
-          </button>
-        )}
       </form>
 
       {loading ? (
